@@ -1,26 +1,228 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brown-900: #2e1a0e;
+  --color-brown-800: #3d2409;
+  --color-brown-700: #5c3a1e;
+  --color-brown-600: #7a5230;
+  --color-brown-500: #9b6f44;
+  --color-brown-400: #b8895e;
+  --color-cream-50: #fdfaf0;
+  --color-cream-100: #faf5e4;
+  --color-cream-200: #f0ead0;
+  --color-cream-300: #e4dab8;
+  --color-amber-500: #e8920a;
+  --color-amber-400: #f5a623;
+  --color-green-700: #2d6a4f;
+  --color-green-600: #3a7d3e;
+  --color-green-500: #5aad5f;
+  --color-red-600: #cc2929;
+  --color-red-500: #e03333;
+  --color-blue-500: #0ea5e9;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #faf5e4;
+  color: #2e1a0e;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f0ead0; }
+::-webkit-scrollbar-thumb { background: #9b6f44; border-radius: 3px; }
+
+/* ── Sidebar ── */
+.sidebar {
+  background-color: #3d2409;
+  min-height: 100vh;
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  color: #e4dab8;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 0.5rem;
+  transition: all 0.15s;
+  cursor: pointer;
+  width: 100%;
+  text-decoration: none;
+}
+.sidebar-nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.sidebar-nav-item.active { background-color: #e8920a; color: #fff; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  border: none;
+  text-decoration: none;
+}
+.btn:hover { opacity: 0.88; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-amber { background-color: #e8920a; color: #fff; }
+.btn-green { background-color: #3a7d3e; color: #fff; }
+.btn-red { background-color: #cc2929; color: #fff; border-radius: 0.375rem; padding: 0.4rem 0.65rem; }
+.btn-outline { background: transparent; border: 2px solid #e8920a; color: #e8920a; }
+.btn-sm { padding: 0.35rem 0.85rem; font-size: 0.75rem; }
+.btn-icon { border-radius: 0.375rem; padding: 0.45rem 0.55rem; }
+
+/* ── Data Table ── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  background-color: #7a5230;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.875rem 1.125rem;
+  text-align: left;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+.data-table th:first-child { border-radius: 0; }
+.data-table td {
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid #e4dab8;
+  font-size: 0.875rem;
+  color: #2e1a0e;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: rgba(0,0,0,0.02); }
+
+/* ── Cards ── */
+.card {
+  background: #fff;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+/* ── Collapsible section header ── */
+.section-header {
+  background-color: #7a5230;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.75rem 1.125rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ── Pathway badges ── */
+.badge { display: inline-block; border-radius: 9999px; padding: 0.15rem 0.65rem; font-size: 0.7rem; font-weight: 700; }
+.badge-explore { background: #2d6a4f; color: #fff; }
+.badge-grow    { background: #52796f; color: #fff; }
+.badge-support { background: #c97f0a; color: #fff; }
+
+/* ── Progress bar ── */
+.progress-track { background: #e4dab8; border-radius: 9999px; height: 7px; overflow: hidden; }
+.progress-fill  { background: #3a7d3e; height: 100%; border-radius: 9999px; transition: width 0.4s ease; }
+
+/* ── Input fields ── */
+.input-field {
+  width: 100%;
+  padding: 0.65rem 0.875rem;
+  border: 1.5px solid #b8895e;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #2e1a0e;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-field:focus { border-color: #e8920a; }
+.input-field::placeholder { color: #9b6f44; }
+
+/* ── Auth background ── */
+.forest-bg {
+  background: linear-gradient(160deg, #2d5a1e 0%, #5c3a1e 55%, #3d2409 100%);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Stage cards ── */
+.stage-card {
+  background: #fff;
+  border-radius: 1rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-align: center;
+}
+.stage-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+
+/* ── Topic cards ── */
+.topic-card {
+  background: #7a5230;
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.topic-card:hover { background: #9b6f44; }
+
+/* ── Insight bubble ── */
+.insight-bubble {
+  background: #fff8e8;
+  border-left: 4px solid #e8920a;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #3d2409;
+}
+
+/* ── Engagement dot ── */
+.dot-high { color: #2d6a4f; font-weight: 700; }
+.dot-mid  { color: #c97f0a; font-weight: 700; }
+.dot-low  { color: #cc2929; font-weight: 700; }
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeInUp 0.4s ease forwards; }
+
+/* ── Video player overlay ── */
+.video-container {
+  position: relative;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 16/9;
+}
+
+/* ── Student experience ── */
+.experience-bg {
+  background: linear-gradient(180deg, #1a3a1a 0%, #2d5a1e 50%, #3d6b25 100%);
+  min-height: 100vh;
 }
