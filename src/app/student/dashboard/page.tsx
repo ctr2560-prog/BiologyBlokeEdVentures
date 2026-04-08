@@ -88,8 +88,11 @@ export default function StudentDashboard() {
     <div className="experience-bg" style={{ minHeight: '100vh', padding: '0 0 4rem' }}>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <div style={{ color: '#e4dab8', fontSize: '0.9rem', fontWeight: 700 }}>
-          🐨 Biology Bloke Edventures
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '10%', padding: 4 }}>
+            <img src="/logo.png" alt="Biology Bloke" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+          </div>
+          <span style={{ color: '#e4dab8', fontSize: '0.85rem', fontWeight: 700 }}>Biology Bloke Edventures</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.85rem' }}>

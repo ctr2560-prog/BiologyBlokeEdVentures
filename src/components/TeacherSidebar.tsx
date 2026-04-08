@@ -17,7 +17,7 @@ export default function TeacherSidebar() {
   return (
     <aside className="sidebar">
       <div className="p-4 flex justify-center mt-2">
-        <Logo href="/teacher/classes" size="md" />
+        <Logo href="/teacher/classes" size="md" variant="dark" />
       </div>
 
       <nav className="px-3 mt-4 flex-1 space-y-1">

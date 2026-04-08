@@ -1,12 +1,18 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Home() {
   return (
     <div className="forest-bg flex flex-col">
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-4">
-        <div style={{ color: '#faf5e4', fontWeight: 900, fontSize: '1.1rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-          Biology Bloke Edventures
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12%', padding: 6 }}>
+            <Image src="/logo.png" alt="The Biology Bloke" width={48} height={48} style={{ objectFit: 'contain' }} />
+          </div>
+          <span style={{ color: '#faf5e4', fontWeight: 900, fontSize: '1rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Edventures
+          </span>
         </div>
         <div className="flex gap-3">
           <Link href="/login" className="btn btn-outline" style={{ borderColor: '#faf5e4', color: '#faf5e4' }}>

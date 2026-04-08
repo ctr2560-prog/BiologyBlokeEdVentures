@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import Logo from '@/components/Logo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -44,8 +45,8 @@ export default function LoginPage() {
         className="card fade-in"
         style={{ width: '100%', maxWidth: 400, padding: '2.5rem 2rem', background: '#faf5e4', borderRadius: '1.25rem' }}
       >
-        <div className="flex justify-center mb-1">
-          <span style={{ fontSize: '2rem' }}>🐨</span>
+        <div className="flex justify-center mb-3">
+          <Logo href="/" size="md" variant="light" />
         </div>
         <h1 style={{ textAlign: 'center', fontWeight: 900, fontSize: '1.4rem', color: '#2e1a0e', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
           Log In

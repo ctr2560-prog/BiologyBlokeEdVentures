@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import Logo from '@/components/Logo'
 
 export default function JoinPage() {
   const router = useRouter()
@@ -74,8 +75,8 @@ export default function JoinPage() {
   return (
     <div className="forest-bg flex flex-col min-h-screen items-center justify-center px-4">
       <div className="card fade-in" style={{ width: '100%', maxWidth: 420, padding: '2.5rem 2rem', background: '#faf5e4', borderRadius: '1.25rem' }}>
-        <div className="flex justify-center mb-2">
-          <span style={{ fontSize: '2.5rem' }}>🌿</span>
+        <div className="flex justify-center mb-3">
+          <Logo href="/" size="md" variant="light" />
         </div>
         <h1 style={{ textAlign: 'center', fontWeight: 900, fontSize: '1.4rem', color: '#2e1a0e', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
           Join a Class
