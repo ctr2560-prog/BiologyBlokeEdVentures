@@ -24,17 +24,11 @@ export default function ClassesPage() {
         .from('classes')
         .select('id, code, name, year_level, students(count)')
         .order('created_at', { ascending: false })
-
       if (data) {
-        setClasses(
-          data.map((c: any) => ({
-            id: c.id,
-            code: c.code,
-            name: c.name,
-            year_level: c.year_level,
-            student_count: c.students?.[0]?.count ?? 0,
-          }))
-        )
+        setClasses(data.map((c: any) => ({
+          id: c.id, code: c.code, name: c.name, year_level: c.year_level,
+          student_count: c.students?.[0]?.count ?? 0,
+        })))
       }
       setLoading(false)
     }
@@ -51,26 +45,24 @@ export default function ClassesPage() {
   }
 
   return (
-    <div style={{ padding: '2.5rem 2.5rem 4rem' }}>
+    <div style={{ padding: '2.5rem 3rem 4rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-        <h1 style={{ fontWeight: 900, fontSize: '2rem', color: '#2e1a0e', textTransform: 'uppercase', letterSpacing: '0.02em', fontFamily: 'Georgia, serif' }}>
-          Classes
-        </h1>
-        <Link href="/teacher/classes/new" className="btn btn-amber">
-          + Create a Class
+        <h1 className="page-title">Classes</h1>
+        <Link href="/teacher/classes/new" className="btn btn-amber" style={{ fontSize: '0.85rem', padding: '0.6rem 1.4rem' }}>
+          Create a Class
         </Link>
       </div>
 
       {/* Table */}
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card">
         {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: '#9b6f44' }}>Loading your classes...</div>
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#9b7a55', fontWeight: 600 }}>Loading your classes...</div>
         ) : classes.length === 0 ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌿</div>
-            <p style={{ color: '#7a5230', fontWeight: 600 }}>No classes yet.</p>
-            <p style={{ color: '#9b6f44', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Create your first class to get started.</p>
+          <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🌿</div>
+            <p style={{ color: '#7a5230', fontWeight: 700, fontSize: '1.05rem', marginBottom: '0.5rem' }}>No classes yet.</p>
+            <p style={{ color: '#9b7a55', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Create your first class to get started.</p>
             <Link href="/teacher/classes/new" className="btn btn-amber">Create a Class</Link>
           </div>
         ) : (
@@ -88,34 +80,28 @@ export default function ClassesPage() {
               {classes.map((cls) => (
                 <tr key={cls.id}>
                   <td>
-                    <span style={{ fontWeight: 700, fontFamily: 'monospace', color: '#5c3a1e', fontSize: '0.95rem' }}>
+                    <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '1rem', color: '#7a5230', letterSpacing: '0.05em' }}>
                       {cls.code}
                     </span>
                   </td>
                   <td>
-                    <Link href={`/teacher/classes/${cls.id}`} style={{ fontWeight: 700, color: '#2e1a0e', textDecoration: 'none' }}>
+                    <Link href={`/teacher/classes/${cls.id}`} style={{ fontWeight: 600, color: '#3a1f0d', textDecoration: 'none' }}>
                       {cls.name}
                     </Link>
                   </td>
-                  <td>{cls.year_level}</td>
-                  <td>
-                    <span style={{ color: cls.student_count === 0 ? '#9b6f44' : '#2e1a0e' }}>
-                      {cls.student_count} {cls.student_count === 1 ? 'Student' : 'Students'}
-                    </span>
+                  <td style={{ color: '#7a5230' }}>{cls.year_level}</td>
+                  <td style={{ color: cls.student_count === 0 ? '#aaa' : '#3a1f0d' }}>
+                    {cls.student_count} {cls.student_count === 1 ? 'Student' : 'Students'}
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <Link href={`/teacher/classes/${cls.id}`} className="btn btn-amber btn-icon btn-sm" title="Edit">
-                        ✏️
-                      </Link>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <button className="btn-icon-amber" title="Edit" onClick={() => {}}>✏️</button>
                       <button
-                        onClick={() => deleteClass(cls.id)}
-                        disabled={deleting === cls.id}
-                        className="btn btn-red btn-icon"
+                        className="btn-icon-red"
                         title="Delete"
-                      >
-                        🗑️
-                      </button>
+                        disabled={deleting === cls.id}
+                        onClick={() => deleteClass(cls.id)}
+                      >🗑️</button>
                     </div>
                   </td>
                 </tr>

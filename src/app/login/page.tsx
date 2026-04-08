@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import Logo from '@/components/Logo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -16,70 +16,60 @@ export default function LoginPage() {
     setForm({ ...form, [e.target.name]: e.target.value })
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault(); setError(''); setLoading(true)
     const supabase = createClient()
-    const { data, error: authErr } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
+    const { data, error: authErr } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password })
     if (authErr) { setError(authErr.message); setLoading(false); return }
-    const role = data.user?.user_metadata?.role
-    if (role === 'teacher') {
-      router.push('/teacher/classes')
-    } else {
-      router.push('/student/dashboard')
-    }
+    router.push(data.user?.user_metadata?.role === 'teacher' ? '/teacher/classes' : '/student/dashboard')
   }
 
   return (
-    <div className="forest-bg flex flex-col min-h-screen items-center justify-center px-4 py-8">
-      <div className="absolute top-4 right-6 flex gap-3">
-        <Link href="/" style={{ color: '#e4dab8', fontSize: '0.85rem' }}>Help</Link>
-        <Link href="/login" style={{ color: '#e4dab8', fontSize: '0.85rem' }}>Log-In</Link>
-        <Link href="/signup" className="btn btn-amber btn-sm">Sign Up</Link>
+    <div className="forest-bg" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', position: 'relative', zIndex: 10 }}>
+        <Link href="/">
+          <div style={{ background: '#fff8e8', borderRadius: 10, padding: 6, width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+            <Image src="/logo.png" alt="The Biology Bloke" width={56} height={56} style={{ objectFit: 'contain' }} />
+          </div>
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <Link href="/help" style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', textDecoration: 'none' }}>Help</Link>
+          <Link href="/login" style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', textDecoration: 'none' }}>Log-in</Link>
+          <Link href="/signup" className="btn btn-amber" style={{ fontSize: '0.9rem', padding: '0.5rem 1.4rem' }}>Sign Up</Link>
+        </div>
+      </nav>
+
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem 1rem 4rem', position: 'relative', zIndex: 10 }}>
+        <div className="fade-in" style={{ background: '#fffcef', borderRadius: 20, padding: '2.5rem 2.25rem 2rem', width: '100%', maxWidth: 440, boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+          <h1 className="font-display" style={{ textAlign: 'center', fontSize: '2.4rem', color: '#2d5a1e', letterSpacing: '0.06em', marginBottom: '1.5rem' }}>
+            Log In
+          </h1>
+          {error && (
+            <div style={{ background: '#fde8e8', border: '1px solid #cc2222', borderRadius: 8, padding: '0.6rem 0.875rem', marginBottom: '1rem', color: '#cc2222', fontSize: '0.85rem' }}>{error}</div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label style={{ fontSize: '0.9rem', fontWeight: 700, color: '#3a1f0d', display: 'block', marginBottom: 5 }}>Email Address:</label>
+              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Koala@example.com" required className="input-field" style={{ background: '#fffdf5' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.9rem', fontWeight: 700, color: '#3a1f0d', display: 'block', marginBottom: 5 }}>Password:</label>
+              <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="•••••••••••••••" required className="input-field" style={{ background: '#fffdf5' }} />
+            </div>
+            <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', padding: '0.8rem', fontSize: '0.95rem', marginTop: '0.5rem' }}>
+              {loading ? 'Logging in...' : 'Log In'}
+            </button>
+          </form>
+          <div style={{ textAlign: 'center', marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Link href="/signup" style={{ color: '#9b7a55', fontSize: '0.875rem', textDecoration: 'underline' }}>No account? Sign up as a teacher</Link>
+            <Link href="/join" style={{ color: '#9b7a55', fontSize: '0.875rem', textDecoration: 'underline' }}>Student? Join with a class code</Link>
+          </div>
+        </div>
       </div>
 
-      <div
-        className="card fade-in"
-        style={{ width: '100%', maxWidth: 400, padding: '2.5rem 2rem', background: '#faf5e4', borderRadius: '1.25rem' }}
-      >
-        <div className="flex justify-center mb-3">
-          <Logo href="/" size="md" variant="light" />
-        </div>
-        <h1 style={{ textAlign: 'center', fontWeight: 900, fontSize: '1.4rem', color: '#2e1a0e', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-          Log In
-        </h1>
-
-        {error && (
-          <div style={{ background: '#fde8e8', border: '1px solid #cc2929', borderRadius: 8, padding: '0.6rem 0.875rem', marginBottom: '1rem', color: '#cc2929', fontSize: '0.85rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Email Address</label>
-            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@school.edu.au" required className="input-field" />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Password</label>
-            <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Your password" required className="input-field" />
-          </div>
-          <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', justifyContent: 'center', marginTop: '0.75rem', padding: '0.75rem', fontSize: '0.9rem' }}>
-            {loading ? 'Logging in...' : 'Log In'}
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: '#7a5230' }}>
-          No account?{' '}
-          <Link href="/signup" style={{ color: '#e8920a', fontWeight: 700 }}>Sign up as a teacher</Link>
-        </p>
-        <p style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.85rem', color: '#7a5230' }}>
-          Student?{' '}
-          <Link href="/join" style={{ color: '#e8920a', fontWeight: 700 }}>Join with a class code</Link>
-        </p>
+      <div style={{ textAlign: 'center', paddingBottom: '2rem', position: 'relative', zIndex: 10 }}>
+        <Link href="/signup" style={{ color: '#fff', fontSize: '0.9rem', textDecoration: 'underline', fontWeight: 600 }}>
+          Have an account? Sign in
+        </Link>
       </div>
     </div>
   )

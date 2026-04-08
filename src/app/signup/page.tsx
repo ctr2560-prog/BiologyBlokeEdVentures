@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import Logo from '@/components/Logo'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -43,84 +43,95 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="forest-bg flex flex-col min-h-screen items-center justify-center px-4 py-8">
-      {/* Top bar */}
-      <div className="absolute top-4 right-6 flex gap-3">
-        <Link href="/" style={{ color: '#e4dab8', fontSize: '0.85rem' }}>Help</Link>
-        <Link href="/login" style={{ color: '#e4dab8', fontSize: '0.85rem' }}>Log-In</Link>
-        <Link href="/signup" className="btn btn-amber btn-sm">Sign Up</Link>
+    <div className="forest-bg" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Top nav */}
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', position: 'relative', zIndex: 10 }}>
+        <Link href="/" style={{ display: 'block' }}>
+          <div style={{ background: '#fff8e8', borderRadius: 10, padding: 6, width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+            <Image src="/logo.png" alt="The Biology Bloke" width={56} height={56} style={{ objectFit: 'contain' }} />
+          </div>
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <Link href="/help" style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', textDecoration: 'none' }}>Help</Link>
+          <Link href="/login" style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', textDecoration: 'none' }}>Log-in</Link>
+          <Link href="/signup" className="btn btn-amber" style={{ fontSize: '0.9rem', padding: '0.5rem 1.4rem' }}>Sign Up</Link>
+        </div>
+      </nav>
+
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem 1rem 4rem', position: 'relative', zIndex: 10 }}>
+        <div
+          className="fade-in"
+          style={{
+            background: '#fffcef',
+            borderRadius: 20,
+            padding: '2.5rem 2.25rem 2rem',
+            width: '100%',
+            maxWidth: 500,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+          }}
+        >
+          <h1
+            className="font-display"
+            style={{ textAlign: 'center', fontSize: '2.4rem', color: '#2d5a1e', letterSpacing: '0.06em', marginBottom: '1.5rem' }}
+          >
+            Create an Account
+          </h1>
+
+          {error && (
+            <div style={{ background: '#fde8e8', border: '1px solid #cc2222', borderRadius: 8, padding: '0.6rem 0.875rem', marginBottom: '1rem', color: '#cc2222', fontSize: '0.85rem' }}>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {[
+              { name: 'name',         label: 'Name:',            type: 'text',     placeholder: 'Carl Koala' },
+              { name: 'email',        label: 'Email Address:',   type: 'email',    placeholder: 'Koala@example.com' },
+              { name: 'school',       label: 'School Name:',     type: 'text',     placeholder: 'Your school' },
+              { name: 'password',     label: 'Create a password:', type: 'password', placeholder: '•••••••••••••••' },
+              { name: 'confirm',      label: 'Confirm password:', type: 'password', placeholder: '•••••••••••••••' },
+            ].map((f) => (
+              <div key={f.name}>
+                <label style={{ fontSize: '0.9rem', fontWeight: 700, color: '#3a1f0d', display: 'block', marginBottom: 5 }}>{f.label}</label>
+                <input
+                  name={f.name}
+                  type={f.type}
+                  value={(form as any)[f.name]}
+                  onChange={handleChange}
+                  placeholder={f.placeholder}
+                  required={f.name !== 'teachingFocus'}
+                  className="input-field"
+                  style={{ background: '#fffdf5', borderColor: '#ddd' }}
+                />
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
+              <input type="checkbox" id="terms" required style={{ width: 18, height: 18, accentColor: '#e8a020', cursor: 'pointer' }} />
+              <label htmlFor="terms" style={{ fontSize: '0.875rem', color: '#3a1f0d', cursor: 'pointer' }}>
+                I have read and agree to the{' '}
+                <span style={{ color: '#e8a020', fontWeight: 700 }}>terms of service.</span>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-amber"
+              style={{ width: '100%', padding: '0.8rem', fontSize: '0.95rem', marginTop: '0.5rem', borderRadius: 9999 }}
+            >
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </button>
+          </form>
+        </div>
       </div>
 
-      <div
-        className="card fade-in"
-        style={{ width: '100%', maxWidth: 440, padding: '2.5rem 2rem', background: '#faf5e4', borderRadius: '1.25rem' }}
-      >
-        <div className="flex justify-center mb-3">
-          <Logo href="/" size="md" variant="light" />
-        </div>
-        <h1 style={{ textAlign: 'center', fontWeight: 900, fontSize: '1.4rem', color: '#2e1a0e', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-          Create an Account
-        </h1>
-
-        {error && (
-          <div style={{ background: '#fde8e8', border: '1px solid #cc2929', borderRadius: 8, padding: '0.6rem 0.875rem', marginBottom: '1rem', color: '#cc2929', fontSize: '0.85rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Name</label>
-            <input name="name" value={form.name} onChange={handleChange} placeholder="Full Name" required className="input-field" />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Email Address</label>
-            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@school.edu.au" required className="input-field" />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>School Name</label>
-            <input name="school" value={form.school} onChange={handleChange} placeholder="Your school" required className="input-field" />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Year Level(s) Taught</label>
-            <select name="yearLevel" value={form.yearLevel} onChange={handleChange} className="input-field" required>
-              <option value="">Select year level</option>
-              <option value="K-2">K–2</option>
-              <option value="3-4">Year 3–4</option>
-              <option value="5-6">Year 5–6</option>
-              <option value="7-8">Year 7–8</option>
-              <option value="9-10">Year 9–10</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Teaching Focus (optional)</label>
-            <input name="teachingFocus" value={form.teachingFocus} onChange={handleChange} placeholder="e.g. ecosystems, sustainability" className="input-field" />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Create a Password</label>
-            <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Min. 8 characters" required className="input-field" />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c3a1e', display: 'block', marginBottom: 4 }}>Confirm Password</label>
-            <input name="confirm" type="password" value={form.confirm} onChange={handleChange} placeholder="Repeat password" required className="input-field" />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <input type="checkbox" id="terms" required style={{ accentColor: '#e8920a' }} />
-            <label htmlFor="terms" style={{ fontSize: '0.8rem', color: '#7a5230' }}>
-              I have read and agree to the <span style={{ textDecoration: 'underline' }}>terms of service</span>
-            </label>
-          </div>
-
-          <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', justifyContent: 'center', marginTop: '0.75rem', padding: '0.75rem', fontSize: '0.9rem' }}>
-            {loading ? 'Creating Account...' : 'Create Account'}
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: '#7a5230' }}>
-          Have an account?{' '}
-          <Link href="/login" style={{ color: '#e8920a', fontWeight: 700 }}>Log in</Link>
-        </p>
+      {/* Bottom link */}
+      <div style={{ textAlign: 'center', paddingBottom: '2rem', position: 'relative', zIndex: 10 }}>
+        <Link href="/login" style={{ color: '#fff', fontSize: '0.9rem', textDecoration: 'underline', fontWeight: 600 }}>
+          Have an account? Sign in
+        </Link>
       </div>
     </div>
   )

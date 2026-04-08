@@ -80,7 +80,7 @@ export default function StudentDetailPage() {
 
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <h1 style={{ fontWeight: 900, fontSize: '2rem', color: '#2e1a0e', textTransform: 'uppercase', fontFamily: 'Georgia, serif' }}>
+        <h1 className="page-title">
           {student.nickname}
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>

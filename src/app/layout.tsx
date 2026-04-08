@@ -1,5 +1,19 @@
 import type { Metadata } from "next";
+import { Bangers, Nunito } from "next/font/google";
 import "./globals.css";
+
+const bangers = Bangers({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bangers",
+  display: "swap",
+});
+
+const nunito = Nunito({
+  subsets: ["latin"],
+  variable: "--font-nunito",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Biology Bloke Edventures",
@@ -12,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="min-h-full">{children}</body>
+    <html lang="en" className={`h-full ${bangers.variable} ${nunito.variable}`}>
+      <body className="min-h-full font-nunito">{children}</body>
     </html>
   );
 }

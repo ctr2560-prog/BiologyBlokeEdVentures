@@ -114,7 +114,7 @@ export default function ClassInsightsPage() {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontWeight: 900, fontSize: '2rem', color: '#2e1a0e', textTransform: 'uppercase', fontFamily: 'Georgia, serif' }}>
+          <h1 className="page-title">
             Class Insights
           </h1>
           <p style={{ color: '#7a5230', fontSize: '0.875rem', marginTop: 2 }}>Class: {className}</p>
