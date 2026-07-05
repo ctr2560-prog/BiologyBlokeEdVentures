@@ -7,10 +7,10 @@
  * email/password (visual for the MVP) and one-tap demo logins.
  */
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { roleHome, roleLabel } from "@/components/layout/navConfig";
-import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/primitives";
 import type { Role } from "@/types";
 
@@ -42,8 +42,7 @@ export default function LandingPage() {
     <div className="bg-cream">
       {/* ============ Top nav ============ */}
       <header className="absolute inset-x-0 top-0 z-30">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Logo size={40} variant="white" withWordmark />
+        <div className="mx-auto flex max-w-6xl items-center justify-end px-6 py-5">
           <nav className="flex items-center gap-2">
             <a href="#how" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-cream/90 hover:text-cream sm:block">
               How it works
@@ -79,10 +78,16 @@ export default function LandingPage() {
 
         {/* Centered copy */}
         <div className="rise-in relative z-10 mx-auto max-w-3xl px-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-forest-100/80">
-            The Biology Bloke
-          </p>
-          <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-7xl">
+          {/* Large centred Biology Bloke logo */}
+          <Image
+            src="/logo-white.png"
+            alt="The Biology Bloke"
+            width={360}
+            height={360}
+            priority
+            className="float-y-slow mx-auto h-40 w-auto drop-shadow-2xl md:h-56"
+          />
+          <h1 className="display mt-6 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-7xl">
             Australia&apos;s wildest way to learn conservation.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-cream/85 md:text-xl">
