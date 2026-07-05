@@ -1,12 +1,5 @@
-import TeacherSidebar from '@/components/TeacherSidebar'
+import { AppShell } from "@/components/layout/AppShell";
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="teacher-shell">
-      <TeacherSidebar />
-      <main className="teacher-main">
-        {children}
-      </main>
-    </div>
-  )
+  return <AppShell role="teacher">{children}</AppShell>;
 }

@@ -1,32 +1,25 @@
 import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import { Inter, Outfit } from "next/font/google";
+import { AppProvider } from "@/lib/store";
 import "./globals.css";
 
-const displayFont = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-bangers",
-  display: "swap",
-});
-
-const bodyFont = Manrope({
-  subsets: ["latin"],
-  variable: "--font-nunito",
-  display: "swap",
-});
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
 export const metadata: Metadata = {
-  title: "Biology Bloke Edventures",
-  description: "A teacher-led, student-driven adaptive learning platform using short-form nature-based media.",
+  title: "BioBloke Edventures",
+  description:
+    "Adaptive conservation education platform — short-form wildlife media, adaptive learning pathways, and class insights by The Biology Bloke.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`h-full ${displayFont.variable} ${bodyFont.variable}`}>
-      <body className="min-h-full font-nunito">{children}</body>
+    <html lang="en">
+      <body className={`${inter.variable} ${outfit.variable} antialiased`}>
+        <AppProvider>{children}</AppProvider>
+      </body>
     </html>
   );
 }

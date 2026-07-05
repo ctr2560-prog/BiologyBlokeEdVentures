@@ -1,156 +1,171 @@
-'use client'
+"use client";
+import { use, useMemo, useState } from "react";
+import Link from "next/link";
+import { useApp } from "@/lib/store";
+import {
+  SectionHeader,
+  Button,
+  Badge,
+  Modal,
+  FormField,
+  inputClass,
+  EmptyState,
+} from "@/components/ui/primitives";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { EngagementPill } from "@/components/cards/InsightCards";
+import {
+  getClass,
+  getStudentsByClass,
+  getUnit,
+  getProgressByStudent,
+  db,
+  newId,
+} from "@/lib/dataService";
+import type { User } from "@/types";
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+export default function ClassDetailPage({ params }: { params: Promise<{ classId: string }> }) {
+  const { classId } = use(params);
+  const { version, bump } = useApp();
+  const [addOpen, setAddOpen] = useState(false);
+  const [studentName, setStudentName] = useState("");
 
-interface Student { id: string; nickname: string; pathway: string; progress_pct: number }
-interface ClassData { id: string; code: string; name: string; year_level: string; focus: string | null }
+  const cls = useMemo(() => {
+    void version;
+    return getClass(classId);
+  }, [version, classId]);
+  const students = useMemo(() => {
+    void version;
+    return getStudentsByClass(classId);
+  }, [version, classId]);
 
-export default function ClassDetailPage() {
-  const { classId } = useParams<{ classId: string }>()
-  const [cls, setCls] = useState<ClassData | null>(null)
-  const [students, setStudents] = useState<Student[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [newNickname, setNewNickname] = useState('')
-  const [addLoading, setAddLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const [{ data: c }, { data: s }] = await Promise.all([
-        supabase.from('classes').select('*').eq('id', classId).single(),
-        supabase.from('students').select('id, nickname, pathway, progress_pct').eq('class_id', classId).order('nickname'),
-      ])
-      setCls(c); setStudents(s ?? []); setLoading(false)
-    }
-    load()
-  }, [classId])
-
-  async function addStudent(e: React.FormEvent) {
-    e.preventDefault(); setAddLoading(true)
-    const supabase = createClient()
-    const password = Math.random().toString(36).slice(2, 10)
-    const email = `${newNickname.toLowerCase().replace(/\s+/g, '_')}_${classId.slice(0,6)}_${Date.now()}@biologybloke.internal`
-    const { data } = await supabase.auth.signUp({ email, password, options: { data: { nickname: newNickname, class_id: classId, role: 'student', generated_password: password } } })
-    if (data.user) {
-      await supabase.from('students').insert({ id: data.user.id, nickname: newNickname, class_id: classId, pathway: 'grow', progress_pct: 0 })
-      setStudents(prev => [...prev, { id: data.user!.id, nickname: newNickname, pathway: 'grow', progress_pct: 0 }])
-    }
-    setNewNickname(''); setShowModal(false); setAddLoading(false)
+  if (!cls) {
+    return <EmptyState emoji="🔍" title="Class not found" message="This class may have been removed." />;
   }
 
-  async function deleteStudent(id: string) {
-    if (!confirm('Remove this student?')) return
-    const supabase = createClient()
-    await supabase.from('students').delete().eq('id', id)
-    setStudents(prev => prev.filter(s => s.id !== id))
-  }
+  const addStudent = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Mock student creation — minimal PII, class-linked only.
+    const id = newId("stu");
+    const student: User = {
+      id,
+      name: studentName,
+      email: `${studentName.toLowerCase().replace(/\s+/g, "")}@student.demo`,
+      role: "student",
+      schoolId: cls.schoolId,
+      classIds: [cls.id],
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+    db.users.push(student);
+    cls.studentIds.push(id);
+    bump();
+    setStudentName("");
+    setAddOpen(false);
+  };
 
-  function copyCode() {
-    if (cls) { navigator.clipboard.writeText(cls.code); setCopied(true); setTimeout(() => setCopied(false), 2000) }
-  }
+  const removeStudent = (id: string) => {
+    cls.studentIds = cls.studentIds.filter((s) => s !== id);
+    bump();
+  };
 
-  if (loading) return <div style={{ padding: '2.5rem', color: '#9b7a55' }}>Loading class...</div>
-  if (!cls) return <div style={{ padding: '2.5rem', color: '#cc2222' }}>Class not found.</div>
+  const columns: Column<User>[] = [
+    {
+      key: "name",
+      header: "Student",
+      render: (s) => (
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-forest-100 text-sm font-bold text-forest-800">
+            {s.name.slice(0, 1)}
+          </span>
+          <span className="font-semibold text-forest-900">{s.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "activity",
+      header: "Reels watched",
+      align: "center",
+      render: (s) => getProgressByStudent(s.id).length,
+    },
+    {
+      key: "engagement",
+      header: "Engagement",
+      align: "center",
+      render: (s) => {
+        const rows = getProgressByStudent(s.id);
+        const level = rows[0]?.engagementLevel ?? "medium";
+        return rows.length ? <EngagementPill level={level} /> : <span className="text-charcoal-soft">—</span>;
+      },
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (s) => (
+        <button onClick={() => removeStudent(s.id)} className="text-sm text-clay-500 hover:text-clay-600">
+          Remove
+        </button>
+      ),
+    },
+  ];
 
   return (
-    <div style={{ padding: '2.5rem 3rem 4rem' }}>
-      <div className="breadcrumb">
-        <Link href="/teacher/classes">Manage Classes</Link> {'>'} {cls.name}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div>
-          <h1 className="page-title">{cls.name} ({cls.year_level})</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#3a1f0d' }}>
-              Class Code:{' '}
-              <span style={{ fontFamily: 'monospace', fontSize: '1.05rem', color: '#7a5230', letterSpacing: '0.1em' }}>{cls.code}</span>
-            </span>
-            <button onClick={copyCode} className="btn btn-outline btn-sm">
-              {copied ? '✓ Copied!' : '📋 Copy'}
-            </button>
+    <div className="space-y-6">
+      <Link href="/teacher/classes" className="text-sm font-semibold text-forest-700 hover:underline">
+        ← All classes
+      </Link>
+      <SectionHeader
+        title={cls.name}
+        subtitle={`${cls.yearGroup} · ${students.length} students`}
+        action={
+          <div className="flex gap-2">
+            <Link href={`/teacher/assign?class=${cls.id}`}>
+              <Button variant="secondary">📌 Assign lesson</Button>
+            </Link>
+            <Button onClick={() => setAddOpen(true)}>➕ Add student</Button>
           </div>
-          {cls.focus && <p style={{ fontSize: '0.85rem', color: '#9b7a55', marginTop: 4 }}>Focus: {cls.focus}</p>}
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button onClick={() => setShowModal(true)} className="btn btn-amber">Add Students</button>
-          <Link href={`/teacher/classes/${classId}/insights`} className="btn btn-green">Class Insights</Link>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="card">
-        {students.length === 0 ? (
-          <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🦘</div>
-            <p style={{ fontWeight: 700, color: '#7a5230', fontSize: '1.05rem', marginBottom: '0.5rem' }}>No students yet.</p>
-            <p style={{ color: '#9b7a55', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-              Share code <strong style={{ color: '#e8a020', letterSpacing: '0.1em' }}>{cls.code}</strong> or add students manually.
-            </p>
-            <button onClick={() => setShowModal(true)} className="btn btn-amber">Add Students</button>
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Progress</th>
-                <th>Password</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((s) => (
-                <tr key={s.id}>
-                  <td style={{ fontWeight: 600 }}>{s.nickname}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 140 }}>
-                      <div className="progress-track" style={{ flex: 1 }}>
-                        <div className="progress-fill" style={{ width: `${s.progress_pct ?? 0}%` }} />
-                      </div>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#7a5230', minWidth: 32 }}>
-                        {s.progress_pct ?? 0}%
-                      </span>
-                    </div>
-                  </td>
-                  <td style={{ letterSpacing: '0.1em', color: '#aaa', fontFamily: 'monospace' }}>••••••••</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <Link href={`/teacher/classes/${classId}/students/${s.id}`} title="View insights">
-                        <button className="btn-icon-green">📊</button>
-                      </Link>
-                      <button className="btn-icon-amber" title="Edit" onClick={() => {}}>✏️</button>
-                      <button className="btn-icon-red" title="Remove" onClick={() => deleteStudent(s.id)}>🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div className="card" style={{ width: '100%', maxWidth: 420, padding: '2rem', background: '#fffcef' }}>
-            <h2 className="page-title" style={{ fontSize: '1.75rem', marginBottom: '0.75rem' }}>Add Student</h2>
-            <p style={{ fontSize: '0.85rem', color: '#7a5230', marginBottom: '1.25rem' }}>
-              Or share code <strong style={{ color: '#e8a020', letterSpacing: '0.1em' }}>{cls.code}</strong> and let students join at <strong>/join</strong>
-            </p>
-            <form onSubmit={addStudent} className="space-y-3">
-              <input value={newNickname} onChange={(e) => setNewNickname(e.target.value)} placeholder="e.g. Kylie Kangaroo" required className="input-field" />
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button type="submit" disabled={addLoading} className="btn btn-amber" style={{ flex: 1 }}>{addLoading ? 'Adding...' : 'Add Student'}</button>
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
-              </div>
-            </form>
+      {/* Class code + assigned units */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Join code</p>
+          <p className="display mt-1 text-2xl font-bold tracking-widest text-forest-800">{cls.classCode}</p>
+          <p className="mt-1 text-xs text-charcoal-soft">Students enter this to join the class.</p>
+        </div>
+        <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Assigned units</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {cls.assignedUnitIds.length ? (
+              cls.assignedUnitIds.map((u) => (
+                <Badge key={u} tone="forest">
+                  {getUnit(u)?.coverEmoji} {getUnit(u)?.title}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-sm text-charcoal-soft">None yet — assign a lesson to get started.</span>
+            )}
           </div>
         </div>
-      )}
+      </div>
+
+      <DataTable
+        columns={columns}
+        rows={students}
+        keyOf={(s) => s.id}
+        empty={<EmptyState emoji="🎓" title="No students yet" message="Add students or share the join code." action={<Button onClick={() => setAddOpen(true)}>Add student</Button>} />}
+      />
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add a student">
+        <form onSubmit={addStudent} className="space-y-4">
+          <FormField label="Display name" required hint="First name and last initial keeps personal data minimal">
+            <input className={inputClass} required value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="e.g. Jordan K." />
+          </FormField>
+          <div className="flex justify-end">
+            <Button type="submit">Add to class</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
-  )
+  );
 }
