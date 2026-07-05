@@ -139,25 +139,36 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          {/* Media panel with floating stat cards */}
-          <div className="relative">
-            <div
-              className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-hero"
-              style={{ background: "linear-gradient(150deg, #14352a 0%, #2d6a4f 55%, #40916c 100%)" }}
-            >
-              <div className="absolute inset-0 opacity-40" style={{ background: "url(/trees.png) bottom center / cover no-repeat" }} />
-              <div className="absolute inset-0 grid place-items-center">
-                <video className="ken-burns h-full w-full object-cover opacity-90" autoPlay muted loop playsInline poster="/intro-poster.jpg" aria-hidden>
-                  <source src="/intro-bg.mp4" type="video/mp4" />
-                </video>
+          {/* Portrait reel card with floating stat cards */}
+          <div className="relative mx-auto w-full max-w-[320px]">
+            {/* Phone-style short-form reel */}
+            <div className="relative aspect-[9/16] overflow-hidden rounded-[2rem] bg-forest-950 shadow-hero ring-1 ring-black/10">
+              <video
+                className="h-full w-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+                poster="/reel-following-poster.jpg"
+                preload="metadata"
+                aria-label="Short-form wildlife reel: walking behind chimps in Uganda"
+              >
+                <source src="/reel-following.mp4" type="video/mp4" />
+              </video>
+              {/* subtle bottom scrim + reel label */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-forest-950/80 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 text-cream">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-cream text-sm">🦍</span>
+                <span className="text-xs font-semibold drop-shadow">A BioBloke reel · Great Apes</span>
               </div>
             </div>
+
             {/* Floating stat cards */}
-            <div className="float-y-slow absolute -left-4 top-8 rounded-2xl bg-white p-4 shadow-lift ring-1 ring-black/5">
+            <div className="float-y-slow absolute -left-4 top-10 rounded-2xl bg-white p-4 shadow-lift ring-1 ring-black/5">
               <p className="display text-3xl font-bold text-clay-500">3</p>
               <p className="text-xs font-medium text-charcoal-soft">Stages · Yr 5–10</p>
             </div>
-            <div className="float-y absolute -right-3 bottom-8 rounded-2xl bg-white p-4 shadow-lift ring-1 ring-black/5">
+            <div className="float-y absolute -right-5 bottom-14 rounded-2xl bg-white p-4 shadow-lift ring-1 ring-black/5">
               <p className="display text-3xl font-bold text-forest-600">100%</p>
               <p className="text-xs font-medium text-charcoal-soft">Adaptive to each student</p>
             </div>
