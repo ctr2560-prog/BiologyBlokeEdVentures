@@ -23,17 +23,6 @@ const roleMeta: { role: Role; emoji: string; blurb: string }[] = [
   { role: "student", emoji: "🎓", blurb: "Watch, explore & earn points" },
 ];
 
-// Depth particles: emoji, [x%, y%], depth factor (higher = moves more), size, float class.
-const particles = [
-  { e: "🦋", x: 12, y: 22, d: 55, s: "text-4xl", f: "float-y" },
-  { e: "🍃", x: 82, y: 18, d: 40, s: "text-3xl", f: "float-y-slow" },
-  { e: "🐨", x: 8, y: 70, d: 30, s: "text-5xl", f: "float-y-fast" },
-  { e: "🌿", x: 90, y: 62, d: 65, s: "text-4xl", f: "float-y" },
-  { e: "🦜", x: 24, y: 82, d: 48, s: "text-3xl", f: "float-y-slow" },
-  { e: "🍂", x: 70, y: 84, d: 35, s: "text-4xl", f: "float-y-fast" },
-  { e: "✨", x: 60, y: 30, d: 70, s: "text-2xl", f: "float-y" },
-];
-
 export default function LandingPage() {
   const { loginAs } = useApp();
   const router = useRouter();
@@ -90,25 +79,7 @@ export default function LandingPage() {
         <div className="absolute inset-0" style={{ background: "radial-gradient(130% 100% at 55% 42%, transparent 62%, rgba(5,17,11,0.6) 100%)" }} />
       </div>
 
-      {/* ---- Layer 2: floating depth particles (parallax) ---- */}
-      <div className="preserve-3d pointer-events-none absolute inset-0">
-        {particles.map((p, i) => (
-          <span
-            key={i}
-            className={`absolute ${p.s} ${p.f} select-none opacity-70 drop-shadow-lg`}
-            style={{
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              transform: `translate3d(${pointer.x * p.d}px, ${pointer.y * p.d}px, 0)`,
-              transition: "transform 0.25s ease-out",
-            }}
-          >
-            {p.e}
-          </span>
-        ))}
-      </div>
-
-      {/* ---- Layer 3: content ---- */}
+      {/* ---- Layer 2: content ---- */}
       <div className="relative mx-auto grid min-h-screen max-w-6xl grid-cols-1 items-center gap-10 px-6 py-12 lg:grid-cols-2">
         {/* Hero copy — parallaxes gently opposite the card */}
         <div
