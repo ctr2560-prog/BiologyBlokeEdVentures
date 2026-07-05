@@ -128,7 +128,7 @@ export function generateClassInsights(pathways: Pathway[], topicEngagement: Reco
 /**
  * Selects the next recommended video for a student based on their pathway.
  */
-export function recommendNextContent(pathway: Pathway, currentTopicId: string): {
+export function recommendNextContent(pathway: Pathway): {
   label: string
   recommendation: string
   icon: string

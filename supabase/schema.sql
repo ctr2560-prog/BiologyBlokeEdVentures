@@ -60,6 +60,34 @@ CREATE TABLE IF NOT EXISTS class_edventures (
   UNIQUE(class_id, stage_id, topic_id)
 );
 
+-- ─── EDVENTURE VIDEOS ──────────────────────────────────────
+-- Teacher-managed short-form media and adaptive timing rules
+CREATE TABLE IF NOT EXISTS edventure_videos (
+  id                          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  teacher_id                  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  stage_id                    TEXT NOT NULL,
+  topic_id                    TEXT NOT NULL,
+  title                       TEXT NOT NULL,
+  description                 TEXT,
+  video_url                   TEXT NOT NULL,
+  thumbnail_emoji             TEXT DEFAULT '🌿',
+  duration_seconds            INTEGER NOT NULL DEFAULT 90,
+  sequence_index              INTEGER NOT NULL DEFAULT 1,
+  curiosity_prompt            TEXT NOT NULL,
+  curiosity_prompt_at_seconds INTEGER NOT NULL DEFAULT 45,
+  check_in_question           TEXT NOT NULL,
+  check_in_options            JSONB NOT NULL DEFAULT '[]'::jsonb,
+  correct_option              TEXT NOT NULL,
+  check_in_at_seconds         INTEGER NOT NULL DEFAULT 75,
+  support_threshold_pct       INTEGER NOT NULL DEFAULT 40,
+  explore_threshold_pct       INTEGER NOT NULL DEFAULT 80,
+  adaptive_focus              TEXT,
+  support_resource_url        TEXT,
+  explore_resource_url        TEXT,
+  is_published                BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at                  TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ─── STUDENT PATHWAYS LOG ─────────────────────────────────
 -- Historical log of pathway changes for a student
 CREATE TABLE IF NOT EXISTS pathway_history (
@@ -80,6 +108,7 @@ ALTER TABLE classes         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE watch_events    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE class_edventures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE edventure_videos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pathway_history ENABLE ROW LEVEL SECURITY;
 
 -- ─── CLASSES policies ─────────────────────────────────────
@@ -133,6 +162,16 @@ CREATE POLICY "Students read assigned edventures"
   ON class_edventures FOR SELECT
   USING (class_id IN (SELECT class_id FROM students WHERE id = auth.uid()));
 
+-- ─── EDVENTURE VIDEOS policies ────────────────────────────
+CREATE POLICY "Teachers manage own video library"
+  ON edventure_videos FOR ALL
+  USING (auth.uid() = teacher_id)
+  WITH CHECK (auth.uid() = teacher_id);
+
+CREATE POLICY "Students read published videos"
+  ON edventure_videos FOR SELECT
+  USING (is_published = TRUE);
+
 -- ─── PATHWAY HISTORY policies ─────────────────────────────
 CREATE POLICY "Teachers read pathway history"
   ON pathway_history FOR SELECT
@@ -153,6 +192,7 @@ CREATE INDEX IF NOT EXISTS idx_watch_events_student ON watch_events(student_id);
 CREATE INDEX IF NOT EXISTS idx_watch_events_class   ON watch_events(class_id);
 CREATE INDEX IF NOT EXISTS idx_classes_teacher      ON classes(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_classes_code         ON classes(code);
+CREATE INDEX IF NOT EXISTS idx_videos_teacher_topic ON edventure_videos(teacher_id, stage_id, topic_id, sequence_index);
 
 -- ============================================================
 -- FUNCTION: Update student pathway after watch event

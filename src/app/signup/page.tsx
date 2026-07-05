@@ -91,13 +91,13 @@ export default function SignupPage() {
               { name: 'school',       label: 'School Name:',     type: 'text',     placeholder: 'Your school' },
               { name: 'password',     label: 'Create a password:', type: 'password', placeholder: '•••••••••••••••' },
               { name: 'confirm',      label: 'Confirm password:', type: 'password', placeholder: '•••••••••••••••' },
-            ].map((f) => (
+            ].map((f: { name: keyof typeof form; label: string; type: string; placeholder: string }) => (
               <div key={f.name}>
                 <label style={{ fontSize: '0.9rem', fontWeight: 700, color: '#3a1f0d', display: 'block', marginBottom: 5 }}>{f.label}</label>
                 <input
                   name={f.name}
                   type={f.type}
-                  value={(form as any)[f.name]}
+                  value={form[f.name]}
                   onChange={handleChange}
                   placeholder={f.placeholder}
                   required={f.name !== 'teachingFocus'}

@@ -1,15 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+type ProfileForm = {
+  name: string
+  school: string
+  yearLevel: string
+  teachingFocus: string
+}
+
 export default function SettingsPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [form, setForm] = useState({ name: '', school: '', yearLevel: '', teachingFocus: '' })
+  const [form, setForm] = useState<ProfileForm>({ name: '', school: '', yearLevel: '', teachingFocus: '' })
 
   useEffect(() => {
     async function load() {
@@ -67,12 +75,12 @@ export default function SettingsPage() {
             { name: 'school', label: 'School', placeholder: 'School name' },
             { name: 'yearLevel', label: 'Year Level', placeholder: 'e.g. Year 7–8' },
             { name: 'teachingFocus', label: 'Teaching Focus', placeholder: 'e.g. ecosystems' },
-          ].map((f) => (
+          ].map((f: { name: keyof ProfileForm; label: string; placeholder: string }) => (
             <div key={f.name}>
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#5c3a1e', display: 'block', marginBottom: 5 }}>{f.label}</label>
               <input
                 name={f.name}
-                value={(form as any)[f.name]}
+                value={form[f.name]}
                 onChange={(e) => setForm({ ...form, [e.target.name]: e.target.value })}
                 placeholder={f.placeholder}
                 className="input-field"

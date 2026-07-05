@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -74,7 +75,7 @@ export default function StudentDashboard() {
     return (
       <div className="experience-bg flex flex-col items-center justify-center min-h-screen" style={{ color: '#e4dab8', textAlign: 'center', padding: '2rem' }}>
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌿</div>
-        <p style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>You haven't joined a class yet.</p>
+        <p style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>You have not joined a class yet.</p>
         <Link href="/join" className="btn btn-amber">Join a Class</Link>
       </div>
     )
@@ -90,7 +91,7 @@ export default function StudentDashboard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '10%', padding: 4 }}>
-            <img src="/logo.png" alt="Biology Bloke" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+            <Image src="/logo.png" alt="Biology Bloke" width={32} height={32} style={{ objectFit: 'contain' }} />
           </div>
           <span style={{ color: '#e4dab8', fontSize: '0.85rem', fontWeight: 700 }}>Biology Bloke Edventures</span>
         </div>

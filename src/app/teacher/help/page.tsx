@@ -31,7 +31,7 @@ export default function HelpPage() {
           Need more help?
         </h3>
         <p style={{ fontSize: '0.875rem', color: '#5c3a1e', marginBottom: '0.75rem' }}>
-          Contact Biology Bloke Edventures support and we'll get back to you within 24 hours.
+          Contact Biology Bloke Edventures support and we&apos;ll get back to you within 24 hours.
         </p>
         <a href="mailto:support@biologyblokeedventures.com" className="btn btn-amber btn-sm">
           📧 Contact Support

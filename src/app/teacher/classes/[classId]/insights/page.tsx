@@ -25,6 +25,12 @@ interface Insight {
   message: string
 }
 
+interface WatchEvent {
+  topic: string
+  watch_pct: number | null
+  avg_time_seconds: number | null
+}
+
 export default function ClassInsightsPage() {
   const { classId } = useParams<{ classId: string }>()
   const [className, setClassName] = useState('')
@@ -50,7 +56,7 @@ export default function ClassInsightsPage() {
       // Build chart data from events
       if (events && events.length > 0) {
         const byTopic: Record<string, number[]> = {}
-        events.forEach((e: any) => {
+        ;(events as WatchEvent[]).forEach((e) => {
           if (!byTopic[e.topic]) byTopic[e.topic] = []
           byTopic[e.topic].push(e.watch_pct ?? 0)
         })
@@ -59,7 +65,7 @@ export default function ClassInsightsPage() {
           avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
         }))
         setChartData(points)
-        const allVals = events.map((e: any) => e.avg_time_seconds ?? 0)
+        const allVals = (events as WatchEvent[]).map((e) => e.avg_time_seconds ?? 0)
         setAvgTime(Math.round(allVals.reduce((a: number, b: number) => a + b, 0) / allVals.length))
       } else {
         // Demo data for empty state

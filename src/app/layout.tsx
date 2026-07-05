@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { Bangers, Nunito } from "next/font/google";
+import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
-const bangers = Bangers({
-  weight: "400",
+const displayFont = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-bangers",
   display: "swap",
 });
 
-const nunito = Nunito({
+const bodyFont = Manrope({
   subsets: ["latin"],
   variable: "--font-nunito",
   display: "swap",
@@ -26,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`h-full ${bangers.variable} ${nunito.variable}`}>
+    <html lang="en" className={`h-full ${displayFont.variable} ${bodyFont.variable}`}>
       <body className="min-h-full font-nunito">{children}</body>
     </html>
   );

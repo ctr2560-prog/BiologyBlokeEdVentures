@@ -12,6 +12,14 @@ interface ClassRow {
   student_count: number
 }
 
+interface ClassQueryRow {
+  id: string
+  code: string
+  name: string
+  year_level: string
+  students: { count: number }[] | null
+}
+
 export default function ClassesPage() {
   const [classes, setClasses] = useState<ClassRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,7 +33,7 @@ export default function ClassesPage() {
         .select('id, code, name, year_level, students(count)')
         .order('created_at', { ascending: false })
       if (data) {
-        setClasses(data.map((c: any) => ({
+        setClasses((data as ClassQueryRow[]).map((c) => ({
           id: c.id, code: c.code, name: c.name, year_level: c.year_level,
           student_count: c.students?.[0]?.count ?? 0,
         })))
