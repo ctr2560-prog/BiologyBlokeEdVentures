@@ -72,29 +72,29 @@ export default function LandingPage() {
 
         {/* Cinematic darkening for legibility */}
         <div className="grain pointer-events-none absolute inset-0">
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(9,26,18,0.55) 0%, rgba(9,26,18,0.35) 40%, rgba(9,26,18,0.7) 100%)" }} />
-          <div className="absolute inset-0" style={{ background: "radial-gradient(120% 100% at 50% 45%, transparent 55%, rgba(5,17,11,0.7) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(9,26,18,0.68) 0%, rgba(9,26,18,0.5) 40%, rgba(9,26,18,0.82) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(120% 100% at 50% 45%, transparent 50%, rgba(5,17,11,0.8) 100%)" }} />
         </div>
 
         {/* Centered copy */}
         <div className="rise-in relative z-10 mx-auto max-w-3xl px-6">
-          {/* Large centred Biology Bloke logo */}
+          {/* Large centred Biology Bloke Edventures logo (home page only) */}
           <Image
-            src="/logo-white.png"
-            alt="The Biology Bloke"
-            width={360}
-            height={360}
+            src="/logo-home.png"
+            alt="The Biology Bloke Edventures"
+            width={420}
+            height={420}
             priority
-            className="float-y-slow mx-auto h-40 w-auto drop-shadow-2xl md:h-56"
+            className="float-y-slow mx-auto h-44 w-auto drop-shadow-2xl md:h-60"
           />
-          <h1 className="display mt-6 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-7xl">
+          <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
             Australia&apos;s wildest way to learn conservation.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-cream/85 md:text-xl">
             Cinematic wildlife reels, adaptive missions and live class insights —
             ready to teach.
           </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <a href="#signin">
               <Button size="lg">Enter the platform →</Button>
             </a>
