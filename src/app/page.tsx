@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { roleHome, roleLabel } from "@/components/layout/navConfig";
 import { Button, Modal, inputClass } from "@/components/ui/primitives";
+import { Reveal } from "@/components/ui/Reveal";
+import { PlatformTabs } from "@/components/layout/PlatformTabs";
 import { getClasses } from "@/lib/dataService";
 import type { Role } from "@/types";
 
@@ -129,8 +131,9 @@ export default function LandingPage() {
 
       {/* ============ What you get (clean white section) ============ */}
       <section id="how" className="mx-auto max-w-6xl scroll-mt-8 px-6 py-20 md:py-28">
+        <Reveal>
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-          <div className="rise-in">
+          <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-forest-600">
               Built for real classrooms
             </p>
@@ -188,6 +191,26 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+        </Reveal>
+      </section>
+
+      {/* ============ One platform, every role (tabs) ============ */}
+      <section className="bg-cream-dark/40 px-6 py-20 md:py-28">
+        <div className="mx-auto max-w-6xl">
+          <Reveal>
+            <div className="mx-auto mb-10 max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-forest-600">
+                One platform, every role
+              </p>
+              <h2 className="display mt-3 text-3xl font-bold text-forest-900 md:text-5xl">
+                Made for teachers, students &amp; schools.
+              </h2>
+            </div>
+          </Reveal>
+          <Reveal delay={120}>
+            <PlatformTabs />
+          </Reveal>
+        </div>
       </section>
 
       {/* ============ Sign in (forest section) ============ */}
@@ -197,7 +220,7 @@ export default function LandingPage() {
         style={{ background: "linear-gradient(160deg, #14352a 0%, #1b4332 55%, #0d2419 100%)" }}
       >
         <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "26px 26px" }} />
-        <div className="relative mx-auto max-w-md text-center">
+        <Reveal className="relative mx-auto max-w-md text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-forest-100/70">
             Start your Edventure
           </p>
@@ -266,7 +289,7 @@ export default function LandingPage() {
           <p className="mt-8 text-xs text-forest-100/60">
             The Biology Bloke · Conservation education for schools
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* ============ Student code modal ============ */}
