@@ -133,15 +133,15 @@ export default function LandingPage() {
           />
           <p className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-cream/25 bg-forest-950/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cream backdrop-blur">
             <Globe className="h-4 w-4" aria-hidden />
-            The first adaptive short-form media platform
+            The world&apos;s first adaptive short-form media platform
           </p>
           <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
-            The world&apos;s wildest way to learn to protect our planet.
+            Every wild place on Earth is a classroom.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-cream/85 md:text-xl">
-            Students explore the wild alongside The Biology Bloke through short reels that
-            adapt to each learner, turning curiosity into real-world action, in science,
-            geography, English and beyond.
+            Students explore the wild alongside The Biology Bloke through short reels. The
+            platform analyses how each learner engages, then sets them adapted work,
+            turning curiosity into real-world understanding and action, beyond just science.
           </p>
         </div>
 
