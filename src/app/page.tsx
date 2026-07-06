@@ -13,6 +13,7 @@ import { useApp } from "@/lib/store";
 import { roleHome, roleLabel } from "@/components/layout/navConfig";
 import { Button, Modal, inputClass } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
+import { ScrollProgress } from "@/components/ui/motion";
 import { PlatformTabs } from "@/components/layout/PlatformTabs";
 import {
   WhyShortForm,
@@ -79,6 +80,7 @@ export default function LandingPage() {
 
   return (
     <div className="bg-cream">
+      <ScrollProgress />
       {/* ============ Top nav ============ */}
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-end px-6 py-5">
