@@ -133,14 +133,14 @@ export default function LandingPage() {
           />
           <p className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-cream/25 bg-forest-950/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cream backdrop-blur">
             <Globe className="h-4 w-4" aria-hidden />
-            The world&apos;s first platform for learning through nature
+            The world&apos;s first adaptive short-form media platform
           </p>
           <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
-            The world&apos;s oldest classroom is the one outside.
+            The world&apos;s wildest way to learn to protect our planet.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-cream/85 md:text-xl">
-            Short, cinematic reels take students into wild places they&apos;ve never seen,
-            then inspire them to protect the world they call home.
+            Students explore the wild through short, cinematic reels, and the platform
+            adapts to each learner, turning curiosity into personalised work.
           </p>
         </div>
 
