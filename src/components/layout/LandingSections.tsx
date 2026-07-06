@@ -18,7 +18,7 @@ import {
   Aurora,
   AnimatedHeading,
 } from "@/components/ui/motion";
-import { exploreEcosystems, videos } from "@/data/content";
+import { exploreEcosystems } from "@/data/content";
 import { getEcoIcon } from "@/lib/icons";
 import {
   Timer,
@@ -29,6 +29,15 @@ import {
   Compass,
   Sparkles,
   BarChart3,
+  BookOpen,
+  Calculator,
+  FlaskConical,
+  Landmark,
+  Palette,
+  Music,
+  HeartPulse,
+  PenTool,
+  Leaf,
   type LucideIcon,
 } from "lucide-react";
 
@@ -207,8 +216,8 @@ export function ContentShowcase() {
           />
           <Reveal delay={100}>
             <p className="mx-auto mt-5 max-w-xl text-lg text-charcoal-soft">
-              From the rainforests of Borneo to the coral reefs of the Pacific, every wild
-              place becomes a series of short, cinematic missions.
+              From the rainforests of Sumatra to the savannahs of Africa, every wild place
+              becomes a series of short, cinematic missions.
             </p>
           </Reveal>
         </div>
@@ -240,22 +249,19 @@ export function ContentShowcase() {
         </div>
       </div>
 
-      {/* Dual marquees */}
+      {/* Dual marquees: a different key learning area in every reel */}
       <div className="mt-12 space-y-3">
         <Marquee durationSeconds={38}>
-          {exploreEcosystems.map((eco) => {
-            const Icon = getEcoIcon(eco.id);
-            return (
-              <span key={eco.id} className="inline-flex items-center gap-2 rounded-full bg-forest-50 px-5 py-2.5 text-base font-semibold text-forest-800">
-                <Icon className="h-4 w-4" aria-hidden /> {eco.name}
-              </span>
-            );
-          })}
+          {learningAreas.slice(0, 5).map((la) => (
+            <span key={la.label} className="inline-flex items-center gap-2 rounded-full bg-forest-50 px-5 py-2.5 text-base font-semibold text-forest-800">
+              <la.Icon className="h-4 w-4" aria-hidden /> {la.label}
+            </span>
+          ))}
         </Marquee>
         <Marquee durationSeconds={44} reverse>
-          {videos.map((v) => (
-            <span key={v.id} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-base font-medium text-charcoal ring-1 ring-sand">
-              <Film className="h-4 w-4 text-forest-600" aria-hidden /> {v.title}
+          {learningAreas.slice(5).map((la) => (
+            <span key={la.label} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-base font-medium text-charcoal ring-1 ring-sand">
+              <la.Icon className="h-4 w-4 text-forest-600" aria-hidden /> {la.label}
             </span>
           ))}
         </Marquee>
@@ -263,6 +269,20 @@ export function ContentShowcase() {
     </section>
   );
 }
+
+/* A different key learning area brought to life in the wild. */
+const learningAreas: { label: string; Icon: LucideIcon }[] = [
+  { label: "Narrative in chimpanzee troops", Icon: BookOpen },
+  { label: "Mathematics in the zoo", Icon: Calculator },
+  { label: "Geography across the savannah", Icon: Globe },
+  { label: "Science in the rainforest canopy", Icon: FlaskConical },
+  { label: "History in ancient forests", Icon: Landmark },
+  { label: "Visual art inspired by the wild", Icon: Palette },
+  { label: "Music in the dawn chorus", Icon: Music },
+  { label: "Wellbeing in the great outdoors", Icon: HeartPulse },
+  { label: "Design a wildlife corridor", Icon: PenTool },
+  { label: "Sustainability in action", Icon: Leaf },
+];
 
 /* ---------- Founder story ---------- */
 export function FounderStory() {

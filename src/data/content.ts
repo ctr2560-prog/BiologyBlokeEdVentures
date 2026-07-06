@@ -718,12 +718,12 @@ export const badges: BadgeDef[] = [
 export const exploreEcosystems = [
   { id: "eco-rainforest", name: "Rainforests", emoji: "", blurb: "Layered worlds bursting with life, from canopy to forest floor.", color: "#1b4332" },
   { id: "eco-bush", name: "Australian Bush", emoji: "", blurb: "Fire-shaped landscapes home to marsupials found nowhere else.", color: "#a47148" },
-  { id: "eco-reef", name: "Coral Reefs", emoji: "", blurb: "The rainforests of the sea, colourful, fragile and vital.", color: "#5c8aa8" },
   { id: "eco-wetlands", name: "Wetlands", emoji: "", blurb: "Nature's kidneys, filtering water and sheltering wildlife.", color: "#2d6a4f" },
-  { id: "eco-savanna", name: "Savanna", emoji: "", blurb: "Vast grasslands where great herds and hunters roam.", color: "#c08552" },
+  { id: "eco-savanna", name: "Savannah", emoji: "", blurb: "Vast grasslands where great herds and hunters roam.", color: "#c08552" },
   { id: "eco-apes", name: "Great Apes", emoji: "", blurb: "Our closest cousins, intelligent, social and endangered.", color: "#8b5e3c" },
   { id: "eco-cats", name: "Big Cats", emoji: "", blurb: "Powerful, stealthy predators at the top of their food webs.", color: "#40916c" },
   { id: "eco-marsupials", name: "Marsupials", emoji: "", blurb: "Pouched mammals uniquely adapted to Australian life.", color: "#74c69d" },
+  { id: "eco-nocturnal", name: "Nocturnal", emoji: "", blurb: "The hidden world that only comes alive after dark.", color: "#3b3a63" },
 ];
 
 export const conservationFacts = [

@@ -7,9 +7,9 @@
 import {
   TreePalm,
   Trees,
-  Fish,
   Bird,
   Sun,
+  Moon,
   PawPrint,
   Cat,
   Rabbit,
@@ -24,12 +24,12 @@ import {
 export const ecoIcon: Record<string, LucideIcon> = {
   "eco-rainforest": TreePalm,
   "eco-bush": Trees,
-  "eco-reef": Fish,
   "eco-wetlands": Bird,
   "eco-savanna": Sun,
   "eco-apes": PawPrint,
   "eco-cats": Cat,
   "eco-marsupials": Rabbit,
+  "eco-nocturnal": Moon,
 };
 
 export const getEcoIcon = (id: string): LucideIcon => ecoIcon[id] ?? Leaf;
