@@ -17,8 +17,8 @@ export default function QuizzesPage() {
     <div className="space-y-6">
       <SectionHeader
         title="Quizzes"
-        subtitle="Quick checks linked to topics — used for adaptive recommendations"
-        action={<Button onClick={() => setModal(true)}>➕ Build quiz</Button>}
+        subtitle="Quick checks linked to topics, used for adaptive recommendations"
+        action={<Button onClick={() => setModal(true)}> Build quiz</Button>}
       />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {quizzes.map((z) => (
@@ -26,7 +26,7 @@ export default function QuizzesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="display font-bold text-forest-900">{z.title}</h3>
-                <p className="text-xs text-charcoal-soft">{getTopic(z.topicId)?.title ?? "—"}</p>
+                <p className="text-xs text-charcoal-soft">{getTopic(z.topicId)?.title ?? "-"}</p>
               </div>
               <Badge tone="forest">{z.questions.length} questions</Badge>
             </div>

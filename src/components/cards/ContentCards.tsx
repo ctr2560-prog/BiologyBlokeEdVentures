@@ -1,15 +1,31 @@
 "use client";
 /*
- * Content cards: cohesive rounded, tactile cards with large emoji "imagery"
+ * Content cards: cohesive rounded, tactile cards with gradient "imagery"
  * placeholders standing in for real wildlife thumbnails. Each is ready to swap
- * the gradient/emoji for a real <Image> once media is uploaded.
+ * the gradient/icon for a real <Image> once media is uploaded. Icons are SVG
+ * (lucide-react), no emojis.
  */
 import Link from "next/link";
 import type { Unit, Video, Resource, Topic, ClassGroup } from "@/types";
 import { Badge, ProgressBar } from "@/components/ui/primitives";
 import { formatWatchTime } from "@/lib/analytics";
+import {
+  Leaf,
+  Film,
+  FileText,
+  HelpCircle,
+  Play,
+  Users,
+  BookOpen,
+  Presentation,
+  ClipboardList,
+  Target,
+  Rocket,
+  Sprout,
+  type LucideIcon,
+} from "lucide-react";
 
-// Warm nature gradients keyed loosely by ecosystem/emoji.
+// Warm nature gradients keyed loosely by a seed string.
 function heroGradient(seed: string): string {
   const gradients = [
     "linear-gradient(135deg, #1b4332 0%, #2d6a4f 55%, #52b788 100%)",
@@ -33,9 +49,7 @@ export function UnitCard({ unit, href }: { unit: Unit; href: string }) {
         className="relative flex h-36 items-center justify-center"
         style={{ background: heroGradient(unit.id) }}
       >
-        <span className="text-6xl drop-shadow-lg transition-transform group-hover:scale-110">
-          {unit.coverEmoji}
-        </span>
+        <Leaf className="h-14 w-14 text-cream/90 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
         <span className="absolute left-3 top-3">
           <Badge tone="gold">{unit.stage}</Badge>
         </span>
@@ -63,10 +77,10 @@ export function TopicCard({ topic, href }: { topic: Topic; href?: string }) {
     <div className="card-lift h-full rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
       <div className="flex items-center gap-3">
         <span
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-2xl"
-          style={{ background: heroGradient(topic.id), color: "white" }}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white"
+          style={{ background: heroGradient(topic.id) }}
         >
-          {topic.animalFocus[0]?.[0] ?? "🌿"}
+          <Leaf className="h-5 w-5" aria-hidden />
         </span>
         <div>
           <h3 className="display font-bold text-forest-900">{topic.title}</h3>
@@ -82,9 +96,9 @@ export function TopicCard({ topic, href }: { topic: Topic; href?: string }) {
         ))}
       </div>
       <div className="mt-3 flex gap-3 text-xs text-charcoal-soft">
-        <span>🎬 {topic.videoIds.length}</span>
-        <span>📝 {topic.resourceIds.length}</span>
-        <span>❓ {topic.quizIds.length}</span>
+        <span className="inline-flex items-center gap-1"><Film className="h-3.5 w-3.5" aria-hidden /> {topic.videoIds.length}</span>
+        <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" aria-hidden /> {topic.resourceIds.length}</span>
+        <span className="inline-flex items-center gap-1"><HelpCircle className="h-3.5 w-3.5" aria-hidden /> {topic.quizIds.length}</span>
       </div>
     </div>
   );
@@ -106,16 +120,14 @@ export function VideoCard({
     <div className="card-lift group h-full overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5">
       <div
         className="relative flex h-40 items-center justify-center"
-        style={{ background: heroGradient(video.thumbEmoji) }}
+        style={{ background: heroGradient(video.id) }}
       >
-        <span className="text-6xl drop-shadow-lg transition-transform group-hover:scale-110">
-          {video.thumbEmoji}
-        </span>
+        <Film className="h-14 w-14 text-cream/90 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
         <span className="glass-dark absolute bottom-2 right-2 rounded-full px-2 py-0.5 text-xs font-semibold text-cream">
           {formatWatchTime(video.durationSeconds)}
         </span>
         <span className="absolute left-1/2 top-1/2 grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full glass text-forest-800 opacity-0 shadow-lift transition-opacity group-hover:opacity-100">
-          ▶
+          <Play className="h-5 w-5" aria-hidden />
         </span>
         {points !== undefined && (
           <span className="absolute left-2 top-2">
@@ -144,21 +156,22 @@ export function VideoCard({
   return href ? <Link href={href} className="block h-full">{inner}</Link> : inner;
 }
 
-const resourceIcon: Record<Resource["type"], string> = {
-  worksheet: "📄",
-  powerpoint: "📊",
-  teacherGuide: "📘",
-  assessment: "✅",
-  activity: "🎯",
-  extension: "🚀",
-  support: "🪴",
+const resourceIcon: Record<Resource["type"], LucideIcon> = {
+  worksheet: FileText,
+  powerpoint: Presentation,
+  teacherGuide: BookOpen,
+  assessment: ClipboardList,
+  activity: Target,
+  extension: Rocket,
+  support: Sprout,
 };
 
 export function ResourceCard({ resource }: { resource: Resource }) {
+  const Icon = resourceIcon[resource.type];
   return (
     <div className="card-lift flex items-center gap-4 rounded-3xl bg-white p-4 shadow-soft ring-1 ring-black/5">
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-forest-50 text-2xl">
-        {resourceIcon[resource.type]}
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-forest-50 text-forest-700">
+        <Icon className="h-5 w-5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
         <h3 className="truncate font-semibold text-forest-900">{resource.title}</h3>
@@ -205,8 +218,8 @@ export function ClassCard({
       <div className="p-5">
         <h3 className="display text-lg font-bold text-forest-900">{cls.name}</h3>
         <div className="mt-2 flex items-center gap-3 text-sm text-charcoal-soft">
-          <span>👥 {studentCount} students</span>
-          <span>📚 {cls.assignedUnitIds.length} units</span>
+          <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" aria-hidden /> {studentCount} students</span>
+          <span className="inline-flex items-center gap-1"><BookOpen className="h-4 w-4" aria-hidden /> {cls.assignedUnitIds.length} units</span>
         </div>
       </div>
     </Link>

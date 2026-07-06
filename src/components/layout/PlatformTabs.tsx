@@ -1,9 +1,9 @@
 "use client";
 /*
- * PlatformTabs — Atomi-style tabbed feature section. Three tabs (Teachers /
+ * PlatformTabs, Atomi-style tabbed feature section. Three tabs (Teachers /
  * Students / Schools); switching a tab swaps an animated preview panel that
  * mocks the relevant portal using the app's real design language.
- * Icons are SVG (lucide-react) — no emojis.
+ * Icons are SVG (lucide-react), no emojis.
  */
 import { useState } from "react";
 import { Badge } from "@/components/ui/primitives";
@@ -36,7 +36,7 @@ const tabs: {
     id: "teachers",
     label: "Teachers",
     Icon: Presentation,
-    heading: "See exactly who needs support — and who's ready to fly.",
+    heading: "See exactly who needs support, and who's ready to fly.",
     blurb:
       "Assign a unit in seconds, then watch live class insights update as students learn.",
     points: [
@@ -97,7 +97,7 @@ export function PlatformTabs() {
         ))}
       </div>
 
-      {/* Content — re-mounts on tab change to animate in */}
+      {/* Content, re-mounts on tab change to animate in */}
       <div key={active} className="panel-in grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
         <div>
           <h3 className="display text-2xl font-bold leading-tight text-forest-900 md:text-4xl">

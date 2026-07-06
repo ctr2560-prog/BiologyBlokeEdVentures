@@ -1,6 +1,6 @@
 "use client";
 /*
- * Elegant CSS-driven chart components — no heavy chart dependency needed for
+ * Elegant CSS-driven chart components, no heavy chart dependency needed for
  * the MVP. Each wraps in an AnalyticsChartCard for consistent framing.
  */
 import type { ReactNode } from "react";

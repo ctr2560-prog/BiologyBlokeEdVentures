@@ -1,6 +1,6 @@
 "use client";
 /*
- * AppShell — the responsive frame shared by every portal.
+ * AppShell, the responsive frame shared by every portal.
  * Desktop: fixed sidebar with nav + role switcher. Mobile: top bar with a
  * slide-in drawer. Redirects to the login page if no demo user is selected.
  */
@@ -11,6 +11,7 @@ import { useApp } from "@/lib/store";
 import { navByRole, roleLabel } from "./navConfig";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { Logo } from "@/components/ui/Logo";
+import { Menu, X, LogOut } from "lucide-react";
 import type { Role } from "@/types";
 
 export function AppShell({
@@ -53,7 +54,7 @@ export function AppShell({
               : "text-charcoal-soft hover:bg-forest-50 hover:text-forest-800"
           }`}
         >
-          <span className="text-base">{item.icon}</span>
+          <item.Icon className="h-5 w-5 shrink-0" aria-hidden strokeWidth={1.75} />
           {item.label}
         </Link>
       ))}
@@ -79,7 +80,7 @@ export function AppShell({
             onClick={handleLogout}
             className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-charcoal-soft hover:bg-clay-400/10 hover:text-clay-600"
           >
-            <span>↩</span> Sign out
+<LogOut className="h-4 w-4" aria-hidden /> Sign out
           </button>
         </div>
       </aside>
@@ -92,7 +93,7 @@ export function AppShell({
           aria-label="Open menu"
           className="grid h-10 w-10 place-items-center rounded-2xl bg-forest-50 text-forest-800"
         >
-          ☰
+          <Menu className="h-5 w-5" aria-hidden />
         </button>
       </header>
 
@@ -111,7 +112,7 @@ export function AppShell({
                 aria-label="Close menu"
                 className="grid h-9 w-9 place-items-center rounded-full text-charcoal-soft hover:bg-charcoal/8"
               >
-                ✕
+                <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
             <NavLinks />
@@ -121,7 +122,7 @@ export function AppShell({
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-charcoal-soft hover:bg-clay-400/10"
               >
-                <span>↩</span> Sign out
+    <LogOut className="h-4 w-4" aria-hidden /> Sign out
               </button>
             </div>
           </div>

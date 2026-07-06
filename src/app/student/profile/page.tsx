@@ -4,6 +4,7 @@ import { SectionHeader, Badge, Button, FormField, inputClass } from "@/component
 import { getUser, getClass, getBadges } from "@/lib/dataService";
 import { explorerPoints, earnedBadges } from "@/data/progress";
 import { DEMO_STUDENT_ID } from "@/data/people";
+import { getBadgeIcon } from "@/lib/icons";
 
 export default function StudentProfile() {
   const { currentUser } = useApp();
@@ -27,19 +28,22 @@ export default function StudentProfile() {
             <h2 className="display text-2xl font-bold">{student?.name}</h2>
             <p className="text-forest-100/90">{cls?.name} · {cls?.yearGroup}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="glass rounded-full px-3 py-1 text-sm font-semibold text-forest-900">⭐ {points} points</span>
-              <span className="glass rounded-full px-3 py-1 text-sm font-semibold text-forest-900">🏅 {myBadges.length} badges</span>
+              <span className="glass rounded-full px-3 py-1 text-sm font-semibold text-forest-900"> {points} points</span>
+              <span className="glass rounded-full px-3 py-1 text-sm font-semibold text-forest-900"> {myBadges.length} badges</span>
             </div>
           </div>
         </div>
         <div className="bg-white p-5">
           <p className="text-sm font-semibold text-forest-900">Badges earned</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {myBadges.length ? myBadges.map((b) => (
-              <span key={b!.id} className="rounded-full bg-forest-50 px-3 py-1.5 text-sm font-medium text-forest-800">
-                {b!.emoji} {b!.name}
-              </span>
-            )) : <span className="text-sm text-charcoal-soft">Complete lessons to earn your first badge!</span>}
+            {myBadges.length ? myBadges.map((b) => {
+              const I = getBadgeIcon(b!.id);
+              return (
+                <span key={b!.id} className="inline-flex items-center gap-1.5 rounded-full bg-forest-50 px-3 py-1.5 text-sm font-medium text-forest-800">
+                  <I className="h-4 w-4" aria-hidden /> {b!.name}
+                </span>
+              );
+            }) : <span className="text-sm text-charcoal-soft">Complete lessons to earn your first badge!</span>}
           </div>
         </div>
       </div>
@@ -57,11 +61,11 @@ export default function StudentProfile() {
           <Button>Save</Button>
         </div>
         <div className="rounded-3xl bg-mist-100 p-6 ring-1 ring-mist-400/40">
-          <h3 className="display text-lg font-bold text-forest-900">🔒 Your privacy</h3>
+          <h3 className="display text-lg font-bold text-forest-900"> Your privacy</h3>
           <p className="mt-2 text-sm text-charcoal">
             BioBloke only stores your display name and the class you joined. We never
             collect unnecessary personal information. Your progress is used to help you
-            learn — only you and your teacher can see it.
+            learn, only you and your teacher can see it.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Badge tone="mist">Minimal data</Badge>

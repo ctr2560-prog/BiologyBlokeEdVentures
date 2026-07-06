@@ -27,11 +27,11 @@ import type { Stage } from "@/types";
 
 type Tab = "videos" | "resources" | "units" | "topics" | "quizzes";
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "videos", label: "Videos", icon: "🎬" },
-  { id: "resources", label: "Resources", icon: "📄" },
-  { id: "units", label: "Units", icon: "🗂️" },
-  { id: "topics", label: "Topics", icon: "🌿" },
-  { id: "quizzes", label: "Quizzes", icon: "❓" },
+  { id: "videos", label: "Videos", icon: "" },
+  { id: "resources", label: "Resources", icon: "" },
+  { id: "units", label: "Units", icon: "" },
+  { id: "topics", label: "Topics", icon: "" },
+  { id: "quizzes", label: "Quizzes", icon: "" },
 ];
 
 export default function ContentLibrary() {
@@ -82,10 +82,10 @@ export default function ContentLibrary() {
     <div className="space-y-6">
       <SectionHeader
         title="Content Library"
-        subtitle="Every video, resource, unit and quiz — searchable and filterable"
+        subtitle="Every video, resource, unit and quiz, searchable and filterable"
         action={
           tab !== "topics" ? (
-            <Button onClick={() => setModal(tab)}>➕ {addLabel[tab]}</Button>
+            <Button onClick={() => setModal(tab)}> {addLabel[tab]}</Button>
           ) : undefined
         }
       />
@@ -109,7 +109,7 @@ export default function ContentLibrary() {
       <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-white p-3 shadow-soft ring-1 ring-black/5">
         <input
           className={`${inputClass} flex-1 min-w-48`}
-          placeholder="🔍 Search content…"
+          placeholder=" Search content…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -134,7 +134,7 @@ export default function ContentLibrary() {
             ))}
           </div>
         ) : (
-          <EmptyState emoji="🎬" title="No videos found" message="Try a different search, or add a new reel." action={<Button onClick={() => setModal("videos")}>Add video</Button>} />
+          <EmptyState title="No videos found" message="Try a different search, or add a new reel." action={<Button onClick={() => setModal("videos")}>Add video</Button>} />
         ))}
 
       {tab === "resources" &&
@@ -145,7 +145,7 @@ export default function ContentLibrary() {
             ))}
           </div>
         ) : (
-          <EmptyState emoji="📄" title="No resources found" message="Upload worksheets, guides and activities here." action={<Button onClick={() => setModal("resources")}>Add resource</Button>} />
+          <EmptyState title="No resources found" message="Upload worksheets, guides and activities here." action={<Button onClick={() => setModal("resources")}>Add resource</Button>} />
         ))}
 
       {tab === "units" &&
@@ -156,7 +156,7 @@ export default function ContentLibrary() {
             ))}
           </div>
         ) : (
-          <EmptyState emoji="🗂️" title="No units yet" message="Create your first unit of work." action={<Button onClick={() => setModal("units")}>Add unit</Button>} />
+          <EmptyState title="No units yet" message="Create your first unit of work." action={<Button onClick={() => setModal("units")}>Add unit</Button>} />
         ))}
 
       {tab === "topics" && (
@@ -185,7 +185,7 @@ export default function ContentLibrary() {
             ))}
           </div>
         ) : (
-          <EmptyState emoji="❓" title="No quizzes yet" message="Build a quick check for a topic." action={<Button onClick={() => setModal("quizzes")}>Build quiz</Button>} />
+          <EmptyState title="No quizzes yet" message="Build a quick check for a topic." action={<Button onClick={() => setModal("quizzes")}>Build quiz</Button>} />
         ))}
 
       {/* Create modals */}

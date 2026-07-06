@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { SectionHeader, StatCard, Badge } from "@/components/ui/primitives";
+import { Film } from "lucide-react";
 import {
   AnalyticsChartCard,
   BarChart,
@@ -34,7 +35,7 @@ export default function AdminAnalytics() {
       header: "Reel",
       render: (r) => (
         <div className="flex items-center gap-2">
-          <span className="text-xl">{r.video.thumbEmoji}</span>
+          <Film className="h-5 w-5 text-forest-600" aria-hidden />
           <span className="font-semibold text-forest-900">{r.video.title}</span>
         </div>
       ),
@@ -53,13 +54,13 @@ export default function AdminAnalytics() {
 
   return (
     <div className="space-y-8">
-      <SectionHeader title="Platform Analytics" subtitle="Whole-platform learning engagement — not surveillance, just insight" />
+      <SectionHeader title="Platform Analytics" subtitle="Whole-platform learning engagement, not surveillance, just insight" />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Total watch time" value={formatWatchTime(a.totalWatchTimeSeconds)} icon={<span>⏱️</span>} />
-        <StatCard label="Video completions" value={a.totalCompletions} icon={<span>🎬</span>} tone="mist" />
-        <StatCard label="Avg completion" value={`${a.avgCompletion}%`} icon={<span>📈</span>} tone="gold" />
-        <StatCard label="Avg quiz score" value={`${a.avgQuizScore}%`} icon={<span>✅</span>} tone="clay" />
+        <StatCard label="Total watch time" value={formatWatchTime(a.totalWatchTimeSeconds)} />
+        <StatCard label="Video completions" value={a.totalCompletions} tone="mist" />
+        <StatCard label="Avg completion" value={`${a.avgCompletion}%`} tone="gold" />
+        <StatCard label="Avg quiz score" value={`${a.avgQuizScore}%`} tone="clay" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -100,7 +101,7 @@ export default function AdminAnalytics() {
           <DonutChart value={detail.avgCompletion} label="Avg completion" />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{detail.video.thumbEmoji}</span>
+              <Film className="h-6 w-6 text-forest-600" aria-hidden />
               <h3 className="display text-lg font-bold text-forest-900">{detail.video.title}</h3>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -110,7 +111,7 @@ export default function AdminAnalytics() {
               <MiniStat label="Drop-off" value={`${detail.dropOff}%`} />
             </div>
             <div className="mt-4 rounded-2xl bg-gold-300/20 px-4 py-3 text-sm text-clay-600">
-              💡 {detail.improvementNote}
+               {detail.improvementNote}
             </div>
           </div>
         </div>

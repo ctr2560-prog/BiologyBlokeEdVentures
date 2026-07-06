@@ -45,7 +45,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
   }, [quiz, answers]);
 
   if (!video) {
-    return <EmptyState emoji="🔍" title="Reel not found" message="This video may have been removed." action={<Link href="/student/classwork"><Button>Back to class work</Button></Link>} />;
+    return <EmptyState title="Reel not found" message="This video may have been removed." action={<Link href="/student/classwork"><Button>Back to class work</Button></Link>} />;
   }
 
   const rec: AdaptiveRecommendation | null =
@@ -105,7 +105,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
   return (
     <div className="space-y-6">
       <Link href="/student/classwork" className="text-sm font-semibold text-forest-700 hover:underline">
-        ← Back to class work
+         Back to class work
       </Link>
 
       {/* Stepper */}
@@ -116,7 +116,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
               {i + 1}
             </span>
             <span className={`capitalize ${stage === s ? "text-forest-900" : "text-charcoal-soft"}`}>{s === "result" ? "Reward" : s}</span>
-            {i < 3 && <span className="text-sand-dark">—</span>}
+            {i < 3 && <span className="text-sand-dark">-</span>}
           </div>
         ))}
       </div>
@@ -156,7 +156,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
                       className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-2.5 text-left text-sm transition-colors ${answers[q.id] === opt ? "border-forest-600 bg-forest-50 font-semibold text-forest-900" : "border-sand hover:border-forest-400"}`}
                     >
                       <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${answers[q.id] === opt ? "border-forest-600 bg-forest-600 text-white" : "border-sand-dark"}`}>
-                        {answers[q.id] === opt && "✓"}
+                        {answers[q.id] === opt && ""}
                       </span>
                       {opt}
                     </button>
@@ -166,7 +166,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
             </div>
           ))}
           <Button className="w-full" size="lg" onClick={() => setStage("reflect")} disabled={Object.keys(answers).length < quiz.questions.length}>
-            Submit answers →
+            Submit answers 
           </Button>
         </div>
       )}
@@ -175,7 +175,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
       {stage === "reflect" && (
         <div className="mx-auto max-w-xl space-y-4">
           <div className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-black/5">
-            <h2 className="display text-xl font-bold text-forest-900">🪞 Reflect</h2>
+            <h2 className="display text-xl font-bold text-forest-900"> Reflect</h2>
             <p className="mt-1 text-sm text-charcoal-soft">{video.learningIntent}</p>
             <p className="mt-4 font-semibold text-forest-900">What is one thing that surprised you in this reel?</p>
             <textarea
@@ -192,7 +192,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
             )}
           </div>
           <Button className="w-full" size="lg" onClick={finishLesson}>
-            Complete mission 🎉
+            Complete mission 
           </Button>
         </div>
       )}
@@ -202,16 +202,16 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
         <div className="mx-auto max-w-xl space-y-4">
           <div className="overflow-hidden rounded-3xl text-cream shadow-hero" style={{ background: "linear-gradient(120deg, #14352a, #2d6a4f)" }}>
             <div className="p-8 text-center">
-              <p className="text-5xl">🎉</p>
+              <p className="text-5xl"></p>
               <h2 className="display mt-2 text-2xl font-bold">Mission complete!</h2>
               <p className="mt-1 text-forest-100/90">Great exploring, {currentUser?.name?.split(" ")[0]}.</p>
               <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold-300/30 px-5 py-2 text-lg font-bold text-cream">
-                ⭐ +{pointsEarned} explorer points
+                 +{pointsEarned} explorer points
               </div>
             </div>
           </div>
 
-          {/* The adaptive recommendation — the personalised next task */}
+          {/* The adaptive recommendation, the personalised next task */}
           <AdaptiveRecommendationPanel rec={rec} audience="student" />
 
           {recommendedTask && (
@@ -223,7 +223,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
               <p className="mt-1 text-sm text-charcoal-soft">{recommendedTask.instructions}</p>
               {recommendedTask.linkedResourceId && (
                 <p className="mt-2 text-sm">
-                  📎 Linked resource: <b>{getResource(recommendedTask.linkedResourceId)?.title}</b>
+                   Linked resource: <b>{getResource(recommendedTask.linkedResourceId)?.title}</b>
                 </p>
               )}
             </div>
@@ -234,7 +234,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
               <Button variant="secondary" className="w-full">Back to class work</Button>
             </Link>
             <Link href="/student/explore" className="flex-1">
-              <Button className="w-full">🧭 Explore more</Button>
+              <Button className="w-full"> Explore more</Button>
             </Link>
           </div>
         </div>

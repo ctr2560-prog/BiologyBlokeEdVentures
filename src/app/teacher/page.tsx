@@ -40,19 +40,18 @@ export default function TeacherDashboard() {
         subtitle="Your classes, activity and who needs a hand today"
         action={
           <Link href="/teacher/assign">
-            <Button>📌 Assign a lesson</Button>
+            <Button> Assign a lesson</Button>
           </Link>
         }
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="My classes" value={classes.length} icon={<span>👥</span>} />
-        <StatCard label="Avg watch time" value={formatWatchTime(avgWatch)} icon={<span>⏱️</span>} tone="mist" />
-        <StatCard label="Avg quiz score" value={`${avgQuiz}%`} icon={<span>✅</span>} tone="gold" />
+        <StatCard label="My classes" value={classes.length} />
+        <StatCard label="Avg watch time" value={formatWatchTime(avgWatch)} tone="mist" />
+        <StatCard label="Avg quiz score" value={`${avgQuiz}%`} tone="gold" />
         <StatCard
           label="Need support"
           value={[...new Set(needSupport.map((p) => p.studentId))].length}
-          icon={<span>🪴</span>}
           tone="clay"
         />
       </div>
@@ -74,7 +73,7 @@ export default function TeacherDashboard() {
           <div className="space-y-2">
             {needSupport.length === 0 && (
               <p className="rounded-3xl bg-white p-5 text-sm text-charcoal-soft shadow-soft">
-                🎉 Everyone is on track right now.
+                 Everyone is on track right now.
               </p>
             )}
             {needSupport.slice(0, 5).map((p) => {
@@ -103,7 +102,7 @@ export default function TeacherDashboard() {
               const student = getUser(p.studentId);
               return (
                 <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-soft ring-1 ring-black/5">
-                  <span className="text-xl">{p.quizScore && p.quizScore >= 80 ? "🌟" : "📺"}</span>
+                  <span className="text-xl">{p.quizScore && p.quizScore >= 80 ? "" : ""}</span>
                   <div className="flex-1">
                     <p className="text-sm text-charcoal">
                       <b className="text-forest-900">{student?.name}</b> watched{" "}
@@ -123,15 +122,15 @@ export default function TeacherDashboard() {
 
       {/* Suggested actions */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <InsightCard title="Suggested follow-up" emoji="🎯" tone="forest">
+        <InsightCard title="Suggested follow-up" tone="forest">
           3 students in 5J are ready for the <b>Design a Wildlife Corridor</b> extension.
           Assign it from Class Insights.
         </InsightCard>
-        <InsightCard title="Class learning gap" emoji="🧩" tone="gold">
-          Food Webs quiz scores are trending low in 5J — consider re-teaching energy flow.
+        <InsightCard title="Class learning gap" tone="gold">
+          Food Webs quiz scores are trending low in 5J, consider re-teaching energy flow.
         </InsightCard>
-        <InsightCard title="Curiosity spike" emoji="🔭" tone="mist">
-          Several students clicked “I’m curious” on the tiger reel — great time for an Explore task.
+        <InsightCard title="Curiosity spike" tone="mist">
+          Several students clicked “I’m curious” on the tiger reel, great time for an Explore task.
         </InsightCard>
       </div>
     </div>

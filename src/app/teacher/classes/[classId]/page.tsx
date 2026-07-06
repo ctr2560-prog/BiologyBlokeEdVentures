@@ -12,6 +12,7 @@ import {
   EmptyState,
 } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Leaf } from "lucide-react";
 import { EngagementPill } from "@/components/cards/InsightCards";
 import {
   getClass,
@@ -39,12 +40,12 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
   }, [version, classId]);
 
   if (!cls) {
-    return <EmptyState emoji="🔍" title="Class not found" message="This class may have been removed." />;
+    return <EmptyState title="Class not found" message="This class may have been removed." />;
   }
 
   const addStudent = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock student creation — minimal PII, class-linked only.
+    // Mock student creation, minimal PII, class-linked only.
     const id = newId("stu");
     const student: User = {
       id,
@@ -93,7 +94,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
       render: (s) => {
         const rows = getProgressByStudent(s.id);
         const level = rows[0]?.engagementLevel ?? "medium";
-        return rows.length ? <EngagementPill level={level} /> : <span className="text-charcoal-soft">—</span>;
+        return rows.length ? <EngagementPill level={level} /> : <span className="text-charcoal-soft">-</span>;
       },
     },
     {
@@ -111,7 +112,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
   return (
     <div className="space-y-6">
       <Link href="/teacher/classes" className="text-sm font-semibold text-forest-700 hover:underline">
-        ← All classes
+         All classes
       </Link>
       <SectionHeader
         title={cls.name}
@@ -119,9 +120,9 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
         action={
           <div className="flex gap-2">
             <Link href={`/teacher/assign?class=${cls.id}`}>
-              <Button variant="secondary">📌 Assign lesson</Button>
+              <Button variant="secondary"> Assign lesson</Button>
             </Link>
-            <Button onClick={() => setAddOpen(true)}>➕ Add student</Button>
+            <Button onClick={() => setAddOpen(true)}> Add student</Button>
           </div>
         }
       />
@@ -139,11 +140,11 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
             {cls.assignedUnitIds.length ? (
               cls.assignedUnitIds.map((u) => (
                 <Badge key={u} tone="forest">
-                  {getUnit(u)?.coverEmoji} {getUnit(u)?.title}
+                  <Leaf className="h-3 w-3" aria-hidden /> {getUnit(u)?.title}
                 </Badge>
               ))
             ) : (
-              <span className="text-sm text-charcoal-soft">None yet — assign a lesson to get started.</span>
+              <span className="text-sm text-charcoal-soft">None yet, assign a lesson to get started.</span>
             )}
           </div>
         </div>
@@ -153,7 +154,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
         columns={columns}
         rows={students}
         keyOf={(s) => s.id}
-        empty={<EmptyState emoji="🎓" title="No students yet" message="Add students or share the join code." action={<Button onClick={() => setAddOpen(true)}>Add student</Button>} />}
+        empty={<EmptyState title="No students yet" message="Add students or share the join code." action={<Button onClick={() => setAddOpen(true)}>Add student</Button>} />}
       />
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add a student">

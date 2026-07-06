@@ -27,19 +27,19 @@ export default function AdminSettings() {
         </div>
 
         <div className="space-y-4">
-          <InsightCard title="Data & privacy" emoji="🔒" tone="mist">
+          <InsightCard title="Data & privacy" tone="mist">
             Student records store display name and class linkage only. Analytics measure
-            learning engagement — never location, behaviour tracking, or unnecessary PII.
+            learning engagement, never location, behaviour tracking, or unnecessary PII.
           </InsightCard>
-          <InsightCard title="Roles & access" emoji="🧭" tone="forest">
+          <InsightCard title="Roles & access" tone="forest">
             <div className="space-y-1.5">
-              <p>👑 <b>Admin</b> — full ecosystem management & platform analytics</p>
-              <p>👩‍🏫 <b>Teacher</b> — only their own classes & those students</p>
-              <p>🎓 <b>Student</b> — only their own progress & assigned work</p>
+              <p> <b>Admin</b>, full ecosystem management & platform analytics</p>
+              <p> <b>Teacher</b>, only their own classes & those students</p>
+              <p> <b>Student</b>, only their own progress & assigned work</p>
             </div>
             <p className="mt-2 text-xs">Enforced via Firebase Auth custom claims + Firestore rules once connected.</p>
           </InsightCard>
-          <InsightCard title="Integrations" emoji="🔌" tone="gold">
+          <InsightCard title="Integrations" tone="gold">
             <div className="flex flex-wrap gap-2">
               <Badge tone="neutral">Firebase Auth · planned</Badge>
               <Badge tone="neutral">Firestore · planned</Badge>

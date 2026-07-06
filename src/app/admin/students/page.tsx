@@ -6,7 +6,7 @@ export default function StudentsPage() {
     <UserManagement
       role="student"
       title="Students"
-      subtitle="Learners across all schools. Minimal personal data is stored — display name and class linkage only."
+      subtitle="Learners across all schools. Minimal personal data is stored, display name and class linkage only."
     />
   );
 }

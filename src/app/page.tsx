@@ -1,6 +1,6 @@
 "use client";
 /*
- * Landing page — cinematic, centered brand splash inspired by editorial nature
+ * Landing page, cinematic, centered brand splash inspired by editorial nature
  * education sites (big bold headline over full-bleed darkened wildlife media,
  * slim top nav, scroll cue), followed by clean marketing sections and a
  * working sign-in. Login is fully functional: account-type selector,
@@ -90,13 +90,13 @@ export default function LandingPage() {
               onClick={() => { setCode(""); setCodeError(""); setCodeOpen(true); }}
               className="glass rounded-full px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream"
             >
-              Student code →
+              Student code 
             </button>
           </nav>
         </div>
       </header>
 
-      {/* ============ Hero — centered brand splash ============ */}
+      {/* ============ Hero, centered brand splash ============ */}
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-forest-950 text-center">
         {/* Live wildlife film */}
         <video
@@ -131,21 +131,21 @@ export default function LandingPage() {
           />
           <p className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-cream/25 bg-forest-950/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cream backdrop-blur">
             <Globe className="h-4 w-4" aria-hidden />
-            The world&apos;s first short-form nature learning platform
+            The world&apos;s first platform for learning through nature
           </p>
           <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
-            Australia&apos;s wildest way to learn conservation.
+            The world&apos;s oldest classroom is the one outside.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-cream/85 md:text-xl">
-            Cinematic wildlife reels, adaptive missions and live class insights —
-            ready to teach.
+            Short, cinematic reels take students into wild places they&apos;ve never seen,
+            then inspire them to protect the world they call home.
           </p>
         </div>
 
         {/* Scroll cue */}
         <a href="#how" className="absolute inset-x-0 bottom-6 z-10 flex flex-col items-center text-cream/70 hover:text-cream">
           <span className="text-[0.65rem] font-semibold uppercase tracking-widest">Discover more</span>
-          <span className="float-y-fast mt-1 text-xl">⌄</span>
+          <span className="float-y-fast mt-1 text-xl"></span>
         </a>
       </section>
 
@@ -161,11 +161,11 @@ export default function LandingPage() {
               Built for real classrooms
             </p>
             <h2 className="display mt-3 text-3xl font-bold leading-tight text-forest-900 md:text-5xl">
-              Everything you need to teach conservation.
+              Everything you need to teach through nature.
             </h2>
             <p className="mt-4 max-w-md text-lg text-charcoal-soft">
               No preparation required. Ready-to-teach units built around short,
-              cinematic wildlife films — with the platform doing the personalising.
+              cinematic wildlife films, with the platform doing the personalising.
             </p>
             <ul className="mt-6 space-y-3">
               {features.map((f) => (
@@ -287,7 +287,7 @@ export default function LandingPage() {
             >
               <input type="email" placeholder="Email address" defaultValue="demo@biobloke.com" className="w-full rounded-2xl border border-sand-dark bg-white px-4 py-3 text-sm focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-500/30" />
               <input type="password" placeholder="Password" defaultValue="explorer" className="w-full rounded-2xl border border-sand-dark bg-white px-4 py-3 text-sm focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-500/30" />
-              <Button type="submit" size="lg" className="w-full">Sign in as {roleLabel[selected]} →</Button>
+              <Button type="submit" size="lg" className="w-full">Sign in as {roleLabel[selected]} </Button>
             </form>
 
             {/* Demo logins */}
@@ -309,7 +309,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="mt-3 text-center text-xs text-charcoal-soft">
-                No sign-up needed — demo accounts use realistic sample data.
+                No sign-up needed. Demo accounts use realistic sample data.
               </p>
             </div>
           </div>
@@ -337,7 +337,7 @@ export default function LandingPage() {
             className={`${inputClass} text-center text-lg font-bold uppercase tracking-widest`}
           />
           {codeError && <p className="text-center text-sm font-medium text-clay-600">{codeError}</p>}
-          <Button type="submit" size="lg" className="w-full">Start exploring →</Button>
+          <Button type="submit" size="lg" className="w-full">Start exploring </Button>
           <p className="text-center text-xs text-charcoal-soft">
             Demo code: <b>KOALA-5J</b>
           </p>

@@ -61,21 +61,21 @@ function InsightsInner() {
           <Badge tone={r.latest.videoCompletionPercentage > 80 ? "forest" : r.latest.videoCompletionPercentage > 50 ? "gold" : "clay"}>
             {r.latest.videoCompletionPercentage}%
           </Badge>
-        ) : "—",
+        ) : "-",
     },
-    { key: "watch", header: "Watch time", align: "center", render: (r) => (r.latest ? formatWatchTime(r.latest.watchTimeSeconds) : "—") },
-    { key: "quiz", header: "Quiz", align: "center", render: (r) => (r.latest?.quizScore != null ? `${r.latest.quizScore}%` : "—") },
-    { key: "focus", header: "Adaptive focus", render: (r) => (r.latest ? <span className="text-charcoal-soft">{r.latest.adaptiveFocusArea}</span> : "—") },
-    { key: "engagement", header: "Engagement", align: "center", render: (r) => (r.latest ? <EngagementPill level={r.latest.engagementLevel} /> : "—") },
+    { key: "watch", header: "Watch time", align: "center", render: (r) => (r.latest ? formatWatchTime(r.latest.watchTimeSeconds) : "-") },
+    { key: "quiz", header: "Quiz", align: "center", render: (r) => (r.latest?.quizScore != null ? `${r.latest.quizScore}%` : "-") },
+    { key: "focus", header: "Adaptive focus", render: (r) => (r.latest ? <span className="text-charcoal-soft">{r.latest.adaptiveFocusArea}</span> : "-") },
+    { key: "engagement", header: "Engagement", align: "center", render: (r) => (r.latest ? <EngagementPill level={r.latest.engagementLevel} /> : "-") },
     {
       key: "rec",
       header: "Recommendation",
       render: (r) =>
         r.latest ? (
           <Badge tone={r.latest.recommendedTaskType === "support" ? "clay" : r.latest.recommendedTaskType === "extension" ? "mist" : "forest"}>
-            {r.latest.recommendedTaskType === "support" ? "🪴 Support" : r.latest.recommendedTaskType === "extension" ? "🚀 Extension" : "🌿 Core"}
+            {r.latest.recommendedTaskType === "support" ? " Support" : r.latest.recommendedTaskType === "extension" ? " Extension" : " Core"}
           </Badge>
-        ) : "—",
+        ) : "-",
     },
   ];
 
@@ -112,10 +112,10 @@ function InsightsInner() {
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Avg completion" value={`${analytics.avgCompletion}%`} icon={<span>📈</span>} />
-        <StatCard label="Avg quiz score" value={`${analytics.avgQuiz}%`} icon={<span>✅</span>} tone="gold" />
-        <StatCard label="Need support" value={analytics.studentsNeedingSupport} icon={<span>🪴</span>} tone="clay" />
-        <StatCard label="Ready for extension" value={analytics.studentsReadyExtension} icon={<span>🚀</span>} tone="mist" />
+        <StatCard label="Avg completion" value={`${analytics.avgCompletion}%`} />
+        <StatCard label="Avg quiz score" value={`${analytics.avgQuiz}%`} tone="gold" />
+        <StatCard label="Need support" value={analytics.studentsNeedingSupport} tone="clay" />
+        <StatCard label="Ready for extension" value={analytics.studentsReadyExtension} tone="mist" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -124,15 +124,15 @@ function InsightsInner() {
         </AnalyticsChartCard>
         <div className="grid grid-cols-1 gap-4">
           <div className="rounded-3xl bg-forest-50 p-5 ring-1 ring-forest-100">
-            <h3 className="display text-sm font-semibold text-forest-900">🌟 Topic strengths</h3>
+            <h3 className="display text-sm font-semibold text-forest-900"> Topic strengths</h3>
             <div className="mt-2 flex flex-wrap gap-2">
               {analytics.strengths.length ? analytics.strengths.map((t) => <Badge key={t.topic} tone="forest">{t.topic} · {t.avg}%</Badge>) : <span className="text-sm text-charcoal-soft">Building up data…</span>}
             </div>
           </div>
           <div className="rounded-3xl bg-clay-400/10 p-5 ring-1 ring-clay-400/25">
-            <h3 className="display text-sm font-semibold text-forest-900">🧩 Learning gaps</h3>
+            <h3 className="display text-sm font-semibold text-forest-900"> Learning gaps</h3>
             <div className="mt-2 flex flex-wrap gap-2">
-              {analytics.gaps.length ? analytics.gaps.map((t) => <Badge key={t.topic} tone="clay">{t.topic} · {t.avg}%</Badge>) : <span className="text-sm text-charcoal-soft">No major gaps 🎉</span>}
+              {analytics.gaps.length ? analytics.gaps.map((t) => <Badge key={t.topic} tone="clay">{t.topic} · {t.avg}%</Badge>) : <span className="text-sm text-charcoal-soft">No major gaps </span>}
             </div>
           </div>
         </div>
@@ -154,13 +154,13 @@ function InsightsInner() {
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <MiniStat label="Watched" value={`${detailProg.videoCompletionPercentage}%`} />
-              <MiniStat label="Quiz" value={detailProg.quizScore != null ? `${detailProg.quizScore}%` : "—"} />
+              <MiniStat label="Quiz" value={detailProg.quizScore != null ? `${detailProg.quizScore}%` : "-"} />
               <MiniStat label="Replays" value={detailProg.replayCount} />
-              <MiniStat label="Worksheet" value={detailProg.worksheetCompleted ? "✓ Done" : "Pending"} />
+              <MiniStat label="Worksheet" value={detailProg.worksheetCompleted ? " Done" : "Pending"} />
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {detailProg.clickedCurious && <Badge tone="mist">🔭 Curious</Badge>}
-              {detailProg.clickedHelp && <Badge tone="clay">🤝 Asked for help</Badge>}
+              {detailProg.clickedCurious && <Badge tone="mist"> Curious</Badge>}
+              {detailProg.clickedHelp && <Badge tone="clay"> Asked for help</Badge>}
             </div>
           </div>
           <AdaptiveRecommendationPanel rec={detailRec} audience="teacher" />

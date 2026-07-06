@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { SectionHeader, Badge, ProgressBar, EmptyState } from "@/components/ui/primitives";
+import { Leaf, Film } from "lucide-react";
 import {
   getUser,
   getAssignmentsByClass,
@@ -21,25 +22,25 @@ export default function ClassWork() {
   const assignments = (student?.classIds ?? []).flatMap((cid) => getAssignmentsByClass(cid));
 
   if (assignments.length === 0) {
-    return <EmptyState emoji="🎒" title="No class work yet" message="Your teacher hasn't assigned any Edventures — check back soon!" />;
+    return <EmptyState title="No class work yet" message="Your teacher hasn't assigned any Edventures, check back soon!" />;
   }
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Class Work" subtitle="Your assigned Edventures — watch, learn and earn points" />
+      <SectionHeader title="Class Work" subtitle="Your assigned Edventures, watch, learn and earn points" />
 
       {assignments.map((a) => {
         const unit = getUnit(a.unitId);
         return (
           <div key={a.id} className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{unit?.coverEmoji}</span>
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-forest-50 text-forest-700"><Leaf className="h-5 w-5" aria-hidden /></span>
               <div>
                 <h2 className="display text-lg font-bold text-forest-900">{unit?.title}</h2>
                 <p className="text-xs text-charcoal-soft">
                   Due {a.dueDate}
-                  {a.explorerPointsEnabled && " · ⭐ points enabled"}
-                  {a.adaptiveTasksEnabled && " · 🎯 adaptive"}
+                  {a.explorerPointsEnabled && " ·  points enabled"}
+                  {a.adaptiveTasksEnabled && " ·  adaptive"}
                 </p>
               </div>
             </div>
@@ -61,9 +62,9 @@ export default function ClassWork() {
                         className="relative flex h-36 items-center justify-center"
                         style={{ background: "linear-gradient(135deg, #1b4332 0%, #40916c 100%)" }}
                       >
-                        <span className="text-6xl drop-shadow-lg transition-transform group-hover:scale-110">{v.thumbEmoji}</span>
+                        <Film className="h-12 w-12 text-cream/90 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
                         <span className="absolute left-3 top-3"><Badge tone="gold">+20 pts</Badge></span>
-                        {done && <span className="absolute right-3 top-3"><Badge tone="forest">✓ Done</Badge></span>}
+                        {done && <span className="absolute right-3 top-3"><Badge tone="forest"> Done</Badge></span>}
                         <span className="glass-dark absolute bottom-2 right-2 rounded-full px-2 py-0.5 text-xs font-semibold text-cream">
                           {Math.round(v.durationSeconds / 60)}m
                         </span>
@@ -75,7 +76,7 @@ export default function ClassWork() {
                           <ProgressBar value={pct} tone={done ? "forest" : "gold"} showLabel />
                         </div>
                         <p className="mt-3 text-sm font-semibold text-forest-700">
-                          {done ? "Review ✓" : pct > 0 ? "Continue →" : "Start mission →"}
+                          {done ? "Review " : pct > 0 ? "Continue " : "Start mission "}
                         </p>
                       </div>
                     </Link>

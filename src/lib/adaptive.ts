@@ -3,8 +3,8 @@
  *
  * generateAdaptiveRecommendation() is the heart of BioBloke's personalisation.
  * It takes a student's engagement signals from a video + quiz and returns a
- * recommendation that both teachers and students see. Pure function — no side
- * effects — so it is trivial to unit-test and to run inside a Cloud Function.
+ * recommendation that both teachers and students see. Pure function, no side
+ * effects, so it is trivial to unit-test and to run inside a Cloud Function.
  */
 import type {
   AdaptiveRecommendation,
@@ -74,7 +74,7 @@ export function generateAdaptiveRecommendation(
     recommendedTaskMessage =
       "Complete the standard worksheet to strengthen your understanding.";
   } else {
-    // Watched a good chunk with a solid quiz but not top-tier — consolidate.
+    // Watched a good chunk with a solid quiz but not top-tier, consolidate.
     engagementLevel = "medium";
     comprehensionLevel = "developing";
     adaptiveFocusArea = "Core consolidation";
@@ -98,7 +98,7 @@ export function generateAdaptiveRecommendation(
   }
   if (input.clickedHelp) {
     recommendation.supportSuggestion =
-      "You asked for help — we've prioritised a support resource for this topic.";
+      "You asked for help, we've prioritised a support resource for this topic.";
     // A help request always makes sure support is at least offered.
     if (recommendation.recommendedTaskType === "extension") {
       recommendation.recommendedTaskType = "core";
@@ -116,15 +116,17 @@ export function engagementColor(level: EngagementLevel): string {
     : "#a47148";
 }
 
-export function taskTypeMeta(type: TaskType): { label: string; emoji: string; color: string } {
+import { LifeBuoy, Sprout, Rocket, Mountain, type LucideIcon } from "lucide-react";
+
+export function taskTypeMeta(type: TaskType): { label: string; Icon: LucideIcon; color: string } {
   switch (type) {
     case "support":
-      return { label: "Support", emoji: "🪴", color: "#a47148" };
+      return { label: "Support", Icon: LifeBuoy, color: "#a47148" };
     case "core":
-      return { label: "Core", emoji: "🌿", color: "#2d6a4f" };
+      return { label: "Core", Icon: Sprout, color: "#2d6a4f" };
     case "extension":
-      return { label: "Extension", emoji: "🚀", color: "#5c8aa8" };
+      return { label: "Extension", Icon: Rocket, color: "#5c8aa8" };
     case "challenge":
-      return { label: "Challenge", emoji: "🏔️", color: "#8b5e3c" };
+      return { label: "Challenge", Icon: Mountain, color: "#8b5e3c" };
   }
 }

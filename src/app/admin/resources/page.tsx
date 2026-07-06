@@ -19,7 +19,7 @@ export default function ResourcesPage() {
       <SectionHeader
         title="Resources"
         subtitle="Worksheets, guides, activities, extensions and support tasks"
-        action={<Button onClick={() => setModal(true)}>➕ Add resource</Button>}
+        action={<Button onClick={() => setModal(true)}> Add resource</Button>}
       />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {resources.map((r) => (

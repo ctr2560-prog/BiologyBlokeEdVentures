@@ -4,6 +4,7 @@ import { SectionHeader, Badge, Modal } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
 import { exploreEcosystems } from "@/data/content";
 import { getVideos } from "@/lib/dataService";
+import { getEcoIcon } from "@/lib/icons";
 
 export default function Explore() {
   const [active, setActive] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export default function Explore() {
             style={{ background: `linear-gradient(150deg, ${eco.color}, #0d2419)` }}
           >
             <div className="pointer-events-none absolute inset-0 opacity-[0.1]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-            <span className="absolute right-3 top-3 text-5xl drop-shadow-lg transition-transform group-hover:scale-110">{eco.emoji}</span>
+            {(() => { const I = getEcoIcon(eco.id); return <I className="absolute right-3 top-3 h-10 w-10 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />; })()}
             <div className="absolute inset-x-4 bottom-4">
               <h3 className="display text-lg font-bold">{eco.name}</h3>
               <p className="mt-1 line-clamp-2 text-xs text-forest-100/90">{eco.blurb}</p>
@@ -47,7 +48,7 @@ export default function Explore() {
         {activeEco && (
           <div className="space-y-4">
             <div className="flex items-center gap-3 rounded-2xl p-4 text-cream" style={{ background: `linear-gradient(120deg, ${activeEco.color}, #0d2419)` }}>
-              <span className="text-5xl">{activeEco.emoji}</span>
+              {(() => { const I = getEcoIcon(activeEco.id); return <I className="h-12 w-12 shrink-0" aria-hidden strokeWidth={1.5} />; })()}
               <p className="text-sm">{activeEco.blurb}</p>
             </div>
             <p className="text-sm font-semibold text-forest-900">Reels to explore</p>
@@ -59,10 +60,10 @@ export default function Explore() {
               </div>
             ) : (
               <p className="rounded-2xl bg-cream/60 px-4 py-6 text-center text-sm text-charcoal-soft">
-                🌱 New reels for this world are coming soon!
+                 New reels for this world are coming soon!
               </p>
             )}
-            <Badge tone="gold">🔭 Curiosity earns bonus explorer points</Badge>
+            <Badge tone="gold"> Curiosity earns bonus explorer points</Badge>
           </div>
         )}
       </Modal>

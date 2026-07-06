@@ -44,7 +44,7 @@ export default function ClassesPage() {
       <SectionHeader
         title="My Classes"
         subtitle="Create classes, share a join code, and assign Edventures"
-        action={<Button onClick={() => { setModal(true); setCreated(null); }}>➕ Create class</Button>}
+        action={<Button onClick={() => { setModal(true); setCreated(null); }}> Create class</Button>}
       />
 
       {classes.length ? (
@@ -55,7 +55,6 @@ export default function ClassesPage() {
         </div>
       ) : (
         <EmptyState
-          emoji="👥"
           title="No classes yet"
           message="Create your first class to start assigning wildlife Edventures."
           action={<Button onClick={() => setModal(true)}>Create class</Button>}
@@ -65,7 +64,7 @@ export default function ClassesPage() {
       <Modal open={modal} onClose={() => setModal(false)} title="Create a class">
         {created ? (
           <div className="text-center">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl">🎉</div>
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl"></div>
             <h3 className="display mt-3 text-lg font-bold text-forest-900">Class created!</h3>
             <p className="mt-1 text-sm text-charcoal-soft">Share this join code with your students:</p>
             <p className="display mt-3 rounded-2xl bg-forest-700 py-4 text-2xl font-bold tracking-widest text-cream">
@@ -89,7 +88,7 @@ export default function ClassesPage() {
               </select>
             </FormField>
             <p className="rounded-2xl bg-forest-50 px-4 py-3 text-xs text-forest-800">
-              A unique join code is generated automatically. Students enter it to join —
+              A unique join code is generated automatically. Students enter it to join -
               no personal data required.
             </p>
             <div className="flex justify-end">

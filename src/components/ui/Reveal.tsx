@@ -1,6 +1,6 @@
 "use client";
 /*
- * Reveal — fades + rises its children into view once they scroll into the
+ * Reveal, fades + rises its children into view once they scroll into the
  * viewport (IntersectionObserver). Used to make the landing feel alive on
  * scroll. Honours prefers-reduced-motion via CSS.
  */

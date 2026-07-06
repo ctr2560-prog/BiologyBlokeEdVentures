@@ -29,13 +29,13 @@ export default function TeacherSettings() {
           <Button>Save changes</Button>
         </div>
         <div className="space-y-4">
-          <InsightCard title="Default lesson settings" emoji="⚙️" tone="forest">
+          <InsightCard title="Default lesson settings" tone="forest">
             New assignments default to <b>adaptive tasks on</b> and <b>explorer points on</b>.
             You can change these per assignment.
           </InsightCard>
-          <InsightCard title="Your data access" emoji="🔒" tone="mist">
+          <InsightCard title="Your data access" tone="mist">
             You can only see your own classes and their students. Other teachers&apos; classes
-            and platform-wide analytics are not visible to you — enforced by role-based rules.
+            and platform-wide analytics are not visible to you, enforced by role-based rules.
           </InsightCard>
         </div>
       </div>

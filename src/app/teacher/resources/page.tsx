@@ -18,7 +18,7 @@ export default function TeacherResources() {
     <div className="space-y-6">
       <SectionHeader title="Resources" subtitle="Download worksheets, guides and activities for your lessons" />
       <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-white p-3 shadow-soft ring-1 ring-black/5">
-        <input className={`${inputClass} flex-1 min-w-48`} placeholder="🔍 Search resources…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input className={`${inputClass} flex-1 min-w-48`} placeholder=" Search resources…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="flex flex-wrap gap-1.5">
           {TYPES.map((t) => (
             <button key={t} onClick={() => setType(t)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${type === t ? "bg-forest-700 text-cream" : "bg-forest-50 text-forest-700"}`}>

@@ -10,6 +10,7 @@ import {
   FormField,
   inputClass,
 } from "@/components/ui/primitives";
+import { Film } from "lucide-react";
 import { UnitCard } from "@/components/cards/ContentCards";
 import {
   getPublishedUnits,
@@ -88,10 +89,10 @@ function AssignInner() {
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" className="flex-1" onClick={() => setPreviewUnit(u.id)}>
-                👁 Preview
+                 Preview
               </Button>
               <Button size="sm" className="flex-1" onClick={() => openAssign(u.id)}>
-                📌 Assign
+                 Assign
               </Button>
             </div>
           </div>
@@ -113,14 +114,14 @@ function AssignInner() {
                 <div className="mt-2 space-y-1">
                   {getVideosByTopic(t.id).map((v) => (
                     <div key={v.id} className="flex items-center gap-2 text-sm text-charcoal">
-                      <span>{v.thumbEmoji}</span> {v.title}
+                      <Film className="h-4 w-4 text-forest-600" aria-hidden /> {v.title}
                     </div>
                   ))}
                 </div>
               </div>
             ))}
             <Button className="w-full" onClick={() => openAssign(previewUnit)}>
-              Assign this unit →
+              Assign this unit 
             </Button>
           </div>
         )}
@@ -130,7 +131,7 @@ function AssignInner() {
       <Modal open={!!assignUnit} onClose={() => setAssignUnit(null)} title="Assign lesson" maxWidth="max-w-lg">
         {confirmed ? (
           <div className="text-center">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl">✅</div>
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl"></div>
             <h3 className="display mt-3 text-lg font-bold text-forest-900">Lesson assigned!</h3>
             <p className="mt-1 text-sm text-charcoal-soft">
               {getUnit(assignUnit ?? "")?.title} is now available to {selectedClasses.length}{" "}
@@ -173,8 +174,8 @@ function AssignInner() {
             </FormField>
 
             <div className="space-y-2">
-              <ToggleRow label="🎯 Adaptive tasks" desc="Auto-assign support/core/extension tasks" value={adaptive} onChange={setAdaptive} />
-              <ToggleRow label="⭐ Explorer points" desc="Students earn points for completing work" value={points} onChange={setPoints} />
+              <ToggleRow label=" Adaptive tasks" desc="Auto-assign support/core/extension tasks" value={adaptive} onChange={setAdaptive} />
+              <ToggleRow label=" Explorer points" desc="Students earn points for completing work" value={points} onChange={setPoints} />
             </div>
 
             <Button className="w-full" onClick={doAssign} disabled={selectedClasses.length === 0}>

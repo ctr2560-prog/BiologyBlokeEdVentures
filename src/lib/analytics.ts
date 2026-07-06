@@ -1,5 +1,5 @@
 /*
- * Analytics layer — derives insight metrics from progress + content data.
+ * Analytics layer, derives insight metrics from progress + content data.
  * All computation is pure and works off the dataService, so it can later run
  * against Firestore aggregation queries or a BigQuery export unchanged.
  */
@@ -54,7 +54,7 @@ export function getAdminAnalytics() {
   const topicCounts = new Map<string, number>();
   progress.forEach((p) => topicCounts.set(p.topicId, (topicCounts.get(p.topicId) ?? 0) + 1));
   const popularTopicId = [...topicCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-  const popularTopic = popularTopicId ? getTopic(popularTopicId)?.title ?? "—" : "—";
+  const popularTopic = popularTopicId ? getTopic(popularTopicId)?.title ?? "-" : "-";
 
   return {
     totalSchools: schools.length,
@@ -147,10 +147,10 @@ export function getVideoAnalytics(videoId: string) {
     avgQuiz: avg(quizScores(rows)),
     improvementNote:
       dropOff > 40
-        ? "High drop-off — consider a shorter intro or a stronger hook in the first 10 seconds."
+        ? "High drop-off, consider a shorter intro or a stronger hook in the first 10 seconds."
         : avgCompletion > 85
-        ? "Strong retention — a great candidate to feature."
-        : "Solid performance — monitor quiz scores for comprehension gaps.",
+        ? "Strong retention, a great candidate to feature."
+        : "Solid performance, monitor quiz scores for comprehension gaps.",
   };
 }
 

@@ -1,6 +1,6 @@
 /*
  * Sample content library for BioBloke Edventures.
- * Units → Topics → Videos / Resources / Quizzes, plus adaptive tasks & badges.
+ * Units  Topics  Videos / Resources / Quizzes, plus adaptive tasks & badges.
  * This mirrors what the Admin would author through the Content Library.
  */
 import type {
@@ -20,11 +20,11 @@ export const units: Unit[] = [
     stage: "Stage 3",
     yearGroups: ["Year 5", "Year 6"],
     description:
-      "How living things survive, adapt and respond to a changing world — from koalas in the canopy to the food webs of the Australian bush.",
+      "How living things survive, adapt and respond to a changing world, from koalas in the canopy to the food webs of the Australian bush.",
     durationLessons: 10,
     outcomes: [
-      "ST3-4LW-S — examines how the structural features of living things help them survive",
-      "ST3-1WS-S — plans and conducts scientific investigations",
+      "ST3-4LW-S, examines how the structural features of living things help them survive",
+      "ST3-1WS-S, plans and conducts scientific investigations",
     ],
     topicIds: [
       "topic-adaptations",
@@ -34,7 +34,7 @@ export const units: Unit[] = [
       "topic-climate",
     ],
     coverImage: "/trees.png",
-    coverEmoji: "🐨",
+    coverEmoji: "",
     published: true,
     createdAt: "2025-01-14",
   },
@@ -44,11 +44,11 @@ export const units: Unit[] = [
     stage: "Stage 4",
     yearGroups: ["Year 7", "Year 8"],
     description:
-      "Ecosystems as connected systems — energy flow, predator and prey relationships, and the growing footprint of humans on the wild.",
+      "Ecosystems as connected systems, energy flow, predator and prey relationships, and the growing footprint of humans on the wild.",
     durationLessons: 12,
     outcomes: [
-      "SC4-14LW — relates the structure of living things to their function",
-      "SC4-15LW — explains how new evidence changes scientific understanding",
+      "SC4-14LW, relates the structure of living things to their function",
+      "SC4-15LW, explains how new evidence changes scientific understanding",
     ],
     topicIds: [
       "topic-ecosystems",
@@ -58,7 +58,7 @@ export const units: Unit[] = [
       "topic-conservation-action",
     ],
     coverImage: "/trees.png",
-    coverEmoji: "🐅",
+    coverEmoji: "",
     published: true,
     createdAt: "2025-02-02",
   },
@@ -68,11 +68,11 @@ export const units: Unit[] = [
     stage: "Stage 5",
     yearGroups: ["Year 9", "Year 10"],
     description:
-      "The real fight to protect biodiversity — threatened species, habitat loss, rainforest conservation and the role of citizen science.",
+      "The real fight to protect biodiversity, threatened species, habitat loss, rainforest conservation and the role of citizen science.",
     durationLessons: 12,
     outcomes: [
-      "SC5-14LW — analyses interactions between components of ecosystems",
-      "SC5-15LW — evaluates the impact of human activity on ecosystems",
+      "SC5-14LW, analyses interactions between components of ecosystems",
+      "SC5-15LW, evaluates the impact of human activity on ecosystems",
     ],
     topicIds: [
       "topic-threatened",
@@ -82,7 +82,7 @@ export const units: Unit[] = [
       "topic-tourism",
     ],
     coverImage: "/trees.png",
-    coverEmoji: "🦧",
+    coverEmoji: "",
     published: true,
     createdAt: "2025-02-20",
   },
@@ -119,7 +119,7 @@ export const topics: Topic[] = [
     unitId: "unit-survival",
     title: "Food Webs",
     description:
-      "Producers, consumers and decomposers — tracing energy through the Australian bush.",
+      "Producers, consumers and decomposers, tracing energy through the Australian bush.",
     animalFocus: ["Dingo", "Kangaroo"],
     ecosystemFocus: ["Australian Bushland"],
     difficulty: "core",
@@ -278,12 +278,12 @@ export const videos: Video[] = [
     id: "vid-koala",
     title: "Why Koalas Sleep So Much",
     description:
-      "Eucalyptus leaves are low in energy and mildly toxic — discover the adaptations that let koalas survive on them.",
+      "Eucalyptus leaves are low in energy and mildly toxic, discover the adaptations that let koalas survive on them.",
     topicId: "topic-adaptations",
     unitId: "unit-survival",
     videoUrl: "",
     thumbnailUrl: "",
-    thumbEmoji: "🐨",
+    thumbEmoji: "",
     durationSeconds: 95,
     tags: ["adaptation", "marsupial", "diet", "Australian bush"],
     stage: "Stage 3",
@@ -301,12 +301,12 @@ export const videos: Video[] = [
     id: "vid-orangutan",
     title: "Orangutan Adaptations in the Rainforest",
     description:
-      "Long arms, grasping feet and remarkable intelligence — how orangutans are built for life in the canopy.",
+      "Long arms, grasping feet and remarkable intelligence, how orangutans are built for life in the canopy.",
     topicId: "topic-adaptations",
     unitId: "unit-survival",
     videoUrl: "",
     thumbnailUrl: "",
-    thumbEmoji: "🦧",
+    thumbEmoji: "",
     durationSeconds: 110,
     tags: ["adaptation", "great ape", "rainforest", "Sumatra"],
     stage: "Stage 3",
@@ -324,12 +324,12 @@ export const videos: Video[] = [
     id: "vid-tiger",
     title: "Tiger Tracks and Predator Behaviour",
     description:
-      "Stripes, silence and stealth — the adaptations that make the tiger a perfect ambush predator.",
+      "Stripes, silence and stealth, the adaptations that make the tiger a perfect ambush predator.",
     topicId: "topic-predators",
     unitId: "unit-wildsystems",
     videoUrl: "",
     thumbnailUrl: "",
-    thumbEmoji: "🐅",
+    thumbEmoji: "",
     durationSeconds: 120,
     tags: ["predator", "big cat", "camouflage", "behaviour"],
     stage: "Stage 4",
@@ -347,18 +347,18 @@ export const videos: Video[] = [
     id: "vid-foodwebs",
     title: "Food Webs in the Australian Bush",
     description:
-      "From gum leaves to dingoes — trace how energy flows through a bushland food web.",
+      "From gum leaves to dingoes, trace how energy flows through a bushland food web.",
     topicId: "topic-foodwebs",
     unitId: "unit-survival",
     videoUrl: "",
     thumbnailUrl: "",
-    thumbEmoji: "🕸️",
+    thumbEmoji: "",
     durationSeconds: 130,
     tags: ["food web", "energy", "producers", "consumers"],
     stage: "Stage 3",
     yearGroups: ["Year 5", "Year 6"],
     transcript:
-      "Every food web starts with producers — plants that capture sunlight. Herbivores eat the plants, and predators eat the herbivores. Remove one link and the whole web can shift...",
+      "Every food web starts with producers, plants that capture sunlight. Herbivores eat the plants, and predators eat the herbivores. Remove one link and the whole web can shift...",
     learningIntent: "Model energy flow through producers, consumers and decomposers.",
     successCriteria: [
       "I can build a simple food web",
@@ -370,12 +370,12 @@ export const videos: Video[] = [
     id: "vid-gorilla",
     title: "Gorillas and Family Structures",
     description:
-      "Silverbacks, troops and gentle giants — the social world of the mountain gorilla.",
+      "Silverbacks, troops and gentle giants, the social world of the mountain gorilla.",
     topicId: "topic-predators",
     unitId: "unit-wildsystems",
     videoUrl: "",
     thumbnailUrl: "",
-    thumbEmoji: "🦍",
+    thumbEmoji: "",
     durationSeconds: 105,
     tags: ["great ape", "social behaviour", "family", "rainforest"],
     stage: "Stage 4",
@@ -393,18 +393,18 @@ export const videos: Video[] = [
     id: "vid-coral",
     title: "Climate Change and Coral Reefs",
     description:
-      "Warming seas and coral bleaching — how climate change threatens the rainforests of the sea.",
+      "Warming seas and coral bleaching, how climate change threatens the rainforests of the sea.",
     topicId: "topic-climate",
     unitId: "unit-survival",
     videoUrl: "",
     thumbnailUrl: "",
-    thumbEmoji: "🐠",
+    thumbEmoji: "",
     durationSeconds: 140,
     tags: ["climate", "coral", "ocean", "bleaching"],
     stage: "Stage 3",
     yearGroups: ["Year 5", "Year 6"],
     transcript:
-      "Corals live in partnership with tiny algae that give them colour and food. When the water gets too warm, corals expel the algae and turn white — this is bleaching...",
+      "Corals live in partnership with tiny algae that give them colour and food. When the water gets too warm, corals expel the algae and turn white, this is bleaching...",
     learningIntent: "Explain how rising temperatures cause coral bleaching.",
     successCriteria: [
       "I can explain what coral bleaching is",
@@ -416,12 +416,12 @@ export const videos: Video[] = [
     id: "vid-wetlands",
     title: "How Wetlands Protect Wildlife",
     description:
-      "Nature's kidneys — how wetlands filter water, store carbon and shelter species.",
+      "Nature's kidneys, how wetlands filter water, store carbon and shelter species.",
     topicId: "topic-conservation-action",
     unitId: "unit-wildsystems",
     videoUrl: "",
     thumbnailUrl: "",
-    thumbEmoji: "🦆",
+    thumbEmoji: "",
     durationSeconds: 100,
     tags: ["wetlands", "ecosystem services", "biodiversity"],
     stage: "Stage 4",
@@ -515,7 +515,7 @@ export const resources: Resource[] = [
     stage: "Stage 4",
     difficulty: "advanced",
     tags: ["extension", "design", "habitat"],
-    teacherNotes: "For students ready for a challenge — pairs or small groups.",
+    teacherNotes: "For students ready for a challenge, pairs or small groups.",
     published: true,
     downloads: 74,
   },
@@ -706,24 +706,24 @@ export const adaptiveTasks: AdaptiveTask[] = [
 ];
 
 export const badges: BadgeDef[] = [
-  { id: "badge-koala", name: "Koala Keeper", emoji: "🐨", description: "Completed the Adaptations topic", pointsRequired: 50 },
-  { id: "badge-foodweb", name: "Food Web Finder", emoji: "🕸️", description: "Aced the Food Webs quiz", pointsRequired: 100 },
-  { id: "badge-rainforest", name: "Rainforest Ranger", emoji: "🌴", description: "Explored 3 rainforest reels", pointsRequired: 150 },
-  { id: "badge-adaptation", name: "Adaptation Expert", emoji: "🧬", description: "Scored 100% on adaptations", pointsRequired: 200 },
-  { id: "badge-champion", name: "Conservation Champion", emoji: "🏆", description: "Completed a full unit", pointsRequired: 300 },
-  { id: "badge-gorilla", name: "Gorilla Guardian", emoji: "🦍", description: "Finished the great apes series", pointsRequired: 250 },
-  { id: "badge-tiger", name: "Tiger Tracker", emoji: "🐅", description: "Mastered predator behaviour", pointsRequired: 220 },
+  { id: "badge-koala", name: "Koala Keeper", emoji: "", description: "Completed the Adaptations topic", pointsRequired: 50 },
+  { id: "badge-foodweb", name: "Food Web Finder", emoji: "", description: "Aced the Food Webs quiz", pointsRequired: 100 },
+  { id: "badge-rainforest", name: "Rainforest Ranger", emoji: "", description: "Explored 3 rainforest reels", pointsRequired: 150 },
+  { id: "badge-adaptation", name: "Adaptation Expert", emoji: "", description: "Scored 100% on adaptations", pointsRequired: 200 },
+  { id: "badge-champion", name: "Conservation Champion", emoji: "", description: "Completed a full unit", pointsRequired: 300 },
+  { id: "badge-gorilla", name: "Gorilla Guardian", emoji: "", description: "Finished the great apes series", pointsRequired: 250 },
+  { id: "badge-tiger", name: "Tiger Tracker", emoji: "", description: "Mastered predator behaviour", pointsRequired: 220 },
 ];
 
 export const exploreEcosystems = [
-  { id: "eco-rainforest", name: "Rainforests", emoji: "🌴", blurb: "Layered worlds bursting with life, from canopy to forest floor.", color: "#1b4332" },
-  { id: "eco-bush", name: "Australian Bush", emoji: "🦘", blurb: "Fire-shaped landscapes home to marsupials found nowhere else.", color: "#a47148" },
-  { id: "eco-reef", name: "Coral Reefs", emoji: "🐠", blurb: "The rainforests of the sea — colourful, fragile and vital.", color: "#5c8aa8" },
-  { id: "eco-wetlands", name: "Wetlands", emoji: "🦆", blurb: "Nature's kidneys, filtering water and sheltering wildlife.", color: "#2d6a4f" },
-  { id: "eco-savanna", name: "Savanna", emoji: "🦁", blurb: "Vast grasslands where great herds and hunters roam.", color: "#c08552" },
-  { id: "eco-apes", name: "Great Apes", emoji: "🦧", blurb: "Our closest cousins — intelligent, social and endangered.", color: "#8b5e3c" },
-  { id: "eco-cats", name: "Big Cats", emoji: "🐅", blurb: "Powerful, stealthy predators at the top of their food webs.", color: "#40916c" },
-  { id: "eco-marsupials", name: "Marsupials", emoji: "🐨", blurb: "Pouched mammals uniquely adapted to Australian life.", color: "#74c69d" },
+  { id: "eco-rainforest", name: "Rainforests", emoji: "", blurb: "Layered worlds bursting with life, from canopy to forest floor.", color: "#1b4332" },
+  { id: "eco-bush", name: "Australian Bush", emoji: "", blurb: "Fire-shaped landscapes home to marsupials found nowhere else.", color: "#a47148" },
+  { id: "eco-reef", name: "Coral Reefs", emoji: "", blurb: "The rainforests of the sea, colourful, fragile and vital.", color: "#5c8aa8" },
+  { id: "eco-wetlands", name: "Wetlands", emoji: "", blurb: "Nature's kidneys, filtering water and sheltering wildlife.", color: "#2d6a4f" },
+  { id: "eco-savanna", name: "Savanna", emoji: "", blurb: "Vast grasslands where great herds and hunters roam.", color: "#c08552" },
+  { id: "eco-apes", name: "Great Apes", emoji: "", blurb: "Our closest cousins, intelligent, social and endangered.", color: "#8b5e3c" },
+  { id: "eco-cats", name: "Big Cats", emoji: "", blurb: "Powerful, stealthy predators at the top of their food webs.", color: "#40916c" },
+  { id: "eco-marsupials", name: "Marsupials", emoji: "", blurb: "Pouched mammals uniquely adapted to Australian life.", color: "#74c69d" },
 ];
 
 export const conservationFacts = [

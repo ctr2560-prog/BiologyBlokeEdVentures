@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { AdaptiveRecommendation } from "@/types";
 import { taskTypeMeta } from "@/lib/adaptive";
 import { Badge } from "@/components/ui/primitives";
+import { Compass, HelpingHand } from "lucide-react";
 
 /** A titled insight callout used across dashboards. */
 export function InsightCard({
@@ -34,7 +35,7 @@ export function InsightCard({
 }
 
 /**
- * AdaptiveRecommendationPanel — the visible output of the adaptive engine.
+ * AdaptiveRecommendationPanel, the visible output of the adaptive engine.
  * Shown to both teachers (as guidance) and students (as their next mission).
  */
 export function AdaptiveRecommendationPanel({
@@ -51,7 +52,7 @@ export function AdaptiveRecommendationPanel({
         className="flex items-center gap-3 px-5 py-4 text-cream"
         style={{ background: `linear-gradient(120deg, ${meta.color}, #1b4332)` }}
       >
-        <span className="text-2xl">{meta.emoji}</span>
+        <meta.Icon className="h-7 w-7" aria-hidden strokeWidth={1.75} />
         <div>
           <p className="text-xs font-medium uppercase tracking-wide opacity-80">
             {audience === "student" ? "Your next mission" : "Recommended pathway"}
@@ -67,13 +68,13 @@ export function AdaptiveRecommendationPanel({
           <Badge tone="mist">Understanding: {rec.comprehensionLevel}</Badge>
         </div>
         {rec.exploreSuggestion && (
-          <p className="rounded-2xl bg-mist-100 px-3 py-2 text-sm text-mist-600">
-            🔭 {rec.exploreSuggestion}
+          <p className="flex items-center gap-2 rounded-2xl bg-mist-100 px-3 py-2 text-sm text-mist-600">
+            <Compass className="h-4 w-4 shrink-0" aria-hidden /> {rec.exploreSuggestion}
           </p>
         )}
         {rec.supportSuggestion && (
-          <p className="rounded-2xl bg-clay-400/10 px-3 py-2 text-sm text-clay-600">
-            🤝 {rec.supportSuggestion}
+          <p className="flex items-center gap-2 rounded-2xl bg-clay-400/10 px-3 py-2 text-sm text-clay-600">
+            <HelpingHand className="h-4 w-4 shrink-0" aria-hidden /> {rec.supportSuggestion}
           </p>
         )}
       </div>

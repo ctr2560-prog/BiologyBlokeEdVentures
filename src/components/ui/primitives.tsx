@@ -4,6 +4,7 @@
  * Modal, FormField, SearchFilterBar. Cohesive, rounded, nature-toned.
  */
 import { useEffect, type ReactNode } from "react";
+import { Sprout, X, type LucideIcon } from "lucide-react";
 
 // ---- Button ----
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -154,20 +155,20 @@ export function StatCard({
 
 // ---- EmptyState ----
 export function EmptyState({
-  emoji = "🌱",
+  Icon = Sprout,
   title,
   message,
   action,
 }: {
-  emoji?: string;
+  Icon?: LucideIcon;
   title: string;
   message: string;
   action?: ReactNode;
 }) {
   return (
     <div className="rounded-3xl border-2 border-dashed border-sand-dark bg-cream/50 p-12 text-center">
-      <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl">
-        {emoji}
+      <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-forest-600">
+        <Icon className="h-7 w-7" aria-hidden strokeWidth={1.75} />
       </div>
       <h3 className="display mt-4 text-lg font-semibold text-forest-900">{title}</h3>
       <p className="mx-auto mt-1 max-w-sm text-sm text-charcoal-soft">{message}</p>
@@ -222,7 +223,7 @@ export function Modal({
             aria-label="Close"
             className="grid h-9 w-9 place-items-center rounded-full text-charcoal-soft hover:bg-charcoal/8"
           >
-            ✕
+            <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
         {children}

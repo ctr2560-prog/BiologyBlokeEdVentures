@@ -1,5 +1,5 @@
 /*
- * Data service layer — the ONLY module the UI talks to for data.
+ * Data service layer, the ONLY module the UI talks to for data.
  *
  * Today it reads from in-memory mock arrays (imported from /src/data). Every
  * function is written so it can be swapped for a Firestore call with the same

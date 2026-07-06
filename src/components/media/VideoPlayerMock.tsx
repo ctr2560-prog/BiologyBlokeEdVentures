@@ -1,12 +1,13 @@
 "use client";
 /*
- * VideoPlayerMock — simulates a short-form reel and TRACKS real engagement
+ * VideoPlayerMock, simulates a short-form reel and TRACKS real engagement
  * signals: watch time, % watched, replays, skip, curiosity + help clicks.
  * A real build swaps the timer loop for the media element's timeupdate events;
  * the tracked outputs stay identical so the adaptive engine is unchanged.
  */
 import { useEffect, useRef, useState } from "react";
 import { Button, Badge, ProgressBar } from "@/components/ui/primitives";
+import { Play, Pause, Compass, HelpingHand, RotateCcw, SkipForward, Check } from "lucide-react";
 import type { Video } from "@/types";
 
 export interface WatchSignals {
@@ -33,7 +34,7 @@ export function VideoPlayerMock({
   const [finished, setFinished] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Play at 8x so a 90s reel simulates in ~11s — keeps the demo snappy.
+  // Play at 8x so a 90s reel simulates in ~11s, keeps the demo snappy.
   const SPEED = 8;
   const duration = video.durationSeconds;
 
@@ -118,18 +119,18 @@ export function VideoPlayerMock({
           <button
             onClick={() => setPlaying(true)}
             aria-label="Play"
-            className="absolute left-1/2 top-1/2 grid h-20 w-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full glass text-3xl text-forest-800 shadow-lift transition-transform hover:scale-105"
+            className="absolute left-1/2 top-1/2 grid h-20 w-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full glass text-forest-800 shadow-lift transition-transform hover:scale-105"
           >
-            ▶
+            <Play className="h-8 w-8" aria-hidden />
           </button>
         )}
         {playing && (
           <button
             onClick={() => setPlaying(false)}
             aria-label="Pause"
-            className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full glass-dark text-2xl text-cream opacity-0 transition-opacity hover:opacity-100"
+            className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full glass-dark text-cream opacity-0 transition-opacity hover:opacity-100"
           >
-            ⏸
+            <Pause className="h-6 w-6" aria-hidden />
           </button>
         )}
       </div>
@@ -138,28 +139,28 @@ export function VideoPlayerMock({
       <div className="mt-4 flex gap-2">
         <button
           onClick={() => setCurious((c) => !c)}
-          className={`flex-1 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${curious ? "bg-mist-500 text-white" : "bg-mist-100 text-mist-600"}`}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${curious ? "bg-mist-500 text-white" : "bg-mist-100 text-mist-600"}`}
         >
-          🔭 I&apos;m curious!
+          <Compass className="h-4 w-4" aria-hidden /> I&apos;m curious!
         </button>
         <button
           onClick={() => setHelp((h) => !h)}
-          className={`flex-1 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${help ? "bg-clay-500 text-white" : "bg-clay-400/15 text-clay-600"}`}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${help ? "bg-clay-500 text-white" : "bg-clay-400/15 text-clay-600"}`}
         >
-          🤝 I need help
+          <HelpingHand className="h-4 w-4" aria-hidden /> I need help
         </button>
       </div>
 
       {/* Nav controls */}
       <div className="mt-3 flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={replay}>↻ Replay</Button>
+        <Button variant="ghost" size="sm" onClick={replay}><RotateCcw className="h-4 w-4" aria-hidden /> Replay</Button>
         {!finished ? (
-          <Button variant="secondary" size="sm" onClick={skip}>Skip ⏭</Button>
+          <Button variant="secondary" size="sm" onClick={skip}>Skip <SkipForward className="h-4 w-4" aria-hidden /></Button>
         ) : (
-          <Badge tone="forest">✓ Finished</Badge>
+          <Badge tone="forest"><Check className="h-3 w-3" aria-hidden /> Finished</Badge>
         )}
         <Button size="sm" onClick={() => finish(false)} disabled={elapsed === 0}>
-          Continue to quiz →
+          Continue to quiz
         </Button>
       </div>
     </div>

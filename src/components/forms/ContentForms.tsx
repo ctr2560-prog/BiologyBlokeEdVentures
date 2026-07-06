@@ -6,6 +6,7 @@
  * dropped into a Modal or a full page.
  */
 import { useState } from "react";
+import { UploadCloud, X, Check, Plus } from "lucide-react";
 import {
   FormField,
   inputClass,
@@ -54,7 +55,7 @@ export function VideoForm({ onSaved }: { onSaved: () => void }) {
   const [stage, setStage] = useState<Stage>("Stage 3");
   const [duration, setDuration] = useState(90);
   const [tags, setTags] = useState("");
-  const [emoji, setEmoji] = useState("🎬");
+  const [emoji] = useState("");
   const [transcript, setTranscript] = useState("");
   const [intent, setIntent] = useState("");
   const [criteria, setCriteria] = useState("");
@@ -91,14 +92,9 @@ export function VideoForm({ onSaved }: { onSaved: () => void }) {
       <FormField label="Description">
         <textarea className={inputClass} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
       </FormField>
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label="Video URL" hint="YouTube / storage URL">
-          <input className={inputClass} value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://…" />
-        </FormField>
-        <FormField label="Thumbnail emoji" hint="Placeholder until real media">
-          <input className={inputClass} value={emoji} onChange={(e) => setEmoji(e.target.value)} />
-        </FormField>
-      </div>
+      <FormField label="Video URL" hint="YouTube / storage URL">
+        <input className={inputClass} value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://…" />
+      </FormField>
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Topic" required>
           <TopicSelect value={topicId} onChange={setTopicId} />
@@ -182,9 +178,9 @@ export function ResourceForm({ onSaved }: { onSaved: () => void }) {
           </select>
         </FormField>
       </div>
-      <FormField label="File upload" hint="Placeholder — wires to Firebase Storage later">
+      <FormField label="File upload" hint="Placeholder, wires to Firebase Storage later">
         <div className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-sand-dark bg-cream/50 px-4 py-5 text-sm text-charcoal-soft">
-          <span className="text-2xl">☁️</span>
+          <UploadCloud className="h-6 w-6" aria-hidden />
           <span>Drag a file here or click to browse (mock)</span>
         </div>
       </FormField>
@@ -220,7 +216,7 @@ export function UnitForm({ onSaved }: { onSaved: () => void }) {
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(10);
   const [outcomes, setOutcomes] = useState("");
-  const [emoji, setEmoji] = useState("🌏");
+  const [emoji] = useState("");
   const [published, setPublished] = useState(false);
 
   const submit = (e: React.FormEvent) => {
@@ -253,9 +249,6 @@ export function UnitForm({ onSaved }: { onSaved: () => void }) {
         </FormField>
         <FormField label="Year groups" hint="Comma sep">
           <input className={inputClass} value={yearGroups} onChange={(e) => setYearGroups(e.target.value)} placeholder="Year 5, Year 6" />
-        </FormField>
-        <FormField label="Cover emoji">
-          <input className={inputClass} value={emoji} onChange={(e) => setEmoji(e.target.value)} />
         </FormField>
       </div>
       <FormField label="Description">
@@ -332,8 +325,9 @@ export function QuizForm({ onSaved }: { onSaved: () => void }) {
                 type="button"
                 onClick={() => setQuestions((qs) => qs.filter((x) => x.id !== q.id))}
                 className="text-clay-500 hover:text-clay-600"
+                aria-label="Remove question"
               >
-                ✕
+                <X className="h-4 w-4" aria-hidden />
               </button>
             </div>
           ))}
@@ -385,8 +379,8 @@ export function QuizForm({ onSaved }: { onSaved: () => void }) {
                     }}
                   />
                   <button type="button" onClick={() => setDraft({ ...draft, correctAnswer: opt })}
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${draft.correctAnswer === opt && opt ? "bg-forest-700 text-cream" : "bg-forest-50 text-forest-700"}`}>
-                    ✓ correct
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${draft.correctAnswer === opt && opt ? "bg-forest-700 text-cream" : "bg-forest-50 text-forest-700"}`}>
+                    <Check className="h-3 w-3" aria-hidden /> correct
                   </button>
                 </div>
               ))}
@@ -415,7 +409,7 @@ export function QuizForm({ onSaved }: { onSaved: () => void }) {
         <FormField label="Linked concept">
           <input className={inputClass} value={draft.linkedConcept} onChange={(e) => setDraft({ ...draft, linkedConcept: e.target.value })} />
         </FormField>
-        <Button type="button" variant="secondary" size="sm" onClick={addQuestion}>➕ Add question</Button>
+        <Button type="button" variant="secondary" size="sm" onClick={addQuestion}><Plus className="h-4 w-4" aria-hidden /> Add question</Button>
       </div>
 
       <div className="flex justify-end">
@@ -437,7 +431,7 @@ function PublishToggle({ published, setPublished }: { published: boolean; setPub
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${published ? "translate-x-5" : "translate-x-0.5"}`} />
       </button>
       <span className="text-sm font-semibold text-forest-900">
-        {published ? "Published — visible to teachers" : "Draft — hidden until published"}
+        {published ? "Published, visible to teachers" : "Draft, hidden until published"}
       </span>
     </label>
   );

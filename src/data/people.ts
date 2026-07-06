@@ -77,7 +77,7 @@ export const users: User[] = [
     avatarUrl: "",
     createdAt: "2025-03-12",
   },
-  // Students (minimal PII — display name + linkage only)
+  // Students (minimal PII, display name + linkage only)
   { id: "stu-1", name: "Aria M.", email: "aria@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
   { id: "stu-2", name: "Ben T.", email: "ben@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
   { id: "stu-3", name: "Chloe R.", email: "chloe@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },

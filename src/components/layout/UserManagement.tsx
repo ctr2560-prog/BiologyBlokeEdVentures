@@ -41,7 +41,7 @@ export function UserManagement({
       ),
     },
     { key: "email", header: "Email", render: (u) => <span className="text-charcoal-soft">{u.email}</span> },
-    { key: "school", header: "School", render: (u) => getSchool(u.schoolId ?? "")?.name ?? "—" },
+    { key: "school", header: "School", render: (u) => getSchool(u.schoolId ?? "")?.name ?? "-" },
     {
       key: "classes",
       header: role === "teacher" ? "Classes" : "Class",
@@ -52,7 +52,7 @@ export function UserManagement({
               {getClass(c)?.name ?? c}
             </Badge>
           ))}
-          {u.classIds.length === 0 && <span className="text-charcoal-soft">—</span>}
+          {u.classIds.length === 0 && <span className="text-charcoal-soft">-</span>}
         </div>
       ),
     },
@@ -64,7 +64,7 @@ export function UserManagement({
       <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-white p-3 shadow-soft ring-1 ring-black/5">
         <input
           className={`${inputClass} flex-1 min-w-48`}
-          placeholder={`🔍 Search ${role}s…`}
+          placeholder={`Search ${role}s…`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/lib/store";
 import { SectionHeader, Button, Modal, Badge } from "@/components/ui/primitives";
+import { Leaf, ChevronUp, ChevronDown } from "lucide-react";
 import { UnitForm } from "@/components/forms/ContentForms";
 import { getUnits, getTopicsByUnit } from "@/lib/dataService";
 
@@ -19,8 +20,8 @@ export default function UnitsPage() {
     <div className="space-y-6">
       <SectionHeader
         title="Units & Topics"
-        subtitle="Structure your curriculum — units contain topics, which hold videos, resources and quizzes"
-        action={<Button onClick={() => setModal(true)}>➕ Create unit</Button>}
+        subtitle="Structure your curriculum, units contain topics, which hold videos, resources and quizzes"
+        action={<Button onClick={() => setModal(true)}> Create unit</Button>}
       />
 
       <div className="space-y-4">
@@ -33,8 +34,8 @@ export default function UnitsPage() {
                 onClick={() => setExpanded(open ? null : unit.id)}
                 className="flex w-full items-center gap-4 p-5 text-left"
               >
-                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-forest-50 text-3xl">
-                  {unit.coverEmoji}
+                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-forest-50 text-forest-700">
+                  <Leaf className="h-6 w-6" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -47,7 +48,7 @@ export default function UnitsPage() {
                 <div className="hidden shrink-0 items-center gap-3 text-sm text-charcoal-soft sm:flex">
                   <span>{topics.length} topics</span>
                   <span>{unit.durationLessons} lessons</span>
-                  <span className="text-lg">{open ? "▲" : "▼"}</span>
+                  {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
                 </div>
               </button>
               {open && (
@@ -72,9 +73,9 @@ export default function UnitsPage() {
                       <div key={t.id} className="rounded-2xl bg-white p-3 ring-1 ring-sand">
                         <p className="font-semibold text-forest-900">{t.title}</p>
                         <div className="mt-1 flex gap-3 text-xs text-charcoal-soft">
-                          <span>🎬 {t.videoIds.length}</span>
-                          <span>📝 {t.resourceIds.length}</span>
-                          <span>❓ {t.quizIds.length}</span>
+                          <span> {t.videoIds.length}</span>
+                          <span> {t.resourceIds.length}</span>
+                          <span> {t.quizIds.length}</span>
                         </div>
                       </div>
                     ))}

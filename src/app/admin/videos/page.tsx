@@ -18,8 +18,8 @@ export default function VideosPage() {
     <div className="space-y-6">
       <SectionHeader
         title="Videos"
-        subtitle="Short-form wildlife reels — the heart of every Edventure"
-        action={<Button onClick={() => setModal(true)}>➕ Add video</Button>}
+        subtitle="Short-form wildlife reels, the heart of every Edventure"
+        action={<Button onClick={() => setModal(true)}> Add video</Button>}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {videos.map((v) => (

@@ -6,7 +6,7 @@
  * - ContentShowcase: original wildlife reels & ecosystems
  * - FounderStory: The Biology Bloke credibility (Cameron Rodgers)
  *
- * Icons are SVG (lucide-react) — no emojis anywhere.
+ * Icons are SVG (lucide-react), no emojis anywhere.
  */
 import { Reveal } from "@/components/ui/Reveal";
 import { exploreEcosystems, videos } from "@/data/content";
@@ -47,7 +47,7 @@ export function WhyShortForm() {
   const stats: { v: string; l: string; Icon: LucideIcon }[] = [
     { v: "60–120s", l: "The length of a BioBloke reel", Icon: Timer },
     { v: "Where they scroll", l: "Learning in the format kids already love", Icon: Smartphone },
-    { v: "Real nature", l: "Original conservation footage — never stock", Icon: Globe },
+    { v: "Real nature", l: "Original conservation footage, never stock", Icon: Globe },
   ];
   return (
     <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
@@ -58,10 +58,10 @@ export function WhyShortForm() {
             Kids already learn in reels. We just made them count.
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-charcoal-soft">
-            The average student watches hours of short-form video every day — yet spends
-            less time in nature than any generation before them. BioBloke meets them where
-            their attention already lives, and turns 60 seconds of wonder into real,
-            measurable learning.
+            The average student watches hours of short-form video every day, yet spends
+            less time in the natural world than any generation before them. BioBloke meets
+            them where their attention already lives, then turns 60 seconds of wonder into
+            real, lasting learning.
           </p>
         </div>
       </Reveal>
@@ -86,7 +86,7 @@ export function HowItWorks() {
     { n: 1, Icon: ClipboardList, t: "Assign", d: "Teachers pick a unit or reel set for a class in seconds." },
     { n: 2, Icon: Film, t: "Watch", d: "Students watch cinematic wildlife reels at their own pace." },
     { n: 3, Icon: Compass, t: "Adapt", d: "The platform reads watch-time, quizzes & curiosity to set each student's next mission." },
-    { n: 4, Icon: BarChart3, t: "Insight", d: "Teachers see who's thriving and who needs a hand — live." },
+    { n: 4, Icon: BarChart3, t: "Insight", d: "Teachers see who's thriving and who needs a hand, live." },
   ];
   return (
     <section
@@ -130,13 +130,13 @@ export function ContentShowcase() {
     <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
       <Reveal>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={`${eyebrow} text-forest-600`}>Real wildlife · real science</p>
+          <p className={`${eyebrow} text-forest-600`}>Real places · real wonder</p>
           <h2 className="display mt-3 text-3xl font-bold leading-tight text-forest-900 md:text-5xl">
             Original reels from the world&apos;s wildest places.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-charcoal-soft">
-            From the rainforests of Sumatra to the Australian bush — every ecosystem
-            becomes a series of short, cinematic missions.
+            From the rainforests of Borneo to the coral reefs of the Pacific, every wild
+            place becomes a series of short, cinematic missions.
           </p>
         </div>
       </Reveal>
@@ -200,7 +200,7 @@ export function FounderStory() {
         <Reveal delay={120} className="order-1 lg:order-2">
           <p className={`${eyebrow} text-forest-600`}>Meet the Biology Bloke</p>
           <h2 className="display mt-3 text-3xl font-bold leading-tight text-forest-900 md:text-4xl">
-            Filmed by a zoo educator — not a stock library.
+            Filmed by a zoo educator, not a stock library.
           </h2>
           <p className="mt-4 text-lg text-charcoal-soft">
             BioBloke is built and filmed by Cameron Rodgers, a zoo education officer and
@@ -214,7 +214,7 @@ export function FounderStory() {
               continuous learning.&rdquo;
             </p>
             <footer className="mt-2 text-sm font-medium text-charcoal-soft">
-              — Cameron Rodgers, The Biology Bloke
+              Cameron Rodgers, The Biology Bloke
             </footer>
           </blockquote>
         </Reveal>

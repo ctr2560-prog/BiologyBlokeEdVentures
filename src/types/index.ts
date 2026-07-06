@@ -5,7 +5,7 @@
  * users, schools, classes, units, topics, videos, resources, quizzes,
  * studentProgress, adaptiveTasks, analyticsEvents.
  *
- * Privacy note: student records deliberately hold minimal personal data —
+ * Privacy note: student records deliberately hold minimal personal data -
  * a display name and school/class linkage only. Analytics focus on learning
  * engagement, never surveillance.
  */

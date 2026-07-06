@@ -34,7 +34,7 @@ function ReportsInner() {
             <select className="rounded-2xl border border-sand-dark bg-white px-4 py-2.5 text-sm font-semibold text-forest-900" value={classId} onChange={(e) => setClassId(e.target.value)}>
               {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <Button variant="secondary" onClick={() => window.print()}>🖨 Print / PDF</Button>
+            <Button variant="secondary" onClick={() => window.print()}> Print / PDF</Button>
           </div>
         }
       />
@@ -57,28 +57,28 @@ function ReportsInner() {
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <ReportSection title="🌟 Topic strengths">
+          <ReportSection title=" Topic strengths">
             {a.strengths.length ? (
               <ul className="space-y-1 text-sm text-charcoal">
-                {a.strengths.map((t) => <li key={t.topic}>• {t.topic} — {t.avg}% avg</li>)}
+                {a.strengths.map((t) => <li key={t.topic}>• {t.topic}, {t.avg}% avg</li>)}
               </ul>
             ) : <p className="text-sm text-charcoal-soft">Gathering data.</p>}
           </ReportSection>
-          <ReportSection title="🧩 Topic gaps">
+          <ReportSection title=" Topic gaps">
             {a.gaps.length ? (
               <ul className="space-y-1 text-sm text-charcoal">
-                {a.gaps.map((t) => <li key={t.topic}>• {t.topic} — {t.avg}% avg</li>)}
+                {a.gaps.map((t) => <li key={t.topic}>• {t.topic}, {t.avg}% avg</li>)}
               </ul>
             ) : <p className="text-sm text-charcoal-soft">No major gaps.</p>}
           </ReportSection>
-          <ReportSection title="🪴 Students needing support">
+          <ReportSection title=" Students needing support">
             {needSupport.length ? (
               <ul className="space-y-1 text-sm text-charcoal">
                 {needSupport.map((s) => <li key={s.id}>• {s.name}</li>)}
               </ul>
             ) : <p className="text-sm text-charcoal-soft">Everyone on track.</p>}
           </ReportSection>
-          <ReportSection title="🚀 Ready for extension">
+          <ReportSection title=" Ready for extension">
             {readyExtension.length ? (
               <ul className="space-y-1 text-sm text-charcoal">
                 {readyExtension.map((s) => <li key={s.id}>• {s.name}</li>)}
@@ -88,11 +88,11 @@ function ReportsInner() {
         </div>
 
         <div className="mt-8 rounded-2xl bg-forest-50 p-5">
-          <h3 className="display font-semibold text-forest-900">📋 Suggested next lesson</h3>
+          <h3 className="display font-semibold text-forest-900"> Suggested next lesson</h3>
           <p className="mt-1 text-sm text-charcoal">
             {a.gaps.length
               ? `Re-teach ${a.gaps[0].topic} with a scaffolded support task, then move the extension-ready students onto the Wildlife Corridor challenge.`
-              : `The class is progressing well — introduce the next topic and enable extension tasks for high performers.`}
+              : `The class is progressing well, introduce the next topic and enable extension tasks for high performers.`}
           </p>
         </div>
       </div>
