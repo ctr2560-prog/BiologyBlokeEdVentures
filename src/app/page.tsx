@@ -136,7 +136,7 @@ export default function LandingPage() {
             The world&apos;s first adaptive short-form media platform
           </p>
           <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
-            Every wild place on Earth is a classroom.
+            Bringing the wild to every classroom, and every learner to the wild.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-cream/85 md:text-xl">
             Students explore the wild alongside The Biology Bloke through short reels. The
