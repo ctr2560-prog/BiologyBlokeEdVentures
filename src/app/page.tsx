@@ -11,7 +11,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { roleHome, roleLabel } from "@/components/layout/navConfig";
-import { Button } from "@/components/ui/primitives";
+import { Button, Modal, inputClass } from "@/components/ui/primitives";
+import { getClasses } from "@/lib/dataService";
 import type { Role } from "@/types";
 
 const roleMeta: { role: Role; emoji: string; blurb: string }[] = [
@@ -29,13 +30,33 @@ const features = [
 ];
 
 export default function LandingPage() {
-  const { loginAs } = useApp();
+  const { loginAs, loginAsUser } = useApp();
   const router = useRouter();
   const [selected, setSelected] = useState<Role>("teacher");
+
+  // Student class-code entry.
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState("");
 
   const enter = (role: Role) => {
     loginAs(role);
     router.push(roleHome[role]);
+  };
+
+  const submitCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const match = getClasses().find(
+      (c) => c.classCode.toLowerCase() === code.trim().toLowerCase()
+    );
+    if (!match) {
+      setCodeError("We couldn't find that class code. Try KOALA-5J for the demo.");
+      return;
+    }
+    // Sign the student in as the first learner in that class (demo behaviour).
+    if (match.studentIds[0]) loginAsUser(match.studentIds[0]);
+    else loginAs("student");
+    router.push(roleHome.student);
   };
 
   return (
@@ -44,12 +65,15 @@ export default function LandingPage() {
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-end px-6 py-5">
           <nav className="flex items-center gap-2">
-            <a href="#how" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-cream/90 hover:text-cream sm:block">
-              How it works
+            <a href="#signin" className="rounded-full px-4 py-2 text-sm font-semibold text-cream/90 hover:text-cream">
+              Teacher login
             </a>
-            <a href="#signin" className="glass rounded-full px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream">
-              Log in
-            </a>
+            <button
+              onClick={() => { setCode(""); setCodeError(""); setCodeOpen(true); }}
+              className="glass rounded-full px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream"
+            >
+              Student code →
+            </button>
           </nav>
         </div>
       </header>
@@ -94,16 +118,6 @@ export default function LandingPage() {
             Cinematic wildlife reels, adaptive missions and live class insights —
             ready to teach.
           </p>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <a href="#signin">
-              <Button size="lg">Enter the platform →</Button>
-            </a>
-            <a href="#how">
-              <button className="rounded-full border border-cream/40 px-7 py-3.5 text-base font-semibold text-cream transition-colors hover:bg-cream/10">
-                How it works
-              </button>
-            </a>
-          </div>
         </div>
 
         {/* Scroll cue */}
@@ -254,6 +268,28 @@ export default function LandingPage() {
           </p>
         </div>
       </section>
+
+      {/* ============ Student code modal ============ */}
+      <Modal open={codeOpen} onClose={() => setCodeOpen(false)} title="Enter your class code">
+        <form onSubmit={submitCode} className="space-y-4">
+          <div className="grid place-items-center py-2 text-5xl">🧭</div>
+          <p className="text-center text-sm text-charcoal-soft">
+            Ask your teacher for your class code, then pop it in below to start your Edventure.
+          </p>
+          <input
+            value={code}
+            onChange={(e) => { setCode(e.target.value); setCodeError(""); }}
+            placeholder="e.g. KOALA-5J"
+            autoFocus
+            className={`${inputClass} text-center text-lg font-bold uppercase tracking-widest`}
+          />
+          {codeError && <p className="text-center text-sm font-medium text-clay-600">{codeError}</p>}
+          <Button type="submit" size="lg" className="w-full">Start exploring →</Button>
+          <p className="text-center text-xs text-charcoal-soft">
+            Demo code: <b>KOALA-5J</b>
+          </p>
+        </form>
+      </Modal>
     </div>
   );
 }
