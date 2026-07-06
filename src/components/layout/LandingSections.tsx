@@ -137,7 +137,7 @@ export function HowItWorks() {
         <div className="text-center">
           <p className={`${eyebrow} text-forest-100/70`}>How it works</p>
           <AnimatedHeading
-            text="One simple loop that personalises itself."
+            text="One powerful loop that personalises itself."
             className="display mt-3 text-3xl font-bold text-cream md:text-5xl"
           />
         </div>
