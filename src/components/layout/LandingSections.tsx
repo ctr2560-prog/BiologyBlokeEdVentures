@@ -9,6 +9,7 @@
  * Icons are SVG (lucide-react), no emojis, no em dashes.
  */
 import { Reveal } from "@/components/ui/Reveal";
+import { useEffect, useRef, useState } from "react";
 import {
   Parallax,
   CountUp,
@@ -16,7 +17,6 @@ import {
   Marquee,
   Aurora,
   AnimatedHeading,
-  useScrollFill,
 } from "@/components/ui/motion";
 import { exploreEcosystems, videos } from "@/data/content";
 import { getEcoIcon } from "@/lib/icons";
@@ -106,7 +106,26 @@ const steps: { Icon: LucideIcon; t: string; d: string }[] = [
 ];
 
 export function HowItWorks() {
-  const { ref, fill } = useScrollFill(0.62);
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.35 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const sweep = 1600; // ms for the rail to travel end to end
+  const per = sweep / (steps.length - 1);
 
   return (
     <section
@@ -114,7 +133,7 @@ export function HowItWorks() {
       style={{ background: "linear-gradient(160deg, #14352a 0%, #1b4332 55%, #0d2419 100%)" }}
     >
       <Aurora />
-      <div className="relative mx-auto max-w-3xl px-6">
+      <div className="relative mx-auto max-w-6xl px-6">
         <div className="text-center">
           <p className={`${eyebrow} text-forest-100/70`}>How it works</p>
           <AnimatedHeading
@@ -123,49 +142,50 @@ export function HowItWorks() {
           />
         </div>
 
-        {/* Timeline */}
-        <div ref={ref} className="relative mt-14 pl-16">
-          {/* background rail */}
-          <div className="absolute left-6 top-1 bottom-1 w-1 -translate-x-1/2 rounded-full bg-cream/12" />
-          {/* animated fill rail */}
-          <div
-            className="absolute left-6 top-1 w-1 -translate-x-1/2 rounded-full bg-gradient-to-b from-forest-400 via-forest-300 to-gold-400"
-            style={{ height: `${fill * 100}%`, transition: "height 0.15s linear" }}
-          />
+        {/* Horizontal timeline (scrolls sideways on small screens) */}
+        <div ref={ref} className="mt-16 overflow-x-auto pb-4">
+          <div className="relative flex min-w-[820px] gap-4 lg:min-w-0">
+            {/* rail track spanning the node centres (10% to 90%) */}
+            <div className="absolute left-[10%] right-[10%] top-[1.375rem] h-1 -translate-y-1/2 overflow-hidden rounded-full bg-cream/12">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-forest-400 via-forest-300 to-gold-400"
+                style={{ width: inView ? "100%" : "0%", transition: `width ${sweep}ms ease-out` }}
+              />
+            </div>
 
-          {steps.map((s, i) => {
-            const active = fill >= i / steps.length;
-            return (
-              <div key={s.t} className="relative pb-9 last:pb-0">
-                {/* node */}
+            {steps.map((s, i) => (
+              <div key={s.t} className="flex flex-1 flex-col items-center text-center">
+                {/* node on the rail */}
                 <span
-                  className={`absolute -left-[2.5rem] top-1 grid h-11 w-11 -translate-x-1/2 place-items-center rounded-2xl transition-all duration-300 ${
-                    active
+                  className={`relative z-10 grid h-11 w-11 place-items-center rounded-2xl transition-all duration-500 ${
+                    inView
                       ? "scale-100 bg-cream text-forest-800 shadow-lift"
                       : "scale-90 bg-forest-900/60 text-cream/60 ring-1 ring-cream/20"
                   }`}
+                  style={{ transitionDelay: `${i * per}ms` }}
                 >
                   <s.Icon className="h-5 w-5" aria-hidden strokeWidth={1.75} />
                 </span>
 
-                <Reveal>
-                  <div
-                    className={`rounded-3xl border p-5 transition-colors duration-300 ${
-                      active ? "border-cream/20 bg-cream/[0.08]" : "border-cream/10 bg-cream/[0.04]"
-                    }`}
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-forest-100/60">
-                        Step {i + 1}
-                      </span>
-                      <h3 className="display text-lg font-bold text-cream">{s.t}</h3>
-                    </div>
-                    <p className="mt-1 text-sm text-forest-100/85">{s.d}</p>
-                  </div>
-                </Reveal>
+                {/* card */}
+                <div
+                  className="mt-6 w-full rounded-3xl border border-cream/15 bg-cream/[0.06] p-5"
+                  style={{
+                    opacity: inView ? 1 : 0,
+                    transform: inView ? "translateY(0)" : "translateY(16px)",
+                    transition: "opacity 0.6s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1)",
+                    transitionDelay: `${i * per + 150}ms`,
+                  }}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wider text-forest-100/60">
+                    Step {i + 1}
+                  </p>
+                  <h3 className="display mt-1 text-lg font-bold text-cream">{s.t}</h3>
+                  <p className="mt-1.5 text-sm text-forest-100/85">{s.d}</p>
+                </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     </section>
