@@ -21,12 +21,22 @@ import {
   FounderStory,
 } from "@/components/layout/LandingSections";
 import { getClasses } from "@/lib/dataService";
+import {
+  Globe,
+  Compass,
+  UserCog,
+  Presentation,
+  GraduationCap,
+  Film,
+  Check,
+  type LucideIcon,
+} from "lucide-react";
 import type { Role } from "@/types";
 
-const roleMeta: { role: Role; emoji: string; blurb: string }[] = [
-  { role: "admin", emoji: "🧑‍💼", blurb: "Manage the whole learning ecosystem" },
-  { role: "teacher", emoji: "👩‍🏫", blurb: "Run classes & assign Edventures" },
-  { role: "student", emoji: "🎓", blurb: "Watch, explore & earn points" },
+const roleMeta: { role: Role; Icon: LucideIcon; blurb: string }[] = [
+  { role: "admin", Icon: UserCog, blurb: "Manage the whole learning ecosystem" },
+  { role: "teacher", Icon: Presentation, blurb: "Run classes & assign Edventures" },
+  { role: "student", Icon: GraduationCap, blurb: "Watch, explore & earn points" },
 ];
 
 const features = [
@@ -120,7 +130,8 @@ export default function LandingPage() {
             className="float-y-slow mx-auto h-44 w-auto drop-shadow-2xl md:h-60"
           />
           <p className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-cream/25 bg-forest-950/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cream backdrop-blur">
-            🌏 The world&apos;s first short-form nature learning platform
+            <Globe className="h-4 w-4" aria-hidden />
+            The world&apos;s first short-form nature learning platform
           </p>
           <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
             Australia&apos;s wildest way to learn conservation.
@@ -159,8 +170,8 @@ export default function LandingPage() {
             <ul className="mt-6 space-y-3">
               {features.map((f) => (
                 <li key={f} className="flex items-start gap-3 text-charcoal">
-                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest-100 text-sm font-bold text-forest-700">
-                    ✓
+                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest-100 text-forest-700">
+                    <Check className="h-3.5 w-3.5" aria-hidden strokeWidth={3} />
                   </span>
                   <span className="text-base">{f}</span>
                 </li>
@@ -187,7 +198,9 @@ export default function LandingPage() {
               {/* subtle bottom scrim + reel label */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-forest-950/80 to-transparent" />
               <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 text-cream">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-cream text-sm">🦍</span>
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-cream">
+                  <Film className="h-4 w-4 text-forest-700" aria-hidden />
+                </span>
                 <span className="text-xs font-semibold drop-shadow">A BioBloke reel · Great Apes</span>
               </div>
             </div>
@@ -255,7 +268,7 @@ export default function LandingPage() {
                     selected === r.role ? "border-forest-600 bg-forest-50 shadow-soft" : "border-sand bg-white hover:border-forest-400"
                   }`}
                 >
-                  <span className="text-2xl">{r.emoji}</span>
+                  <r.Icon className="mx-auto h-6 w-6 text-forest-700" aria-hidden />
                   <span className="mt-1 block text-xs font-semibold text-forest-900">{roleLabel[r.role]}</span>
                 </button>
               ))}
@@ -289,9 +302,9 @@ export default function LandingPage() {
                   <button
                     key={r.role}
                     onClick={() => enter(r.role)}
-                    className="rounded-2xl bg-forest-700 px-2 py-2.5 text-xs font-semibold text-cream transition-colors hover:bg-forest-800"
+                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-forest-700 px-2 py-2.5 text-xs font-semibold text-cream transition-colors hover:bg-forest-800"
                   >
-                    {r.emoji} Demo {roleLabel[r.role]}
+                    <r.Icon className="h-4 w-4" aria-hidden /> Demo {roleLabel[r.role]}
                   </button>
                 ))}
               </div>
@@ -310,7 +323,9 @@ export default function LandingPage() {
       {/* ============ Student code modal ============ */}
       <Modal open={codeOpen} onClose={() => setCodeOpen(false)} title="Enter your class code">
         <form onSubmit={submitCode} className="space-y-4">
-          <div className="grid place-items-center py-2 text-5xl">🧭</div>
+          <div className="grid place-items-center py-2">
+            <Compass className="h-12 w-12 text-forest-600" aria-hidden />
+          </div>
           <p className="text-center text-sm text-charcoal-soft">
             Ask your teacher for your class code, then pop it in below to start your Edventure.
           </p>

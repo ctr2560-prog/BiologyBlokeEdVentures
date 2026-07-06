@@ -3,16 +3,31 @@
  * PlatformTabs — Atomi-style tabbed feature section. Three tabs (Teachers /
  * Students / Schools); switching a tab swaps an animated preview panel that
  * mocks the relevant portal using the app's real design language.
+ * Icons are SVG (lucide-react) — no emojis.
  */
 import { useState } from "react";
 import { Badge } from "@/components/ui/primitives";
+import {
+  Presentation,
+  GraduationCap,
+  Building2,
+  Rocket,
+  Sprout,
+  LifeBuoy,
+  Film,
+  PawPrint,
+  Fish,
+  Award,
+  Check,
+  type LucideIcon,
+} from "lucide-react";
 
 type TabId = "teachers" | "students" | "schools";
 
 const tabs: {
   id: TabId;
   label: string;
-  emoji: string;
+  Icon: LucideIcon;
   heading: string;
   blurb: string;
   points: string[];
@@ -20,7 +35,7 @@ const tabs: {
   {
     id: "teachers",
     label: "Teachers",
-    emoji: "👩‍🏫",
+    Icon: Presentation,
     heading: "See exactly who needs support — and who's ready to fly.",
     blurb:
       "Assign a unit in seconds, then watch live class insights update as students learn.",
@@ -33,7 +48,7 @@ const tabs: {
   {
     id: "students",
     label: "Students",
-    emoji: "🎓",
+    Icon: GraduationCap,
     heading: "Short wildlife reels that turn into a personal Edventure.",
     blurb:
       "Watch at your own pace, take quick quizzes, and get a mission matched to you.",
@@ -46,7 +61,7 @@ const tabs: {
   {
     id: "schools",
     label: "Schools",
-    emoji: "🏫",
+    Icon: Building2,
     heading: "One platform for your whole conservation curriculum.",
     blurb:
       "Manage every unit, reel and class, with platform-wide analytics for leaders.",
@@ -70,13 +85,13 @@ export function PlatformTabs() {
           <button
             key={t.id}
             onClick={() => setActive(t.id)}
-            className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
               active === t.id
                 ? "bg-forest-700 text-cream shadow-soft"
                 : "bg-white text-charcoal-soft ring-1 ring-sand hover:bg-forest-50"
             }`}
           >
-            <span className="mr-1.5">{t.emoji}</span>
+            <t.Icon className="h-4 w-4" aria-hidden />
             {t.label}
           </button>
         ))}
@@ -92,8 +107,8 @@ export function PlatformTabs() {
           <ul className="mt-5 space-y-3">
             {tab.points.map((p) => (
               <li key={p} className="flex items-start gap-3 text-charcoal">
-                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest-100 text-sm font-bold text-forest-700">
-                  ✓
+                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest-100 text-forest-700">
+                  <Check className="h-3.5 w-3.5" aria-hidden strokeWidth={3} />
                 </span>
                 <span>{p}</span>
               </li>
@@ -127,10 +142,10 @@ function PanelFrame({ title, children }: { title: string; children: React.ReactN
 }
 
 function TeacherPreview() {
-  const rows = [
-    { n: "Aria M.", c: 97, e: "high", r: "🚀 Extension", tone: "mist" as const },
-    { n: "Ben T.", c: 82, e: "high", r: "🌿 Core", tone: "forest" as const },
-    { n: "Chloe R.", c: 42, e: "low", r: "🪴 Support", tone: "clay" as const },
+  const rows: { n: string; c: number; label: string; Icon: LucideIcon; tone: "mist" | "forest" | "clay" }[] = [
+    { n: "Aria M.", c: 97, label: "Extension", Icon: Rocket, tone: "mist" },
+    { n: "Ben T.", c: 82, label: "Core", Icon: Sprout, tone: "forest" },
+    { n: "Chloe R.", c: 42, label: "Support", Icon: LifeBuoy, tone: "clay" },
   ];
   return (
     <PanelFrame title="Class Insights · 5J Science Explorers">
@@ -154,7 +169,10 @@ function TeacherPreview() {
             </span>
             <span className="flex-1 text-sm font-semibold text-forest-900">{r.n}</span>
             <span className="text-xs text-charcoal-soft">{r.c}%</span>
-            <Badge tone={r.tone}>{r.r}</Badge>
+            <Badge tone={r.tone}>
+              <r.Icon className="h-3 w-3" aria-hidden />
+              {r.label}
+            </Badge>
           </div>
         ))}
       </div>
@@ -163,6 +181,7 @@ function TeacherPreview() {
 }
 
 function StudentPreview() {
+  const badges: LucideIcon[] = [PawPrint, Fish, Award];
   return (
     <div className="mx-auto flex max-w-[300px] items-end gap-3">
       {/* phone reel */}
@@ -171,17 +190,22 @@ function StudentPreview() {
           <source src="/reel-following.mp4" type="video/mp4" />
         </video>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-forest-950/80 to-transparent" />
-        <span className="absolute bottom-2 left-2 text-[0.6rem] font-semibold text-cream">🦍 Great Apes reel</span>
+        <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[0.6rem] font-semibold text-cream">
+          <Film className="h-3 w-3" aria-hidden />
+          Great Apes reel
+        </span>
       </div>
       {/* points + badges */}
       <div className="space-y-2">
         <div className="rounded-2xl bg-white p-3 shadow-lift ring-1 ring-black/5">
           <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-charcoal-soft">Explorer points</p>
-          <p className="display text-2xl font-bold text-forest-700">⭐ 285</p>
+          <p className="display text-2xl font-bold text-forest-700">285</p>
         </div>
         <div className="flex flex-wrap gap-1.5 rounded-2xl bg-white p-3 shadow-lift ring-1 ring-black/5">
-          {["🐨", "🕸️", "🧬"].map((b) => (
-            <span key={b} className="grid h-8 w-8 place-items-center rounded-full bg-forest-50 text-lg">{b}</span>
+          {badges.map((Icon, i) => (
+            <span key={i} className="grid h-8 w-8 place-items-center rounded-full bg-forest-50">
+              <Icon className="h-4 w-4 text-forest-700" aria-hidden />
+            </span>
           ))}
         </div>
       </div>

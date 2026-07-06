@@ -5,18 +5,49 @@
  * - HowItWorks: the adaptive loop in 4 steps
  * - ContentShowcase: original wildlife reels & ecosystems
  * - FounderStory: The Biology Bloke credibility (Cameron Rodgers)
+ *
+ * Icons are SVG (lucide-react) — no emojis anywhere.
  */
 import { Reveal } from "@/components/ui/Reveal";
 import { exploreEcosystems, videos } from "@/data/content";
+import {
+  Timer,
+  Smartphone,
+  Globe,
+  ClipboardList,
+  Film,
+  Compass,
+  BarChart3,
+  TreePalm,
+  Trees,
+  Fish,
+  Bird,
+  Sun,
+  PawPrint,
+  Cat,
+  Rabbit,
+  type LucideIcon,
+} from "lucide-react";
 
 const eyebrow = "text-sm font-semibold uppercase tracking-[0.2em]";
 
+const ecoIcon: Record<string, LucideIcon> = {
+  "eco-rainforest": TreePalm,
+  "eco-bush": Trees,
+  "eco-reef": Fish,
+  "eco-wetlands": Bird,
+  "eco-savanna": Sun,
+  "eco-apes": PawPrint,
+  "eco-cats": Cat,
+  "eco-marsupials": Rabbit,
+};
+
 /* ---------- Why short-form ---------- */
 export function WhyShortForm() {
-  const stats = [
-    { v: "60–120s", l: "The length of a BioBloke reel", e: "⏱️" },
-    { v: "Where they scroll", l: "Learning in the format kids already love", e: "📱" },
-    { v: "Real nature", l: "Original conservation footage — never stock", e: "🌏" },
+  const stats: { v: string; l: string; Icon: LucideIcon }[] = [
+    { v: "60–120s", l: "The length of a BioBloke reel", Icon: Timer },
+    { v: "Where they scroll", l: "Learning in the format kids already love", Icon: Smartphone },
+    { v: "Real nature", l: "Original conservation footage — never stock", Icon: Globe },
   ];
   return (
     <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
@@ -38,7 +69,7 @@ export function WhyShortForm() {
         {stats.map((s, i) => (
           <Reveal key={s.l} delay={i * 100}>
             <div className="h-full rounded-3xl bg-white p-6 text-center shadow-soft ring-1 ring-black/5">
-              <div className="text-4xl">{s.e}</div>
+              <s.Icon className="mx-auto h-9 w-9 text-forest-600" aria-hidden strokeWidth={1.75} />
               <p className="display mt-3 text-2xl font-bold text-forest-800">{s.v}</p>
               <p className="mt-1 text-sm text-charcoal-soft">{s.l}</p>
             </div>
@@ -51,11 +82,11 @@ export function WhyShortForm() {
 
 /* ---------- How it works ---------- */
 export function HowItWorks() {
-  const steps = [
-    { n: 1, e: "📌", t: "Assign", d: "Teachers pick a unit or reel set for a class in seconds." },
-    { n: 2, e: "🎬", t: "Watch", d: "Students watch cinematic wildlife reels at their own pace." },
-    { n: 3, e: "🧭", t: "Adapt", d: "The platform reads watch-time, quizzes & curiosity to set each student's next mission." },
-    { n: 4, e: "📊", t: "Insight", d: "Teachers see who's thriving and who needs a hand — live." },
+  const steps: { n: number; Icon: LucideIcon; t: string; d: string }[] = [
+    { n: 1, Icon: ClipboardList, t: "Assign", d: "Teachers pick a unit or reel set for a class in seconds." },
+    { n: 2, Icon: Film, t: "Watch", d: "Students watch cinematic wildlife reels at their own pace." },
+    { n: 3, Icon: Compass, t: "Adapt", d: "The platform reads watch-time, quizzes & curiosity to set each student's next mission." },
+    { n: 4, Icon: BarChart3, t: "Insight", d: "Teachers see who's thriving and who needs a hand — live." },
   ];
   return (
     <section
@@ -80,7 +111,7 @@ export function HowItWorks() {
                   <span className="grid h-11 w-11 place-items-center rounded-2xl bg-forest-700 text-cream display text-lg font-bold">
                     {s.n}
                   </span>
-                  <span className="text-3xl">{s.e}</span>
+                  <s.Icon className="h-7 w-7 text-forest-600" aria-hidden strokeWidth={1.75} />
                 </div>
                 <h3 className="display mt-4 text-lg font-bold text-forest-900">{s.t}</h3>
                 <p className="mt-1 text-sm text-charcoal-soft">{s.d}</p>
@@ -112,28 +143,32 @@ export function ContentShowcase() {
 
       {/* Ecosystem wall */}
       <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {exploreEcosystems.map((eco, i) => (
-          <Reveal key={eco.id} delay={(i % 4) * 80}>
-            <div
-              className="card-lift group relative aspect-square overflow-hidden rounded-3xl p-5 text-cream shadow-soft"
-              style={{ background: `linear-gradient(150deg, ${eco.color}, #0d2419)` }}
-            >
-              <div className="pointer-events-none absolute inset-0 opacity-[0.1]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-              <span className="absolute right-3 top-3 text-4xl drop-shadow-lg transition-transform group-hover:scale-110">{eco.emoji}</span>
-              <div className="absolute inset-x-4 bottom-4">
-                <h3 className="display text-base font-bold">{eco.name}</h3>
+        {exploreEcosystems.map((eco, i) => {
+          const Icon = ecoIcon[eco.id] ?? Trees;
+          return (
+            <Reveal key={eco.id} delay={(i % 4) * 80}>
+              <div
+                className="card-lift group relative aspect-square overflow-hidden rounded-3xl p-5 text-cream shadow-soft"
+                style={{ background: `linear-gradient(150deg, ${eco.color}, #0d2419)` }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-[0.1]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+                <Icon className="absolute right-3 top-3 h-8 w-8 text-cream/90 transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.75} />
+                <div className="absolute inset-x-4 bottom-4">
+                  <h3 className="display text-base font-bold">{eco.name}</h3>
+                </div>
               </div>
-            </div>
-          </Reveal>
-        ))}
+            </Reveal>
+          );
+        })}
       </div>
 
       {/* Reel titles strip */}
       <Reveal delay={120}>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           {videos.slice(0, 6).map((v) => (
-            <span key={v.id} className="rounded-full bg-forest-50 px-4 py-2 text-sm font-medium text-forest-800">
-              {v.thumbEmoji} {v.title}
+            <span key={v.id} className="inline-flex items-center gap-1.5 rounded-full bg-forest-50 px-4 py-2 text-sm font-medium text-forest-800">
+              <Film className="h-3.5 w-3.5" aria-hidden />
+              {v.title}
             </span>
           ))}
         </div>
