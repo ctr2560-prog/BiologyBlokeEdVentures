@@ -14,6 +14,12 @@ import { roleHome, roleLabel } from "@/components/layout/navConfig";
 import { Button, Modal, inputClass } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { PlatformTabs } from "@/components/layout/PlatformTabs";
+import {
+  WhyShortForm,
+  HowItWorks,
+  ContentShowcase,
+  FounderStory,
+} from "@/components/layout/LandingSections";
 import { getClasses } from "@/lib/dataService";
 import type { Role } from "@/types";
 
@@ -113,6 +119,9 @@ export default function LandingPage() {
             priority
             className="float-y-slow mx-auto h-44 w-auto drop-shadow-2xl md:h-60"
           />
+          <p className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-cream/25 bg-forest-950/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cream backdrop-blur">
+            🌏 The world&apos;s first short-form nature learning platform
+          </p>
           <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
             Australia&apos;s wildest way to learn conservation.
           </h1>
@@ -128,6 +137,9 @@ export default function LandingPage() {
           <span className="float-y-fast mt-1 text-xl">⌄</span>
         </a>
       </section>
+
+      <WhyShortForm />
+      <HowItWorks />
 
       {/* ============ What you get (clean white section) ============ */}
       <section id="how" className="mx-auto max-w-6xl scroll-mt-8 px-6 py-20 md:py-28">
@@ -212,6 +224,9 @@ export default function LandingPage() {
           </Reveal>
         </div>
       </section>
+
+      <ContentShowcase />
+      <FounderStory />
 
       {/* ============ Sign in (forest section) ============ */}
       <section
