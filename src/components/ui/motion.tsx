@@ -285,6 +285,37 @@ export function AnimatedHeading({
   );
 }
 
+/* ---------- Scroll-fill (0..1) as a section passes the viewport ---------- */
+export function useScrollFill(lead = 0.55) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [fill, setFill] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (reduce()) {
+      setFill(1);
+      return;
+    }
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const rect = el.getBoundingClientRect();
+        const center = window.innerHeight * lead;
+        const f = (center - rect.top) / rect.height;
+        setFill(Math.min(1, Math.max(0, f)));
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [lead]);
+  return { ref, fill };
+}
+
 /* ---------- Sticky scroll stepper ---------- */
 export function useSectionProgress() {
   const ref = useRef<HTMLDivElement>(null);

@@ -16,7 +16,7 @@ import {
   Marquee,
   Aurora,
   AnimatedHeading,
-  useSectionProgress,
+  useScrollFill,
 } from "@/components/ui/motion";
 import { exploreEcosystems, videos } from "@/data/content";
 import { getEcoIcon } from "@/lib/icons";
@@ -27,6 +27,7 @@ import {
   ClipboardList,
   Film,
   Compass,
+  Sparkles,
   BarChart3,
   type LucideIcon,
 } from "lucide-react";
@@ -95,90 +96,76 @@ export function WhyShortForm() {
   );
 }
 
-/* ---------- How it works: sticky scroll-stepper ---------- */
-const steps: { n: number; Icon: LucideIcon; t: string; d: string }[] = [
-  { n: 1, Icon: ClipboardList, t: "Assign", d: "Teachers pick a unit or reel set for a class in seconds." },
-  { n: 2, Icon: Film, t: "Watch", d: "Students watch cinematic wildlife reels at their own pace." },
-  { n: 3, Icon: Compass, t: "Adapt", d: "The platform reads watch-time, quizzes and curiosity to set each student's next mission." },
-  { n: 4, Icon: BarChart3, t: "Insight", d: "Teachers see who is thriving and who needs a hand, live." },
+/* ---------- How it works: animated vertical timeline ---------- */
+const steps: { Icon: LucideIcon; t: string; d: string }[] = [
+  { Icon: ClipboardList, t: "Assign", d: "Teachers pick a unit or reel set for a class in seconds." },
+  { Icon: Film, t: "Watch", d: "Students watch cinematic wildlife reels at their own pace." },
+  { Icon: Compass, t: "Adapt", d: "The platform reads watch-time, quizzes and curiosity to understand each learner." },
+  { Icon: Sparkles, t: "Personalise", d: "Every student is given work matched to them: support, core or extension." },
+  { Icon: BarChart3, t: "Insight", d: "Teachers see who is thriving and who needs a hand, live." },
 ];
 
 export function HowItWorks() {
-  const { ref, progress } = useSectionProgress();
-  const active = Math.min(steps.length - 1, Math.floor(progress * steps.length));
-  const ActiveIcon = steps[active].Icon;
+  const { ref, fill } = useScrollFill(0.62);
 
   return (
     <section
-      ref={ref}
-      className="relative"
-      style={{ height: `${steps.length * 85 + 40}vh`, background: "linear-gradient(160deg, #14352a 0%, #1b4332 55%, #0d2419 100%)" }}
+      className="relative overflow-hidden py-20 md:py-28"
+      style={{ background: "linear-gradient(160deg, #14352a 0%, #1b4332 55%, #0d2419 100%)" }}
     >
       <Aurora />
-      <div className="sticky top-0 flex h-screen items-center overflow-hidden px-6">
-        <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
-          {/* Left: step list + progress rail */}
-          <div>
-            <p className={`${eyebrow} text-forest-100/70`}>How it works</p>
-            <h2 className="display mt-3 text-3xl font-bold text-cream md:text-5xl">
-              One simple loop that personalises itself.
-            </h2>
-            <div className="mt-8 flex gap-4">
-              {/* progress rail */}
-              <div className="relative w-1 shrink-0 rounded-full bg-cream/15">
-                <div
-                  className="absolute inset-x-0 top-0 rounded-full bg-gradient-to-b from-forest-400 to-gold-400 transition-[height] duration-300"
-                  style={{ height: `${((active + 1) / steps.length) * 100}%` }}
-                />
-              </div>
-              <ul className="flex-1 space-y-4">
-                {steps.map((s, i) => (
-                  <li
-                    key={s.n}
-                    className={`transition-all duration-300 ${i === active ? "opacity-100" : "opacity-40"}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-bold transition-colors ${
-                          i === active ? "bg-cream text-forest-800" : "bg-cream/15 text-cream"
-                        }`}
-                      >
-                        {s.n}
-                      </span>
-                      <span className="display text-lg font-bold text-cream">{s.t}</span>
-                    </div>
-                    {i === active && (
-                      <p className="panel-in mt-1 pl-12 text-sm text-forest-100/85">{s.d}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+      <div className="relative mx-auto max-w-3xl px-6">
+        <div className="text-center">
+          <p className={`${eyebrow} text-forest-100/70`}>How it works</p>
+          <AnimatedHeading
+            text="One simple loop that personalises itself."
+            className="display mt-3 text-3xl font-bold text-cream md:text-5xl"
+          />
+        </div>
 
-          {/* Right: big animated visual for the active step */}
-          <div className="relative hidden lg:block">
-            <div key={active} className="panel-in rounded-[2rem] bg-cream/95 p-10 shadow-hero">
-              <div className="flex items-center justify-between">
-                <span className="display text-7xl font-bold text-forest-100" style={{ WebkitTextStroke: "1px #2d6a4f" }}>
-                  0{steps[active].n}
+        {/* Timeline */}
+        <div ref={ref} className="relative mt-14 pl-16">
+          {/* background rail */}
+          <div className="absolute left-6 top-1 bottom-1 w-1 -translate-x-1/2 rounded-full bg-cream/12" />
+          {/* animated fill rail */}
+          <div
+            className="absolute left-6 top-1 w-1 -translate-x-1/2 rounded-full bg-gradient-to-b from-forest-400 via-forest-300 to-gold-400"
+            style={{ height: `${fill * 100}%`, transition: "height 0.15s linear" }}
+          />
+
+          {steps.map((s, i) => {
+            const active = fill >= i / steps.length;
+            return (
+              <div key={s.t} className="relative pb-9 last:pb-0">
+                {/* node */}
+                <span
+                  className={`absolute -left-[2.5rem] top-1 grid h-11 w-11 -translate-x-1/2 place-items-center rounded-2xl transition-all duration-300 ${
+                    active
+                      ? "scale-100 bg-cream text-forest-800 shadow-lift"
+                      : "scale-90 bg-forest-900/60 text-cream/60 ring-1 ring-cream/20"
+                  }`}
+                >
+                  <s.Icon className="h-5 w-5" aria-hidden strokeWidth={1.75} />
                 </span>
-                <span className="grid h-20 w-20 place-items-center rounded-3xl bg-forest-700 text-cream">
-                  <ActiveIcon className="h-10 w-10" aria-hidden strokeWidth={1.5} />
-                </span>
+
+                <Reveal>
+                  <div
+                    className={`rounded-3xl border p-5 transition-colors duration-300 ${
+                      active ? "border-cream/20 bg-cream/[0.08]" : "border-cream/10 bg-cream/[0.04]"
+                    }`}
+                  >
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-forest-100/60">
+                        Step {i + 1}
+                      </span>
+                      <h3 className="display text-lg font-bold text-cream">{s.t}</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-forest-100/85">{s.d}</p>
+                  </div>
+                </Reveal>
               </div>
-              <h3 className="display mt-6 text-3xl font-bold text-forest-900">{steps[active].t}</h3>
-              <p className="mt-2 text-lg text-charcoal-soft">{steps[active].d}</p>
-              <div className="mt-6 flex gap-1.5">
-                {steps.map((s, i) => (
-                  <span
-                    key={s.n}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${i === active ? "w-8 bg-forest-600" : "w-3 bg-sand-dark"}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
     </section>
