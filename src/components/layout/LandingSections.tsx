@@ -316,10 +316,14 @@ export function FounderStory() {
           />
           <Reveal delay={100}>
             <p className="mt-4 text-lg text-charcoal-soft">
-              BioBloke is built and filmed by Cameron Rodgers, a zoo education officer and
-              wildlife filmmaker who has followed orangutans in Sumatra, big cats on the
-              Masai Mara and marsupials across the Australian bush. Every reel is real
-              footage, grounded in real science and real fieldwork.
+              Biology Bloke is built and filmed by Cameron Rodgers, an Australian educator,
+              PhD researcher, conservation storyteller and wildlife filmmaker with one
+              mission: to bring the natural world into every classroom. His work is grounded
+              in real field experience, from tracking orangutans through the forests of
+              Sumatra and exploring big cat country in East Africa, to documenting Australian
+              wildlife alongside leading conservation organisations. Every reel pairs
+              authentic footage with real science and short-form storytelling to spark
+              curiosity, conservation and deeper learning.
             </p>
           </Reveal>
           <Reveal delay={160}>
