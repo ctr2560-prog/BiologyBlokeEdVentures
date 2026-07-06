@@ -141,8 +141,8 @@ export default function LandingPage() {
             and every learner to the wild.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-balance text-lg text-cream/85 md:text-xl">
-            Students explore the wild with The Biology Bloke through short reels that adapt
-            to each learner, turning curiosity into action across every key learning area.
+            Students explore the natural world with The Biology Bloke through reels that
+            adapt to each learner, turning curiosity into action across every key learning area.
           </p>
         </div>
 
