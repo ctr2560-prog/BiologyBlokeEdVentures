@@ -316,11 +316,11 @@ export function FounderStory() {
           />
           <Reveal delay={100}>
             <p className="mt-4 text-lg text-charcoal-soft">
-              Biology Bloke is built and filmed by Cameron Rodgers, an Australian educator,
-              PhD researcher and wildlife filmmaker on a mission to bring the natural world
-              into every classroom. From orangutans in Sumatra to big cat country in East
-              Africa and wildlife across Australia, his reels pair authentic footage with
-              real science to spark curiosity, conservation and deeper learning.
+              Biology Bloke is built and filmed by Cameron Rodgers, a multi-award-winning
+              Australian educator and wildlife presenter on a mission to bring the natural
+              world into every classroom. From orangutans in Sumatra to big cat country in
+              East Africa and wildlife across Australia, every reel carries one belief: that
+              learning is how we change the world.
             </p>
           </Reveal>
           <Reveal delay={160}>
