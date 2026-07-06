@@ -121,7 +121,7 @@ export default function LandingPage() {
         </div>
 
         {/* Centered copy */}
-        <div className="rise-in relative z-10 mx-auto max-w-3xl px-6">
+        <div className="rise-in relative z-10 mx-auto max-w-4xl px-6">
           {/* Large centred Biology Bloke Edventures logo (home page only) */}
           <Image
             src="/logo-home.png"
@@ -135,13 +135,14 @@ export default function LandingPage() {
             <Globe className="h-4 w-4" aria-hidden />
             The world&apos;s first adaptive short-form media platform
           </p>
-          <h1 className="display mt-5 text-5xl font-bold leading-[1.02] text-cream drop-shadow-xl md:text-6xl">
-            Bringing the wild to every classroom, and every learner to the wild.
+          <h1 className="display mt-5 text-4xl font-bold leading-[1.08] text-cream drop-shadow-xl md:text-5xl">
+            Bringing the wild to every classroom,
+            <br className="hidden sm:block" />
+            and every learner to the wild.
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg text-cream/85 md:text-xl">
-            Students explore the wild alongside The Biology Bloke through short reels. The
-            platform analyses how each learner engages, then sets them adapted work,
-            turning curiosity into real-world understanding and action, beyond just science.
+          <p className="mx-auto mt-6 max-w-3xl text-balance text-lg text-cream/85 md:text-xl">
+            Students explore the wild with The Biology Bloke through short reels that adapt
+            to each learner, turning curiosity into action across every key learning area.
           </p>
         </div>
 
