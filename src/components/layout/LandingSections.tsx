@@ -351,6 +351,55 @@ const learningAreas: { label: string; Icon: LucideIcon }[] = [
   { label: "Sustainability in action", Icon: Leaf },
 ];
 
+/*
+ * FounderReel — cycles through Cameron's vlog clips in the founder panel.
+ * Each muted clip plays once, then fades to the next and loops back. Only
+ * plays while on screen.
+ */
+function FounderReel() {
+  const clips = [1, 2, 3];
+  const [i, setI] = useState(0);
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => (e.isIntersecting ? el.play?.().catch(() => {}) : el.pause?.()),
+      { threshold: 0.2 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [i]);
+
+  return (
+    <>
+      <video
+        key={i}
+        ref={ref}
+        className="panel-in absolute inset-0 h-full w-full object-cover"
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        poster={`/founder-${clips[i]}.jpg`}
+        onEnded={() => setI((p) => (p + 1) % clips.length)}
+        aria-hidden
+      >
+        <source src={`/founder-${clips[i]}.mp4`} type="video/mp4" />
+      </video>
+      <div className="absolute right-4 top-4 z-10 flex gap-1.5">
+        {clips.map((_, d) => (
+          <span
+            key={d}
+            className={`h-1.5 rounded-full transition-all duration-300 ${d === i ? "w-5 bg-cream" : "w-1.5 bg-cream/40"}`}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
 /* ---------- Founder story ---------- */
 export function FounderStory() {
   return (
@@ -360,9 +409,7 @@ export function FounderStory() {
         <div className="order-2 lg:order-1">
           <Parallax speed={0.12}>
             <TiltCard max={6} className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-forest-950 shadow-hero ring-1 ring-black/10">
-              <video className="ken-burns absolute inset-0 h-full w-full object-cover" autoPlay muted loop playsInline poster="/intro-poster.jpg" preload="metadata" aria-hidden>
-                <source src="/intro-bg.mp4" type="video/mp4" />
-              </video>
+              <FounderReel />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-forest-950/85 to-transparent" />
               <div className="absolute bottom-5 left-5 text-cream">
                 <p className="text-xs font-semibold uppercase tracking-wider text-forest-100/70">Filmed by</p>
