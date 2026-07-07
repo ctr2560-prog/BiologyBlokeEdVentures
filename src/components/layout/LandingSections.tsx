@@ -311,7 +311,7 @@ export function FounderStory() {
             <p className={`${eyebrow} text-forest-600`}>Meet the Biology Bloke</p>
           </Reveal>
           <AnimatedHeading
-            text="Filmed by a zoo educator, not a stock library."
+            text="From the wild, into the classroom, and back again."
             className="display mt-3 text-3xl font-bold leading-tight text-forest-900 md:text-4xl"
           />
           <Reveal delay={100}>
