@@ -326,8 +326,8 @@ export function FounderStory() {
           <Reveal delay={160}>
             <blockquote className="mt-6 border-l-4 border-forest-500 pl-5">
               <p className="display text-xl font-semibold text-forest-900">
-                &ldquo;The solution to the global conservation crisis is the development of
-                continuous learning.&rdquo;
+                &ldquo;To better understand the world, we must better understand
+                ourselves.&rdquo;
               </p>
               <footer className="mt-2 text-sm font-medium text-charcoal-soft">
                 Cameron Rodgers, The Biology Bloke
