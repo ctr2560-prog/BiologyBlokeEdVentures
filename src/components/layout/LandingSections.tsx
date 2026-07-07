@@ -43,6 +43,63 @@ import {
 
 const eyebrow = "text-sm font-semibold uppercase tracking-[0.2em]";
 
+/*
+ * CardVideo — a muted square wildlife loop that only loads and plays while its
+ * card is on screen (IntersectionObserver), and pauses when scrolled away. This
+ * keeps a grid of eight looping videos smooth by never decoding off-screen ones.
+ */
+function CardVideo({ media, index = 0 }: { media: string; index?: number }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        clearTimeout(timer);
+        if (e.isIntersecting) {
+          // Stagger so eight cards never start decoding at the same instant.
+          timer = setTimeout(() => el.play?.().catch(() => {}), index * 220);
+        } else {
+          el.pause?.();
+        }
+      },
+      { threshold: 0.25 }
+    );
+    obs.observe(el);
+    return () => {
+      clearTimeout(timer);
+      obs.disconnect();
+    };
+  }, [index]);
+  return (
+    <video
+      ref={ref}
+      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+      muted
+      loop
+      playsInline
+      preload="none"
+      poster={`/card-${media}.jpg`}
+      aria-hidden
+    >
+      <source src={`/card-${media}.mp4`} type="video/mp4" />
+    </video>
+  );
+}
+
+/* Real wildlife footage behind each ecosystem card (muted square loops in /public). */
+const ecoMedia: Record<string, string> = {
+  "eco-rainforest": "rainforest",
+  "eco-bush": "bush",
+  "eco-wetlands": "wetlands",
+  "eco-savanna": "savanna",
+  "eco-apes": "apes",
+  "eco-cats": "cats",
+  "eco-marsupials": "marsupials",
+  "eco-nocturnal": "nocturnal",
+};
+
 /* ---------- Why short-form ---------- */
 export function WhyShortForm() {
   const stats: { v: string; l: string; Icon: LucideIcon }[] = [
@@ -222,25 +279,35 @@ export function ContentShowcase() {
           </Reveal>
         </div>
 
-        {/* Ecosystem tilt grid */}
+        {/* Ecosystem tilt grid (real wildlife footage, muted loops) */}
         <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {exploreEcosystems.map((eco, i) => {
             const Icon = getEcoIcon(eco.id);
+            const media = ecoMedia[eco.id];
             return (
               <Reveal key={eco.id} delay={(i % 4) * 80}>
                 <TiltCard
                   glare
-                  max={12}
-                  className="group aspect-square overflow-hidden rounded-3xl p-5 text-cream shadow-soft"
+                  max={10}
+                  className="group aspect-square overflow-hidden rounded-3xl text-cream shadow-soft"
                 >
+                  {media ? (
+                    <CardVideo media={media} index={i} />
+                  ) : (
+                    <div className="absolute inset-0 rounded-[inherit]" style={{ background: `linear-gradient(150deg, ${eco.color}, #0d2419)` }} />
+                  )}
+                  {/* legibility scrim */}
                   <div
-                    className="absolute inset-0 rounded-[inherit]"
-                    style={{ background: `linear-gradient(150deg, ${eco.color}, #0d2419)` }}
+                    className="pointer-events-none absolute inset-0 rounded-[inherit]"
+                    style={{ background: "linear-gradient(180deg, rgba(9,26,18,0.15) 0%, rgba(9,26,18,0) 35%, rgba(9,26,18,0.8) 100%)" }}
                   />
-                  <div className="pointer-events-none absolute inset-0 rounded-[inherit] opacity-[0.1]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-                  <Icon className="absolute right-3 top-3 h-8 w-8 text-cream/90 transition-transform duration-300 group-hover:scale-125" aria-hidden strokeWidth={1.5} />
+                  {/* icon chip */}
+                  <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full glass-dark text-cream transition-transform duration-300 group-hover:scale-110">
+                    <Icon className="h-4 w-4" aria-hidden strokeWidth={1.75} />
+                  </span>
+                  {/* name */}
                   <div className="absolute inset-x-4 bottom-4">
-                    <h3 className="display text-base font-bold">{eco.name}</h3>
+                    <h3 className="display text-base font-bold drop-shadow-lg">{eco.name}</h3>
                   </div>
                 </TiltCard>
               </Reveal>
