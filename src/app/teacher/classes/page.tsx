@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useApp } from "@/lib/store";
 import {
   SectionHeader,
@@ -12,6 +13,7 @@ import {
 import { ClassCard } from "@/components/cards/ContentCards";
 import { getClassesByTeacher, getStudentsByClass, createClass } from "@/lib/dataService";
 import { DEMO_TEACHER_ID } from "@/data/people";
+import { Printer } from "lucide-react";
 
 export default function ClassesPage() {
   const { currentUser, version, bump } = useApp();
@@ -19,6 +21,7 @@ export default function ClassesPage() {
   const [modal, setModal] = useState(false);
   const [name, setName] = useState("");
   const [yearGroup, setYearGroup] = useState("Year 5");
+  const [size, setSize] = useState(24);
   const [created, setCreated] = useState<string | null>(null);
 
   const classes = useMemo(() => {
@@ -28,16 +31,24 @@ export default function ClassesPage() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cls = createClass({
-      name,
-      yearGroup,
-      teacherId,
-      schoolId: currentUser?.schoolId ?? "school-srhs",
-    });
+    const cls = createClass(
+      {
+        name,
+        yearGroup,
+        teacherId,
+        schoolId: currentUser?.schoolId ?? "school-srhs",
+      },
+      Math.max(1, Math.min(42, size))
+    );
     bump();
-    setCreated(cls.classCode);
+    setCreated(cls.id);
     setName("");
   };
+
+  const createdClass = useMemo(() => {
+    void version;
+    return created ? getClassesByTeacher(teacherId).find((c) => c.id === created) : null;
+  }, [created, teacherId, version]);
 
   return (
     <div className="space-y-6">
@@ -62,17 +73,24 @@ export default function ClassesPage() {
       )}
 
       <Modal open={modal} onClose={() => setModal(false)} title="Create a class">
-        {created ? (
+        {createdClass ? (
           <div className="text-center">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl"></div>
-            <h3 className="display mt-3 text-lg font-bold text-forest-900">Class created!</h3>
+            <h3 className="display text-lg font-bold text-forest-900">Class created!</h3>
             <p className="mt-1 text-sm text-charcoal-soft">Share this join code with your students:</p>
             <p className="display mt-3 rounded-2xl bg-forest-700 py-4 text-2xl font-bold tracking-widest text-cream">
-              {created}
+              {createdClass.classCode}
             </p>
-            <div className="mt-4 flex justify-center gap-2">
-              <Button variant="secondary" onClick={() => setCreated(null)}>Create another</Button>
-              <Button onClick={() => setModal(false)}>Done</Button>
+            <p className="mt-3 text-sm text-charcoal-soft">
+              {createdClass.studentIds.length} explorer aliases have been created. Print the
+              cards and hand them out, no names needed.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Link href={`/teacher/classes/${createdClass.id}/cards`}>
+                <Button variant="secondary"><Printer className="h-4 w-4" aria-hidden /> Print explorer cards</Button>
+              </Link>
+              <Link href={`/teacher/classes/${createdClass.id}`}>
+                <Button>Open class</Button>
+              </Link>
             </div>
           </div>
         ) : (
@@ -80,16 +98,21 @@ export default function ClassesPage() {
             <FormField label="Class name" required>
               <input className={inputClass} required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 5J Science Explorers" />
             </FormField>
-            <FormField label="Year group">
-              <select className={inputClass} value={yearGroup} onChange={(e) => setYearGroup(e.target.value)}>
-                {["Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10"].map((y) => (
-                  <option key={y}>{y}</option>
-                ))}
-              </select>
-            </FormField>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Year group">
+                <select className={inputClass} value={yearGroup} onChange={(e) => setYearGroup(e.target.value)}>
+                  {["Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10"].map((y) => (
+                    <option key={y}>{y}</option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Number of students" hint="Up to 42">
+                <input type="number" min={1} max={42} className={inputClass} value={size} onChange={(e) => setSize(+e.target.value)} />
+              </FormField>
+            </div>
             <p className="rounded-2xl bg-forest-50 px-4 py-3 text-xs text-forest-800">
-              A unique join code is generated automatically. Students enter it to join -
-              no personal data required.
+              Each student gets a unique animal alias and a join code. No names or personal
+              data, ever, the animal-to-child list stays with you.
             </p>
             <div className="flex justify-end">
               <Button type="submit">Create class</Button>

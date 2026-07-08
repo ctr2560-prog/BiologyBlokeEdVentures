@@ -1,34 +1,24 @@
 "use client";
-import { use, useMemo, useState } from "react";
+import { use, useMemo } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
-import {
-  SectionHeader,
-  Button,
-  Badge,
-  Modal,
-  FormField,
-  inputClass,
-  EmptyState,
-} from "@/components/ui/primitives";
+import { SectionHeader, Button, Badge, EmptyState } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { Leaf } from "lucide-react";
+import { AliasChip } from "@/components/ui/AliasChip";
 import { EngagementPill } from "@/components/cards/InsightCards";
+import { Leaf, Printer, Plus } from "lucide-react";
 import {
   getClass,
   getStudentsByClass,
   getUnit,
   getProgressByStudent,
-  db,
-  newId,
+  addAlias,
 } from "@/lib/dataService";
 import type { User } from "@/types";
 
 export default function ClassDetailPage({ params }: { params: Promise<{ classId: string }> }) {
   const { classId } = use(params);
   const { version, bump } = useApp();
-  const [addOpen, setAddOpen] = useState(false);
-  const [studentName, setStudentName] = useState("");
 
   const cls = useMemo(() => {
     void version;
@@ -43,24 +33,9 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
     return <EmptyState title="Class not found" message="This class may have been removed." />;
   }
 
-  const addStudent = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Mock student creation, minimal PII, class-linked only.
-    const id = newId("stu");
-    const student: User = {
-      id,
-      name: studentName,
-      email: `${studentName.toLowerCase().replace(/\s+/g, "")}@student.demo`,
-      role: "student",
-      schoolId: cls.schoolId,
-      classIds: [cls.id],
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    db.users.push(student);
-    cls.studentIds.push(id);
+  const addExplorer = () => {
+    addAlias(cls.id);
     bump();
-    setStudentName("");
-    setAddOpen(false);
   };
 
   const removeStudent = (id: string) => {
@@ -71,15 +46,8 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
   const columns: Column<User>[] = [
     {
       key: "name",
-      header: "Student",
-      render: (s) => (
-        <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-forest-100 text-sm font-bold text-forest-800">
-            {s.name.slice(0, 1)}
-          </span>
-          <span className="font-semibold text-forest-900">{s.name}</span>
-        </div>
-      ),
+      header: "Explorer",
+      render: (s) => <AliasChip user={s} />,
     },
     {
       key: "activity",
@@ -112,27 +80,30 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
   return (
     <div className="space-y-6">
       <Link href="/teacher/classes" className="text-sm font-semibold text-forest-700 hover:underline">
-         All classes
+        All classes
       </Link>
       <SectionHeader
         title={cls.name}
-        subtitle={`${cls.yearGroup} · ${students.length} students`}
+        subtitle={`${cls.yearGroup} · ${students.length} explorers`}
         action={
-          <div className="flex gap-2">
-            <Link href={`/teacher/assign?class=${cls.id}`}>
-              <Button variant="secondary"> Assign lesson</Button>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/teacher/classes/${cls.id}/cards`}>
+              <Button variant="secondary"><Printer className="h-4 w-4" aria-hidden /> Explorer cards</Button>
             </Link>
-            <Button onClick={() => setAddOpen(true)}> Add student</Button>
+            <Link href={`/teacher/assign?class=${cls.id}`}>
+              <Button variant="secondary">Assign lesson</Button>
+            </Link>
+            <Button onClick={addExplorer}><Plus className="h-4 w-4" aria-hidden /> Add explorer</Button>
           </div>
         }
       />
 
-      {/* Class code + assigned units */}
+      {/* Join code + assigned units */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
           <p className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Join code</p>
           <p className="display mt-1 text-2xl font-bold tracking-widest text-forest-800">{cls.classCode}</p>
-          <p className="mt-1 text-xs text-charcoal-soft">Students enter this to join the class.</p>
+          <p className="mt-1 text-xs text-charcoal-soft">Students enter this, then tap their animal.</p>
         </div>
         <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
           <p className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Assigned units</p>
@@ -154,19 +125,8 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
         columns={columns}
         rows={students}
         keyOf={(s) => s.id}
-        empty={<EmptyState title="No students yet" message="Add students or share the join code." action={<Button onClick={() => setAddOpen(true)}>Add student</Button>} />}
+        empty={<EmptyState title="No explorers yet" message="Add explorers or share the join code." action={<Button onClick={addExplorer}>Add explorer</Button>} />}
       />
-
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add a student">
-        <form onSubmit={addStudent} className="space-y-4">
-          <FormField label="Display name" required hint="First name and last initial keeps personal data minimal">
-            <input className={inputClass} required value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="e.g. Jordan K." />
-          </FormField>
-          <div className="flex justify-end">
-            <Button type="submit">Add to class</Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

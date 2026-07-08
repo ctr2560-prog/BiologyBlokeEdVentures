@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { SectionHeader, StatCard, Badge } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { AliasChip } from "@/components/ui/AliasChip";
 import { EngagementPill, AdaptiveRecommendationPanel } from "@/components/cards/InsightCards";
 import { AnalyticsChartCard, BarChart } from "@/components/analytics/Charts";
 import {
@@ -42,15 +43,8 @@ function InsightsInner() {
   const columns: Column<Row>[] = [
     {
       key: "name",
-      header: "Student",
-      render: (r) => (
-        <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-forest-100 text-sm font-bold text-forest-800">
-            {r.student.name.slice(0, 1)}
-          </span>
-          <span className="font-semibold text-forest-900">{r.student.name}</span>
-        </div>
-      ),
+      header: "Explorer",
+      render: (r) => <AliasChip user={r.student} />,
     },
     {
       key: "completion",
@@ -148,8 +142,8 @@ function InsightsInner() {
       {detailProg && detailRec && (
         <div className="rise-in grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
-            <h3 className="display text-lg font-bold text-forest-900">{getUser(selectedStudent!)?.name}</h3>
-            <p className="text-sm text-charcoal-soft">
+            {(() => { const u = getUser(selectedStudent!); return u ? <AliasChip user={u} size={40} /> : null; })()}
+            <p className="mt-2 text-sm text-charcoal-soft">
               Latest: {getTopic(detailProg.topicId)?.title} · {getVideo(detailProg.videoId)?.title}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3">

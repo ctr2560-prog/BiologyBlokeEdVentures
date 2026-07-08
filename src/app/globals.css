@@ -217,3 +217,22 @@ h1, h2, h3, h4, .display {
   }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
+
+/* Print: hide app chrome, show only printable content (explorer cards) */
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  body {
+    background: #fff;
+  }
+  .print-card {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+}

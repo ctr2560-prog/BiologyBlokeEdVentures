@@ -4,6 +4,7 @@ import { useApp } from "@/lib/store";
 import { SectionHeader, StatCard, Button, Badge } from "@/components/ui/primitives";
 import { InsightCard, EngagementPill } from "@/components/cards/InsightCards";
 import { ClassCard } from "@/components/cards/ContentCards";
+import { AliasAvatar } from "@/components/ui/AliasChip";
 import {
   getClassesByTeacher,
   getStudentsByClass,
@@ -80,9 +81,7 @@ export default function TeacherDashboard() {
               const student = getUser(p.studentId);
               return (
                 <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-soft ring-1 ring-black/5">
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-clay-400/20 text-sm font-bold text-clay-600">
-                    {student?.name.slice(0, 1)}
-                  </span>
+                  {student && <AliasAvatar user={student} size={36} />}
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-forest-900">{student?.name}</p>
                     <p className="text-xs text-charcoal-soft">{getTopic(p.topicId)?.title} · {p.adaptiveFocusArea}</p>

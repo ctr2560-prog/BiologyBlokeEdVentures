@@ -33,6 +33,7 @@ import {
   assignments as seedAssignments,
 } from "@/data/people";
 import { studentProgress as seedProgress } from "@/data/progress";
+import { animals, getAnimal } from "@/data/animals";
 import type {
   Unit,
   Topic,
@@ -150,8 +151,44 @@ export function createQuiz(quiz: Omit<Quiz, "id">): Quiz {
   return created;
 }
 
+// Pick `count` unused animal ids at random (excluding ones already taken).
+function pickAnimals(count: number, taken: Set<string>): string[] {
+  const pool = animals.map((a) => a.id).filter((id) => !taken.has(id));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, count);
+}
+
+// Create one nameless student alias in a class with the next free animal.
+export function addAlias(classId: string): User | null {
+  const cls = getClass(classId);
+  if (!cls) return null;
+  const taken = new Set(
+    getStudentsByClass(classId).map((s) => s.animalId).filter(Boolean) as string[]
+  );
+  const [animalId] = pickAnimals(1, taken);
+  if (!animalId) return null; // pool exhausted
+  const animal = getAnimal(animalId);
+  const stu: User = {
+    id: newId("stu"),
+    name: animal?.name ?? animalId,
+    animalId,
+    email: "",
+    role: "student",
+    schoolId: cls.schoolId,
+    classIds: [classId],
+    createdAt: new Date().toISOString().slice(0, 10),
+  };
+  db.users.push(stu);
+  cls.studentIds.push(stu.id);
+  return stu;
+}
+
 export function createClass(
-  input: Omit<ClassGroup, "id" | "classCode" | "studentIds" | "assignedUnitIds">
+  input: Omit<ClassGroup, "id" | "classCode" | "studentIds" | "assignedUnitIds">,
+  size = 0
 ): ClassGroup {
   const created: ClassGroup = {
     ...input,
@@ -163,6 +200,22 @@ export function createClass(
   db.classes.push(created);
   const teacher = getUser(input.teacherId);
   if (teacher) teacher.classIds.push(created.id);
+  // Auto-generate `size` animal-alias students.
+  for (const animalId of pickAnimals(size, new Set())) {
+    const animal = getAnimal(animalId);
+    const stu: User = {
+      id: newId("stu"),
+      name: animal?.name ?? animalId,
+      animalId,
+      email: "",
+      role: "student",
+      schoolId: input.schoolId,
+      classIds: [created.id],
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+    db.users.push(stu);
+    created.studentIds.push(stu.id);
+  }
   return created;
 }
 
