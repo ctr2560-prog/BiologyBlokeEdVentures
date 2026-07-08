@@ -143,6 +143,7 @@ export const assignments: Assignment[] = [
     dueDate: "2026-07-18",
     adaptiveTasksEnabled: true,
     explorerPointsEnabled: true,
+    deliveryMode: "student-led",
     assignedAt: "2026-07-01",
   },
   {
@@ -153,6 +154,7 @@ export const assignments: Assignment[] = [
     dueDate: "2026-07-20",
     adaptiveTasksEnabled: true,
     explorerPointsEnabled: true,
+    deliveryMode: "student-led",
     assignedAt: "2026-07-02",
   },
   {
@@ -163,6 +165,7 @@ export const assignments: Assignment[] = [
     dueDate: "2026-07-22",
     adaptiveTasksEnabled: false,
     explorerPointsEnabled: true,
+    deliveryMode: "teacher-led",
     assignedAt: "2026-07-03",
   },
 ];

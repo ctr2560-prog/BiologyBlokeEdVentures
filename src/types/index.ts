@@ -47,6 +47,8 @@ export interface ClassGroup {
   classCode: string;
 }
 
+export type DeliveryMode = "student-led" | "teacher-led";
+
 export interface Assignment {
   id: string;
   classId: string;
@@ -55,6 +57,7 @@ export interface Assignment {
   dueDate: string;
   adaptiveTasksEnabled: boolean;
   explorerPointsEnabled: boolean;
+  deliveryMode: DeliveryMode;
   assignedAt: string;
 }
 

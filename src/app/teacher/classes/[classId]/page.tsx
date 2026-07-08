@@ -6,7 +6,7 @@ import { SectionHeader, Button, Badge, EmptyState } from "@/components/ui/primit
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { AliasChip } from "@/components/ui/AliasChip";
 import { EngagementPill } from "@/components/cards/InsightCards";
-import { Leaf, Printer, Plus } from "lucide-react";
+import { Leaf, Printer, Plus, MonitorPlay } from "lucide-react";
 import {
   getClass,
   getStudentsByClass,
@@ -87,6 +87,9 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
         subtitle={`${cls.yearGroup} · ${students.length} explorers`}
         action={
           <div className="flex flex-wrap gap-2">
+            <Link href={`/teacher/present/${cls.id}`}>
+              <Button variant="secondary"><MonitorPlay className="h-4 w-4" aria-hidden /> Present</Button>
+            </Link>
             <Link href={`/teacher/classes/${cls.id}/cards`}>
               <Button variant="secondary"><Printer className="h-4 w-4" aria-hidden /> Explorer cards</Button>
             </Link>

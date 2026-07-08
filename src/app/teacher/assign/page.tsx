@@ -10,7 +10,8 @@ import {
   FormField,
   inputClass,
 } from "@/components/ui/primitives";
-import { Film } from "lucide-react";
+import { Film, Tablet, MonitorPlay } from "lucide-react";
+import type { DeliveryMode } from "@/types";
 import { UnitCard } from "@/components/cards/ContentCards";
 import {
   getPublishedUnits,
@@ -38,6 +39,7 @@ function AssignInner() {
   const [dueDate, setDueDate] = useState("2026-07-25");
   const [adaptive, setAdaptive] = useState(true);
   const [points, setPoints] = useState(true);
+  const [mode, setMode] = useState<DeliveryMode>("student-led");
 
   const units = useMemo(() => {
     void version;
@@ -66,6 +68,7 @@ function AssignInner() {
         dueDate,
         adaptiveTasksEnabled: adaptive,
         explorerPointsEnabled: points,
+        deliveryMode: mode,
       })
     );
     bump();
@@ -173,9 +176,31 @@ function AssignInner() {
               <input type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </FormField>
 
+            {/* Delivery mode */}
+            <div>
+              <p className="mb-2 text-sm font-semibold text-forest-900">How will they learn?</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { m: "student-led" as const, Icon: Tablet, t: "Student-led", d: "Each student on a device, self-paced and adaptive." },
+                  { m: "teacher-led" as const, Icon: MonitorPlay, t: "Teacher-led", d: "One screen for the class, no devices needed." },
+                ]).map((o) => (
+                  <button
+                    key={o.m}
+                    type="button"
+                    onClick={() => setMode(o.m)}
+                    className={`rounded-2xl border-2 p-3 text-left transition-all ${mode === o.m ? "border-forest-600 bg-forest-50 shadow-soft" : "border-sand hover:border-forest-400"}`}
+                  >
+                    <o.Icon className="h-5 w-5 text-forest-700" aria-hidden />
+                    <p className="mt-1 text-sm font-semibold text-forest-900">{o.t}</p>
+                    <p className="mt-0.5 text-xs text-charcoal-soft">{o.d}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <ToggleRow label=" Adaptive tasks" desc="Auto-assign support/core/extension tasks" value={adaptive} onChange={setAdaptive} />
-              <ToggleRow label=" Explorer points" desc="Students earn points for completing work" value={points} onChange={setPoints} />
+              <ToggleRow label="Adaptive tasks" desc="Auto-assign support/core/extension tasks" value={adaptive} onChange={setAdaptive} />
+              <ToggleRow label="Explorer points" desc="Students earn points for completing work" value={points} onChange={setPoints} />
             </div>
 
             <Button className="w-full" onClick={doAssign} disabled={selectedClasses.length === 0}>
