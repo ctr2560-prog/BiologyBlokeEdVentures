@@ -77,16 +77,18 @@ export const users: User[] = [
     avatarUrl: "",
     createdAt: "2025-03-12",
   },
-  // Students (minimal PII, display name + linkage only)
-  { id: "stu-1", name: "Aria M.", email: "aria@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
-  { id: "stu-2", name: "Ben T.", email: "ben@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
-  { id: "stu-3", name: "Chloe R.", email: "chloe@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
-  { id: "stu-4", name: "Diego S.", email: "diego@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
-  { id: "stu-5", name: "Ella W.", email: "ella@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-7science"], createdAt: "2025-02-01" },
-  { id: "stu-6", name: "Finn O.", email: "finn@student.srhs", role: "student", schoolId: "school-srhs", classIds: ["class-9bio"], createdAt: "2025-02-01" },
-  { id: "stu-7", name: "Grace L.", email: "grace@student.cr", role: "student", schoolId: "school-coastal", classIds: ["class-6cr"], createdAt: "2025-03-15" },
-  { id: "stu-8", name: "Hugo P.", email: "hugo@student.cr", role: "student", schoolId: "school-coastal", classIds: ["class-6cr"], createdAt: "2025-03-15" },
-  { id: "stu-9", name: "Ivy K.", email: "ivy@student.cr", role: "student", schoolId: "school-coastal", classIds: ["class-6cr"], createdAt: "2025-03-15" },
+  // Students are nameless animal aliases (no PII). name = the animal display
+  // name; animalId links to the catalogue. The real child is known only to the
+  // teacher's printed explorer cards.
+  { id: "stu-1", name: "Koala", animalId: "koala", email: "", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
+  { id: "stu-2", name: "Tiger", animalId: "tiger", email: "", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
+  { id: "stu-3", name: "Orangutan", animalId: "orangutan", email: "", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
+  { id: "stu-4", name: "Wombat", animalId: "wombat", email: "", role: "student", schoolId: "school-srhs", classIds: ["class-5j"], createdAt: "2025-02-01" },
+  { id: "stu-5", name: "Kookaburra", animalId: "kookaburra", email: "", role: "student", schoolId: "school-srhs", classIds: ["class-7science"], createdAt: "2025-02-01" },
+  { id: "stu-6", name: "Crocodile", animalId: "crocodile", email: "", role: "student", schoolId: "school-srhs", classIds: ["class-9bio"], createdAt: "2025-02-01" },
+  { id: "stu-7", name: "Dolphin", animalId: "dolphin", email: "", role: "student", schoolId: "school-coastal", classIds: ["class-6cr"], createdAt: "2025-03-15" },
+  { id: "stu-8", name: "Echidna", animalId: "echidna", email: "", role: "student", schoolId: "school-coastal", classIds: ["class-6cr"], createdAt: "2025-03-15" },
+  { id: "stu-9", name: "Platypus", animalId: "platypus", email: "", role: "student", schoolId: "school-coastal", classIds: ["class-6cr"], createdAt: "2025-03-15" },
 ];
 
 export const classes: ClassGroup[] = [

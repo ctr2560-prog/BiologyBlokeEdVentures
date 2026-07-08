@@ -21,7 +21,9 @@ import {
   ContentShowcase,
   FounderStory,
 } from "@/components/layout/LandingSections";
-import { getClasses } from "@/lib/dataService";
+import { getClasses, getStudentsByClass } from "@/lib/dataService";
+import { getAnimal } from "@/data/animals";
+import { getAnimalIcon, getAnimalColor } from "@/lib/icons";
 import {
   Globe,
   Compass,
@@ -32,7 +34,7 @@ import {
   Check,
   type LucideIcon,
 } from "lucide-react";
-import type { Role } from "@/types";
+import type { Role, ClassGroup } from "@/types";
 
 const roleMeta: { role: Role; Icon: LucideIcon; blurb: string }[] = [
   { role: "admin", Icon: UserCog, blurb: "Manage the whole learning ecosystem" },
@@ -53,10 +55,11 @@ export default function LandingPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<Role>("teacher");
 
-  // Student class-code entry.
+  // Student login: step 1 = class code, step 2 = pick your animal.
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [pickClass, setPickClass] = useState<ClassGroup | null>(null);
 
   const enter = (role: Role) => {
     loginAs(role);
@@ -72,9 +75,12 @@ export default function LandingPage() {
       setCodeError("We couldn't find that class code. Try KOALA-5J for the demo.");
       return;
     }
-    // Sign the student in as the first learner in that class (demo behaviour).
-    if (match.studentIds[0]) loginAsUser(match.studentIds[0]);
-    else loginAs("student");
+    // Step 2: show the class's animals to pick from.
+    setPickClass(match);
+  };
+
+  const pickAnimal = (studentId: string) => {
+    loginAsUser(studentId);
     router.push(roleHome.student);
   };
 
@@ -89,7 +95,7 @@ export default function LandingPage() {
               Teacher login
             </a>
             <button
-              onClick={() => { setCode(""); setCodeError(""); setCodeOpen(true); }}
+              onClick={() => { setCode(""); setCodeError(""); setPickClass(null); setCodeOpen(true); }}
               className="glass rounded-full px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream"
             >
               Student code 
@@ -325,27 +331,64 @@ export default function LandingPage() {
       </section>
 
       {/* ============ Student code modal ============ */}
-      <Modal open={codeOpen} onClose={() => setCodeOpen(false)} title="Enter your class code">
-        <form onSubmit={submitCode} className="space-y-4">
-          <div className="grid place-items-center py-2">
-            <Compass className="h-12 w-12 text-forest-600" aria-hidden />
+      <Modal
+        open={codeOpen}
+        onClose={() => setCodeOpen(false)}
+        title={pickClass ? "Which animal are you?" : "Enter your class code"}
+        maxWidth={pickClass ? "max-w-lg" : "max-w-md"}
+      >
+        {!pickClass ? (
+          <form onSubmit={submitCode} className="space-y-4">
+            <div className="grid place-items-center py-2">
+              <Compass className="h-12 w-12 text-forest-600" aria-hidden />
+            </div>
+            <p className="text-center text-sm text-charcoal-soft">
+              Ask your teacher for your class code, then pop it in below to start your Edventure.
+            </p>
+            <input
+              value={code}
+              onChange={(e) => { setCode(e.target.value); setCodeError(""); }}
+              placeholder="e.g. KOALA-5J"
+              autoFocus
+              className={`${inputClass} text-center text-lg font-bold uppercase tracking-widest`}
+            />
+            {codeError && <p className="text-center text-sm font-medium text-clay-600">{codeError}</p>}
+            <Button type="submit" size="lg" className="w-full">Next</Button>
+            <p className="text-center text-xs text-charcoal-soft">
+              Demo code: <b>KOALA-5J</b>
+            </p>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-center text-sm text-charcoal-soft">
+              Tap your explorer animal for <b>{pickClass.name}</b>.
+            </p>
+            <div className="grid max-h-[55vh] grid-cols-3 gap-2.5 overflow-y-auto sm:grid-cols-4">
+              {getStudentsByClass(pickClass.id).map((s) => {
+                const animal = getAnimal(s.animalId ?? "");
+                if (!animal) return null;
+                const Icon = getAnimalIcon(animal.kind);
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => pickAnimal(s.id)}
+                    className="card-lift group flex flex-col items-center gap-2 overflow-hidden rounded-2xl p-3 text-cream shadow-soft"
+                    style={{ background: `linear-gradient(150deg, ${getAnimalColor(animal.id)}, #0d2419)` }}
+                  >
+                    <Icon className="h-8 w-8 transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
+                    <span className="text-xs font-semibold">{animal.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setPickClass(null)}
+              className="w-full text-center text-xs font-semibold text-forest-700 hover:underline"
+            >
+              ← Wrong class? Go back
+            </button>
           </div>
-          <p className="text-center text-sm text-charcoal-soft">
-            Ask your teacher for your class code, then pop it in below to start your Edventure.
-          </p>
-          <input
-            value={code}
-            onChange={(e) => { setCode(e.target.value); setCodeError(""); }}
-            placeholder="e.g. KOALA-5J"
-            autoFocus
-            className={`${inputClass} text-center text-lg font-bold uppercase tracking-widest`}
-          />
-          {codeError && <p className="text-center text-sm font-medium text-clay-600">{codeError}</p>}
-          <Button type="submit" size="lg" className="w-full">Start exploring </Button>
-          <p className="text-center text-xs text-charcoal-soft">
-            Demo code: <b>KOALA-5J</b>
-          </p>
-        </form>
+        )}
       </Modal>
     </div>
   );

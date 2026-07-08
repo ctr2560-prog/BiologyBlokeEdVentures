@@ -21,6 +21,8 @@ export interface User {
   classIds: string[];
   avatarUrl?: string;
   createdAt: string;
+  /** For students: their animal alias id (no real name/PII is stored). */
+  animalId?: string;
 }
 
 export interface School {

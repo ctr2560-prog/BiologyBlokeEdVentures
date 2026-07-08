@@ -8,6 +8,8 @@ import {
   TreePalm,
   Trees,
   Bird,
+  Fish,
+  Turtle,
   Sun,
   Moon,
   PawPrint,
@@ -20,6 +22,7 @@ import {
   Bug,
   type LucideIcon,
 } from "lucide-react";
+import type { AnimalKind } from "@/data/animals";
 
 export const ecoIcon: Record<string, LucideIcon> = {
   "eco-rainforest": TreePalm,
@@ -45,3 +48,27 @@ export const badgeIcon: Record<string, LucideIcon> = {
 };
 
 export const getBadgeIcon = (id: string): LucideIcon => badgeIcon[id] ?? Award;
+
+/* ---- Animal aliases ---- */
+const animalKindIcon: Record<AnimalKind, LucideIcon> = {
+  mammal: PawPrint,
+  bird: Bird,
+  reptile: Turtle,
+  marine: Fish,
+  insect: Bug,
+};
+
+export const getAnimalIcon = (kind: AnimalKind): LucideIcon => animalKindIcon[kind];
+
+// Deterministic tile colour per animal id (varied nature palette).
+const animalPalette = [
+  "#2d6a4f", "#1b4332", "#a47148", "#d4a373", "#5c8aa8", "#40916c",
+  "#c08552", "#6d597a", "#bc6c25", "#457b9d", "#588157", "#8b5e3c",
+  "#3b3a63", "#e07a5f", "#7fa8c9", "#b5838d",
+];
+
+export const getAnimalColor = (id: string): string => {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % animalPalette.length;
+  return animalPalette[h];
+};
