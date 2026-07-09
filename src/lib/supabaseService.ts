@@ -1,0 +1,749 @@
+"use client";
+
+/*
+ * Async service layer — mirrors dataService.ts with identical signatures but
+ * talks to Supabase instead of the in-memory mock.
+ *
+ * MIGRATION GUIDE (when ready to switch a page):
+ *  1. Replace `import { ... } from "@/lib/dataService"` with supabaseService.
+ *  2. Make the component async (Server Component) or wrap reads in useEffect/SWR.
+ *  3. Replace bump() calls with router.refresh() or real-time subscriptions.
+ *
+ * This file uses the browser client — for Server Components swap
+ * getSupabaseClient() with createSupabaseServerClient() from ./supabase/server.
+ */
+
+import { getSupabaseClient } from "./supabase/client";
+import { animals, getAnimal } from "@/data/animals";
+import type {
+  Unit,
+  Topic,
+  Video,
+  Resource,
+  Quiz,
+  Question,
+  ClassGroup,
+  User,
+  Assignment,
+  StudentProgress,
+  School,
+  AdaptiveTask,
+} from "@/types";
+
+// ---- ID generation ----
+
+function newId(prefix: string): string {
+  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+// ---- Row mappers (snake_case DB → camelCase TypeScript) ----
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+
+function mapUnit(r: Row): Unit {
+  return {
+    id: r.id,
+    title: r.title,
+    stage: r.stage,
+    yearGroups: r.year_groups ?? [],
+    description: r.description ?? "",
+    durationLessons: r.duration_lessons ?? 1,
+    outcomes: r.outcomes ?? [],
+    topicIds: (r.topics ?? []).map((t: Row) => t.id),
+    coverImage: r.cover_image ?? "",
+    coverEmoji: "",
+    published: Boolean(r.published),
+    createdAt: r.created_at ?? "",
+  };
+}
+
+function mapTopic(r: Row): Topic {
+  return {
+    id: r.id,
+    unitId: r.unit_id,
+    title: r.title,
+    description: r.description ?? "",
+    animalFocus: r.animal_focus ?? [],
+    ecosystemFocus: r.ecosystem_focus ?? [],
+    difficulty: r.difficulty,
+    videoIds: (r.videos ?? []).map((v: Row) => v.id),
+    quizIds: (r.quizzes ?? []).map((q: Row) => q.id),
+    resourceIds: (r.resources ?? []).map((res: Row) => res.id),
+  };
+}
+
+function mapVideo(r: Row): Video {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description ?? "",
+    topicId: r.topic_id,
+    unitId: r.unit_id,
+    videoUrl: r.video_url ?? "",
+    thumbnailUrl: r.thumbnail_url ?? "",
+    thumbEmoji: "",
+    durationSeconds: r.duration_seconds ?? 0,
+    tags: r.tags ?? [],
+    stage: r.stage,
+    yearGroups: r.year_groups ?? [],
+    transcript: r.transcript ?? "",
+    learningIntent: r.learning_intent ?? "",
+    successCriteria: r.success_criteria ?? [],
+    published: Boolean(r.published),
+  };
+}
+
+function mapResource(r: Row): Resource {
+  return {
+    id: r.id,
+    title: r.title,
+    type: r.type,
+    fileUrl: r.file_url ?? "#",
+    topicId: r.topic_id,
+    unitId: r.unit_id,
+    stage: r.stage,
+    difficulty: r.difficulty,
+    tags: r.tags ?? [],
+    teacherNotes: r.teacher_notes ?? undefined,
+    published: Boolean(r.published),
+    downloads: r.downloads ?? 0,
+  };
+}
+
+function mapQuestion(r: Row): Question {
+  return {
+    id: r.id,
+    questionText: r.question_text,
+    type: r.type,
+    options: r.options ?? [],
+    correctAnswer: r.correct_answer,
+    explanation: r.explanation ?? "",
+    difficulty: r.difficulty,
+    linkedConcept: r.linked_concept ?? "",
+  };
+}
+
+function mapQuiz(r: Row): Quiz {
+  return {
+    id: r.id,
+    title: r.title,
+    topicId: r.topic_id,
+    questions: (r.questions ?? [])
+      .sort((a: Row, b: Row) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map(mapQuestion),
+  };
+}
+
+function mapSchool(r: Row): School {
+  return {
+    id: r.id,
+    name: r.name,
+    location: r.location ?? "",
+    active: Boolean(r.active),
+    teacherIds: (r.teachers ?? []).map((t: Row) => t.id),
+    studentIds: (r.students ?? []).map((s: Row) => s.id),
+    subscriptionStatus: r.subscription_status,
+    lastActive: r.last_active ?? "",
+  };
+}
+
+function mapUser(r: Row, classIds: string[] = []): User {
+  return {
+    id: r.id,
+    name: r.name,
+    email: r.email ?? "",
+    role: r.role,
+    schoolId: r.school_id ?? undefined,
+    classIds,
+    avatarUrl: r.avatar_url ?? "",
+    createdAt: r.created_at ?? "",
+    animalId: r.animal_id ?? undefined,
+  };
+}
+
+function mapClass(r: Row): ClassGroup {
+  const studentIds = (r.class_students ?? []).map((cs: Row) => cs.student_id);
+  const assignedUnitIds = [
+    ...new Set<string>((r.assignments ?? []).map((a: Row) => String(a.unit_id))),
+  ];
+  return {
+    id: r.id,
+    name: r.name,
+    yearGroup: r.year_group,
+    teacherId: r.teacher_id,
+    schoolId: r.school_id,
+    studentIds,
+    assignedUnitIds,
+    classCode: r.class_code,
+  };
+}
+
+function mapAssignment(r: Row): Assignment {
+  return {
+    id: r.id,
+    classId: r.class_id,
+    unitId: r.unit_id,
+    topicIds: (r.assignment_topics ?? []).map((at: Row) => at.topic_id),
+    dueDate: r.due_date ?? "",
+    adaptiveTasksEnabled: Boolean(r.adaptive_tasks_enabled),
+    explorerPointsEnabled: Boolean(r.explorer_points_enabled),
+    deliveryMode: r.delivery_mode ?? "student-led",
+    assignedAt: r.assigned_at ?? "",
+  };
+}
+
+function mapProgress(r: Row): StudentProgress {
+  return {
+    id: r.id,
+    studentId: r.student_id,
+    classId: r.class_id,
+    unitId: r.unit_id,
+    topicId: r.topic_id,
+    videoId: r.video_id,
+    watchTimeSeconds: r.watch_time_seconds ?? 0,
+    videoCompletionPercentage: Number(r.video_completion_percentage ?? 0),
+    replayCount: r.replay_count ?? 0,
+    skipped: Boolean(r.skipped),
+    clickedCurious: Boolean(r.clicked_curious),
+    clickedHelp: Boolean(r.clicked_help),
+    quizScore: r.quiz_score !== null ? Number(r.quiz_score) : null,
+    quizAttempts: r.quiz_attempts ?? 0,
+    worksheetCompleted: Boolean(r.worksheet_completed),
+    adaptiveFocusArea: r.adaptive_focus_area ?? "",
+    engagementLevel: r.engagement_level ?? "medium",
+    recommendedTaskType: r.recommended_task_type ?? undefined,
+    lastActive: r.last_active ?? "",
+  };
+}
+
+function mapAdaptiveTask(r: Row): AdaptiveTask {
+  return {
+    id: r.id,
+    title: r.title,
+    type: r.type,
+    topicId: r.topic_id,
+    description: r.description ?? "",
+    instructions: r.instructions ?? "",
+    linkedResourceId: r.linked_resource_id ?? undefined,
+    triggerCondition: r.trigger_condition ?? "",
+    estimatedTimeMinutes: r.estimated_time_minutes ?? 10,
+  };
+}
+
+// ---- Units ----
+
+export async function getUnits(): Promise<Unit[]> {
+  const { data } = await getSupabaseClient()
+    .from("units")
+    .select("*, topics(id)")
+    .order("created_at");
+  return (data ?? []).map(mapUnit);
+}
+
+export async function getPublishedUnits(): Promise<Unit[]> {
+  const { data } = await getSupabaseClient()
+    .from("units")
+    .select("*, topics(id)")
+    .eq("published", true)
+    .order("created_at");
+  return (data ?? []).map(mapUnit);
+}
+
+export async function getUnit(id: string): Promise<Unit | null> {
+  const { data } = await getSupabaseClient()
+    .from("units")
+    .select("*, topics(id)")
+    .eq("id", id)
+    .single();
+  return data ? mapUnit(data) : null;
+}
+
+// ---- Topics ----
+
+export async function getTopics(): Promise<Topic[]> {
+  const { data } = await getSupabaseClient()
+    .from("topics")
+    .select("*, videos(id), quizzes(id), resources(id)");
+  return (data ?? []).map(mapTopic);
+}
+
+export async function getTopic(id: string): Promise<Topic | null> {
+  const { data } = await getSupabaseClient()
+    .from("topics")
+    .select("*, videos(id), quizzes(id), resources(id)")
+    .eq("id", id)
+    .single();
+  return data ? mapTopic(data) : null;
+}
+
+export async function getTopicsByUnit(unitId: string): Promise<Topic[]> {
+  const { data } = await getSupabaseClient()
+    .from("topics")
+    .select("*, videos(id), quizzes(id), resources(id)")
+    .eq("unit_id", unitId);
+  return (data ?? []).map(mapTopic);
+}
+
+// ---- Videos ----
+
+export async function getVideos(): Promise<Video[]> {
+  const { data } = await getSupabaseClient().from("videos").select("*").order("title");
+  return (data ?? []).map(mapVideo);
+}
+
+export async function getVideo(id: string): Promise<Video | null> {
+  const { data } = await getSupabaseClient()
+    .from("videos")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data ? mapVideo(data) : null;
+}
+
+export async function getVideosByTopic(topicId: string): Promise<Video[]> {
+  const { data } = await getSupabaseClient()
+    .from("videos")
+    .select("*")
+    .eq("topic_id", topicId);
+  return (data ?? []).map(mapVideo);
+}
+
+// ---- Resources ----
+
+export async function getResources(): Promise<Resource[]> {
+  const { data } = await getSupabaseClient().from("resources").select("*").order("title");
+  return (data ?? []).map(mapResource);
+}
+
+export async function getResource(id: string): Promise<Resource | null> {
+  const { data } = await getSupabaseClient()
+    .from("resources")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data ? mapResource(data) : null;
+}
+
+// ---- Quizzes ----
+
+export async function getQuizzes(): Promise<Quiz[]> {
+  const { data } = await getSupabaseClient()
+    .from("quizzes")
+    .select("*, questions(*)");
+  return (data ?? []).map(mapQuiz);
+}
+
+export async function getQuiz(id: string): Promise<Quiz | null> {
+  const { data } = await getSupabaseClient()
+    .from("quizzes")
+    .select("*, questions(*)")
+    .eq("id", id)
+    .single();
+  return data ? mapQuiz(data) : null;
+}
+
+export async function getQuizByTopic(topicId: string): Promise<Quiz | null> {
+  const { data } = await getSupabaseClient()
+    .from("quizzes")
+    .select("*, questions(*)")
+    .eq("topic_id", topicId)
+    .limit(1)
+    .maybeSingle();
+  return data ? mapQuiz(data) : null;
+}
+
+// ---- Schools ----
+
+export async function getSchools(): Promise<School[]> {
+  const { data } = await getSupabaseClient()
+    .from("schools")
+    .select("*, teachers:users!school_id(id,role), students:users!school_id(id,role)");
+  if (!data) return [];
+  return data.map((r: Row) => {
+    // Separate teachers and students from the joined users.
+    const allUsers: Row[] = r.teachers ?? [];
+    return mapSchool({
+      ...r,
+      teachers: allUsers.filter((u) => u.role === "teacher"),
+      students: allUsers.filter((u) => u.role === "student"),
+    });
+  });
+}
+
+export async function getSchool(id: string): Promise<School | null> {
+  const { data } = await getSupabaseClient()
+    .from("schools")
+    .select("*, users(id, role)")
+    .eq("id", id)
+    .single();
+  if (!data) return null;
+  const users: Row[] = data.users ?? [];
+  return mapSchool({
+    ...data,
+    teachers: users.filter((u) => u.role === "teacher"),
+    students: users.filter((u) => u.role === "student"),
+  });
+}
+
+// ---- Users ----
+
+export async function getUsers(): Promise<User[]> {
+  const { data } = await getSupabaseClient().from("users").select("*");
+  return (data ?? []).map((r: Row) => mapUser(r));
+}
+
+export async function getUser(id: string): Promise<User | null> {
+  const { data } = await getSupabaseClient()
+    .from("users")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data ? mapUser(data) : null;
+}
+
+export async function getTeachers(): Promise<User[]> {
+  const { data } = await getSupabaseClient()
+    .from("users")
+    .select("*")
+    .eq("role", "teacher");
+  return (data ?? []).map((r: Row) => mapUser(r));
+}
+
+export async function getStudents(): Promise<User[]> {
+  const { data } = await getSupabaseClient()
+    .from("users")
+    .select("*")
+    .eq("role", "student");
+  return (data ?? []).map((r: Row) => mapUser(r));
+}
+
+// ---- Classes ----
+
+const CLASS_SELECT = "*, class_students(student_id), assignments(unit_id)";
+
+export async function getClasses(): Promise<ClassGroup[]> {
+  const { data } = await getSupabaseClient().from("classes").select(CLASS_SELECT);
+  return (data ?? []).map(mapClass);
+}
+
+export async function getClass(id: string): Promise<ClassGroup | null> {
+  const { data } = await getSupabaseClient()
+    .from("classes")
+    .select(CLASS_SELECT)
+    .eq("id", id)
+    .single();
+  return data ? mapClass(data) : null;
+}
+
+export async function getClassesByTeacher(teacherId: string): Promise<ClassGroup[]> {
+  const { data } = await getSupabaseClient()
+    .from("classes")
+    .select(CLASS_SELECT)
+    .eq("teacher_id", teacherId);
+  return (data ?? []).map(mapClass);
+}
+
+export async function getStudentsByClass(classId: string): Promise<User[]> {
+  const { data } = await getSupabaseClient()
+    .from("users")
+    .select("*, class_students!inner(class_id)")
+    .eq("class_students.class_id", classId)
+    .eq("role", "student");
+  return (data ?? []).map((r: Row) => mapUser(r, [classId]));
+}
+
+// ---- Assignments ----
+
+const ASSIGN_SELECT = "*, assignment_topics(topic_id)";
+
+export async function getAssignments(): Promise<Assignment[]> {
+  const { data } = await getSupabaseClient().from("assignments").select(ASSIGN_SELECT);
+  return (data ?? []).map(mapAssignment);
+}
+
+export async function getAssignmentsByClass(classId: string): Promise<Assignment[]> {
+  const { data } = await getSupabaseClient()
+    .from("assignments")
+    .select(ASSIGN_SELECT)
+    .eq("class_id", classId);
+  return (data ?? []).map(mapAssignment);
+}
+
+// ---- Student Progress ----
+
+export async function getProgress(): Promise<StudentProgress[]> {
+  const { data } = await getSupabaseClient().from("student_progress").select("*");
+  return (data ?? []).map(mapProgress);
+}
+
+export async function getProgressByClass(classId: string): Promise<StudentProgress[]> {
+  const { data } = await getSupabaseClient()
+    .from("student_progress")
+    .select("*")
+    .eq("class_id", classId);
+  return (data ?? []).map(mapProgress);
+}
+
+export async function getProgressByStudent(studentId: string): Promise<StudentProgress[]> {
+  const { data } = await getSupabaseClient()
+    .from("student_progress")
+    .select("*")
+    .eq("student_id", studentId)
+    .order("last_active", { ascending: false });
+  return (data ?? []).map(mapProgress);
+}
+
+export async function getProgressForVideo(videoId: string): Promise<StudentProgress[]> {
+  const { data } = await getSupabaseClient()
+    .from("student_progress")
+    .select("*")
+    .eq("video_id", videoId);
+  return (data ?? []).map(mapProgress);
+}
+
+// ---- Adaptive Tasks ----
+
+export async function getAdaptiveTasks(): Promise<AdaptiveTask[]> {
+  const { data } = await getSupabaseClient().from("adaptive_tasks").select("*");
+  return (data ?? []).map(mapAdaptiveTask);
+}
+
+// ---- Mutations: Content ----
+
+export async function createVideo(video: Omit<Video, "id">): Promise<Video> {
+  const id = newId("vid");
+  const { data, error } = await getSupabaseClient()
+    .from("videos")
+    .insert({
+      id,
+      title: video.title,
+      description: video.description,
+      topic_id: video.topicId,
+      unit_id: video.unitId,
+      video_url: video.videoUrl,
+      thumbnail_url: video.thumbnailUrl,
+      duration_seconds: video.durationSeconds,
+      tags: video.tags,
+      stage: video.stage,
+      year_groups: video.yearGroups,
+      transcript: video.transcript,
+      learning_intent: video.learningIntent,
+      success_criteria: video.successCriteria,
+      published: video.published,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapVideo(data);
+}
+
+export async function createResource(
+  resource: Omit<Resource, "id" | "downloads">
+): Promise<Resource> {
+  const id = newId("res");
+  const { data, error } = await getSupabaseClient()
+    .from("resources")
+    .insert({
+      id,
+      title: resource.title,
+      type: resource.type,
+      file_url: resource.fileUrl,
+      topic_id: resource.topicId,
+      unit_id: resource.unitId,
+      stage: resource.stage,
+      difficulty: resource.difficulty,
+      tags: resource.tags,
+      teacher_notes: resource.teacherNotes ?? null,
+      published: resource.published,
+      downloads: 0,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapResource(data);
+}
+
+export async function createUnit(unit: Omit<Unit, "id" | "createdAt">): Promise<Unit> {
+  const id = newId("unit");
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await getSupabaseClient()
+    .from("units")
+    .insert({
+      id,
+      title: unit.title,
+      stage: unit.stage,
+      year_groups: unit.yearGroups,
+      description: unit.description,
+      duration_lessons: unit.durationLessons,
+      outcomes: unit.outcomes,
+      cover_image: unit.coverImage,
+      published: unit.published,
+      created_at: today,
+    })
+    .select("*, topics(id)")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapUnit(data);
+}
+
+// ---- Mutations: Classes & Students ----
+
+function generateClassCode(name: string): string {
+  const base = name.replace(/[^A-Za-z]/g, "").slice(0, 5).toUpperCase() || "CLASS";
+  const suffix = Math.floor(100 + Math.random() * 900);
+  return `${base}-${suffix}`;
+}
+
+export async function createClass(
+  input: Omit<ClassGroup, "id" | "classCode" | "studentIds" | "assignedUnitIds">,
+  size = 0
+): Promise<ClassGroup> {
+  const supabase = getSupabaseClient();
+  const id = newId("class");
+  const classCode = generateClassCode(input.name);
+
+  const { error } = await supabase.from("classes").insert({
+    id,
+    name: input.name,
+    year_group: input.yearGroup,
+    teacher_id: input.teacherId,
+    school_id: input.schoolId,
+    class_code: classCode,
+  });
+  if (error) throw new Error(error.message);
+
+  if (size > 0) {
+    // Pick random animals and create alias students.
+    const picked = animals.slice().sort(() => Math.random() - 0.5).slice(0, size);
+    const studentRows = picked.map((animal) => ({
+      id: newId("stu"),
+      name: animal.name,
+      animal_id: animal.id,
+      email: "",
+      role: "student",
+      school_id: input.schoolId,
+      created_at: new Date().toISOString().slice(0, 10),
+    }));
+
+    const { data: created } = await supabase.from("users").insert(studentRows).select("id");
+    const studentIds = (created ?? []).map((r: Row) => String(r.id));
+
+    await supabase
+      .from("class_students")
+      .insert(studentIds.map((sid: string) => ({ class_id: id, student_id: sid })));
+  }
+
+  return (await getClass(id))!;
+}
+
+export async function addAlias(classId: string): Promise<User | null> {
+  const supabase = getSupabaseClient();
+
+  // Find which animals are already taken in this class.
+  const { data: existing } = await supabase
+    .from("users")
+    .select("animal_id, class_students!inner(class_id)")
+    .eq("class_students.class_id", classId)
+    .eq("role", "student");
+
+  const taken = new Set((existing ?? []).map((r: Row) => r.animal_id).filter(Boolean));
+  const pool = animals.filter((a) => !taken.has(a.id));
+  if (pool.length === 0) return null;
+
+  const animal = pool[Math.floor(Math.random() * pool.length)];
+  const cls = await getClass(classId);
+  if (!cls) return null;
+
+  const id = newId("stu");
+  const today = new Date().toISOString().slice(0, 10);
+
+  await supabase.from("users").insert({
+    id,
+    name: animal.name,
+    animal_id: animal.id,
+    email: "",
+    role: "student",
+    school_id: cls.schoolId,
+    created_at: today,
+  });
+
+  await supabase.from("class_students").insert({ class_id: classId, student_id: id });
+
+  return getUser(id);
+}
+
+export async function assignLessonToClass(
+  input: Omit<Assignment, "id" | "assignedAt">
+): Promise<Assignment> {
+  const supabase = getSupabaseClient();
+  const id = newId("assign");
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase.from("assignments").insert({
+    id,
+    class_id: input.classId,
+    unit_id: input.unitId,
+    due_date: input.dueDate,
+    adaptive_tasks_enabled: input.adaptiveTasksEnabled,
+    explorer_points_enabled: input.explorerPointsEnabled,
+    delivery_mode: input.deliveryMode,
+    assigned_at: today,
+  });
+  if (error) throw new Error(error.message);
+
+  if (input.topicIds.length) {
+    await supabase.from("assignment_topics").insert(
+      input.topicIds.map((tid) => ({ assignment_id: id, topic_id: tid }))
+    );
+  }
+
+  return (await getAssignmentsByClass(input.classId)).find((a) => a.id === id)!;
+}
+
+// ---- Mutations: Student Progress ----
+
+export async function upsertProgress(
+  progress: Omit<StudentProgress, "id">
+): Promise<StudentProgress> {
+  const supabase = getSupabaseClient();
+
+  // Try to find an existing record for this student + video combo.
+  const { data: existing } = await supabase
+    .from("student_progress")
+    .select("id")
+    .eq("student_id", progress.studentId)
+    .eq("video_id", progress.videoId)
+    .maybeSingle();
+
+  const id = existing?.id ?? newId("prog");
+
+  const { data, error } = await supabase
+    .from("student_progress")
+    .upsert({
+      id,
+      student_id: progress.studentId,
+      class_id: progress.classId,
+      unit_id: progress.unitId,
+      topic_id: progress.topicId,
+      video_id: progress.videoId,
+      watch_time_seconds: progress.watchTimeSeconds,
+      video_completion_percentage: progress.videoCompletionPercentage,
+      replay_count: progress.replayCount,
+      skipped: progress.skipped,
+      clicked_curious: progress.clickedCurious,
+      clicked_help: progress.clickedHelp,
+      quiz_score: progress.quizScore,
+      quiz_attempts: progress.quizAttempts,
+      worksheet_completed: progress.worksheetCompleted,
+      adaptive_focus_area: progress.adaptiveFocusArea,
+      engagement_level: progress.engagementLevel,
+      recommended_task_type: progress.recommendedTaskType ?? null,
+      last_active: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapProgress(data);
+}
