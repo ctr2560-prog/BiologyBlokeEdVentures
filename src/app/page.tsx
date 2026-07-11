@@ -27,20 +27,14 @@ import { getAnimalIcon, getAnimalColor } from "@/lib/icons";
 import {
   Globe,
   Compass,
-  UserCog,
-  Presentation,
-  GraduationCap,
   Film,
   Check,
-  type LucideIcon,
+  PlayCircle,
+  HelpCircle,
+  Layers,
+  ChevronDown,
 } from "lucide-react";
-import type { Role, ClassGroup, User } from "@/types";
-
-const roleMeta: { role: Role; Icon: LucideIcon; blurb: string }[] = [
-  { role: "admin", Icon: UserCog, blurb: "Manage the whole learning ecosystem" },
-  { role: "teacher", Icon: Presentation, blurb: "Run classes & assign Edventures" },
-  { role: "student", Icon: GraduationCap, blurb: "Watch, explore & earn points" },
-];
+import type { ClassGroup, User } from "@/types";
 
 const features = [
   "Curriculum-aligned units for Stage 3-5",
@@ -51,15 +45,8 @@ const features = [
 ];
 
 export default function LandingPage() {
-  const { loginAs, signIn, signInStudent } = useApp();
+  const { signInStudent } = useApp();
   const router = useRouter();
-  const [selected, setSelected] = useState<Role>("teacher");
-
-  // Real sign-in form state.
-  const [email, setEmail] = useState("thebiologybloke@gmail.com");
-  const [password, setPassword] = useState("");
-  const [signInError, setSignInError] = useState("");
-  const [signingIn, setSigningIn] = useState(false);
 
   // Student login: step 1 = class code, step 2 = pick your animal.
   const [codeOpen, setCodeOpen] = useState(false);
@@ -69,11 +56,6 @@ export default function LandingPage() {
   const [pickClass, setPickClass] = useState<ClassGroup | null>(null);
   const [pickStudents, setPickStudents] = useState<User[]>([]);
   const [pickLoading, setPickLoading] = useState(false);
-
-  const enter = (role: Role) => {
-    loginAs(role);
-    router.push(roleHome[role]);
-  };
 
   const openCodeModal = () => {
     setCode("");
@@ -119,13 +101,22 @@ export default function LandingPage() {
       {/* ============ Top nav ============ */}
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-end px-6 py-5">
-          <nav className="flex items-center gap-2">
-            <a href="/login" className="rounded-full px-4 py-2 text-sm font-semibold text-cream/90 hover:text-cream">
+          <nav className="flex items-center gap-3">
+            <a
+              href="/login"
+              className="text-sm font-medium text-cream/55 hover:text-cream/80"
+            >
               Teacher sign in
+            </a>
+            <a
+              href="/register"
+              className="rounded-full bg-cream px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream/90"
+            >
+              Sign up your school
             </a>
             <button
               onClick={openCodeModal}
-              className="glass rounded-full px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream"
+              className="rounded-full bg-gold-400 px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-gold-300"
             >
               Student code
             </button>
@@ -151,40 +142,42 @@ export default function LandingPage() {
 
         {/* Cinematic darkening for legibility */}
         <div className="grain pointer-events-none absolute inset-0">
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(9,26,18,0.68) 0%, rgba(9,26,18,0.5) 40%, rgba(9,26,18,0.82) 100%)" }} />
-          <div className="absolute inset-0" style={{ background: "radial-gradient(120% 100% at 50% 45%, transparent 50%, rgba(5,17,11,0.8) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(9,26,18,0.72) 0%, rgba(9,26,18,0.55) 40%, rgba(9,26,18,0.86) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(110% 90% at 50% 48%, transparent 40%, rgba(5,17,11,0.88) 100%)" }} />
         </div>
 
         {/* Centered copy */}
         <div className="rise-in relative z-10 mx-auto max-w-4xl px-6">
-          {/* Large centred Biology Bloke Edventures logo (home page only) */}
+          {/* Logo - reduced ~18% from previous size */}
           <Image
             src="/logo-home.png"
             alt="The Biology Bloke Edventures"
             width={420}
             height={420}
             priority
-            className="float-y-slow mx-auto h-44 w-auto drop-shadow-2xl md:h-60"
+            className="float-y-slow mx-auto h-36 w-auto drop-shadow-2xl md:h-52"
           />
-          <p className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-cream/25 bg-forest-950/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cream backdrop-blur">
-            <Globe className="h-4 w-4" aria-hidden />
-            The world&apos;s first adaptive short-form media platform
+          <p className="mx-auto mt-2 inline-flex items-center gap-2 rounded-full border border-cream/20 bg-forest-950/40 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-cream/90 backdrop-blur">
+            <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Adaptive short-form learning, built for the real world
           </p>
-          <h1 className="display mt-5 text-4xl font-bold leading-[1.08] text-cream drop-shadow-xl md:text-5xl">
+          <h1 className="display mt-4 text-4xl font-bold leading-[1.08] text-cream drop-shadow-xl md:text-5xl">
             Bringing the wild to every classroom,
             <br className="hidden sm:block" />
             and every learner to the wild.
           </h1>
-          <p className="mx-auto mt-6 max-w-3xl text-balance text-lg text-cream/85 md:text-xl">
-            Students explore the natural world with The Biology Bloke through reels that
-            adapt to each learner, turning curiosity into action across every key learning area.
+          <p className="mx-auto mt-5 max-w-2xl text-balance text-base text-cream/95 md:text-lg">
+            Students explore real wildlife through short-form videos and personalised
+            activities that adapt to their understanding, interests and learning needs,
+            turning curiosity into action across the curriculum.
           </p>
+
         </div>
 
         {/* Scroll cue */}
-        <a href="#how" className="absolute inset-x-0 bottom-6 z-10 flex flex-col items-center text-cream/70 hover:text-cream">
+        <a href="#how" className="absolute inset-x-0 bottom-6 z-10 flex flex-col items-center gap-1 text-cream/80 transition-colors hover:text-cream">
           <span className="text-[0.65rem] font-semibold uppercase tracking-widest">Discover more</span>
-          <span className="float-y-fast mt-1 text-xl"></span>
+          <ChevronDown className="float-y-fast h-4 w-4" aria-hidden />
         </a>
       </section>
 
@@ -280,116 +273,118 @@ export default function LandingPage() {
       <ContentShowcase />
       <FounderStory />
 
-      {/* ============ Sign in (forest section) ============ */}
-      <section
-        id="signin"
-        className="relative scroll-mt-4 overflow-hidden px-6 py-20 md:py-28"
-        style={{ background: "linear-gradient(160deg, #14352a 0%, #1b4332 55%, #0d2419 100%)" }}
-      >
-        <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "26px 26px" }} />
-        <Reveal className="relative mx-auto max-w-md text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-forest-100/70">
-            Start your Edventure
-          </p>
-          <h2 className="display mt-3 text-3xl font-bold text-cream md:text-4xl">
-            Welcome back, Explorer
-          </h2>
-
-          <div className="mt-7 rounded-3xl bg-cream p-7 text-left shadow-hero">
-            {/* Account type selector */}
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">I am a...</p>
-            <div className="grid grid-cols-3 gap-2">
-              {roleMeta.map((r) => (
-                <button
-                  key={r.role}
-                  onClick={() => setSelected(r.role)}
-                  className={`rounded-2xl border-2 p-3 text-center transition-all ${
-                    selected === r.role ? "border-forest-600 bg-forest-50 shadow-soft" : "border-sand bg-white hover:border-forest-400"
-                  }`}
-                >
-                  <r.Icon className="mx-auto h-6 w-6 text-forest-700" aria-hidden />
-                  <span className="mt-1 block text-xs font-semibold text-forest-900">{roleLabel[r.role]}</span>
-                </button>
-              ))}
-            </div>
-            <p className="mt-2 text-center text-xs text-charcoal-soft">
-              {roleMeta.find((r) => r.role === selected)?.blurb}
-            </p>
-
-            {/* Sign-in form */}
-            <form
-              className="mt-5 space-y-3"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (selected === "student") {
-                  openCodeModal();
-                  return;
-                }
-                setSignInError("");
-                setSigningIn(true);
-                const { error } = await signIn(email, password);
-                setSigningIn(false);
-                if (error) { setSignInError(error); return; }
-                router.push(roleHome[selected]);
-              }}
-            >
-              <input
-                type="email"
-                placeholder="Email address"
-                value={selected === "student" ? "" : email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={selected === "student" || signingIn}
-                className={inputClass + " w-full"}
-              />
-              <input
-                type="password"
-                placeholder={selected === "student" ? "Use your class code instead" : "Password"}
-                value={selected === "student" ? "" : password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={selected === "student" || signingIn}
-                className={inputClass + " w-full"}
-              />
-              {signInError && (
-                <p className="text-xs text-red-600">{signInError}</p>
-              )}
-              <Button type="submit" size="lg" className="w-full" disabled={signingIn}>
-                {signingIn ? "Signing in..." : selected === "student" ? "Enter class code" : `Sign in as ${roleLabel[selected]}`}
-              </Button>
-            </form>
-
-            {/* Demo logins */}
-            <div className="mt-5">
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-sand" />
-                <span className="text-xs font-medium text-charcoal-soft">or jump straight in</span>
-                <div className="h-px flex-1 bg-sand" />
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {roleMeta.map((r) => (
-                  <button
-                    key={r.role}
-                    onClick={() => enter(r.role)}
-                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-forest-700 px-2 py-2.5 text-xs font-semibold text-cream transition-colors hover:bg-forest-800"
-                  >
-                    <r.Icon className="h-4 w-4" aria-hidden /> Demo {roleLabel[r.role]}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-3 text-center text-xs text-charcoal-soft">
-                No sign-up needed. Demo accounts use realistic sample data.
+      {/* ============ Sample content showcase ============ */}
+      <section className="bg-cream-dark/30 px-6 py-20 md:py-28">
+        <div className="mx-auto max-w-6xl">
+          <Reveal>
+            <div className="mb-12 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-forest-600">
+                Free samples
+              </p>
+              <h2 className="display mt-3 text-3xl font-bold text-forest-900 md:text-4xl">
+                See what students experience
+              </h2>
+              <p className="mt-3 text-base text-charcoal-soft">
+                A taste of a real BioBloke Edventure, from reel to reflection.
               </p>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-forest-100/60">
-            <a href="/register" className="font-semibold text-forest-300/80 hover:text-cream hover:underline">
-              Create teacher account
-            </a>
-            <span>·</span>
-            <span>The Biology Bloke · Conservation education for schools</span>
-          </div>
-        </Reveal>
+          <Reveal delay={80}>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+              {/* Sample: Reel */}
+              <div className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5">
+                <div className="relative aspect-[9/5] overflow-hidden bg-forest-950">
+                  <video
+                    className="h-full w-full object-cover opacity-80"
+                    autoPlay muted loop playsInline poster="/reel-following-poster.jpg" preload="metadata" aria-hidden
+                  >
+                    <source src="/reel-following.mp4" type="video/mp4" />
+                  </video>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="grid h-12 w-12 place-items-center rounded-full bg-cream/90 shadow-lift">
+                      <PlayCircle className="h-7 w-7 text-forest-700" aria-hidden />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-3 left-3">
+                    <span className="rounded-full bg-forest-700/80 px-2.5 py-1 text-xs font-semibold text-cream backdrop-blur">1 min 40 sec</span>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-forest-600">Wildlife Reel</p>
+                  <h3 className="display mt-1 font-bold text-forest-900">Naptime is over!</h3>
+                  <p className="mt-1 text-sm text-charcoal-soft">Watch a troop of chimpanzees wake up and start their morning in Uganda&apos;s Kibale Forest.</p>
+                </div>
+              </div>
+
+              {/* Sample: Quiz */}
+              <div className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5">
+                <div className="flex aspect-[9/5] items-center justify-center bg-gradient-to-br from-sand/60 to-gold/20">
+                  <HelpCircle className="h-16 w-16 text-gold-600/60" aria-hidden strokeWidth={1.2} />
+                </div>
+                <div className="p-5">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-forest-600">Quick Quiz</p>
+                  <h3 className="display mt-1 font-bold text-forest-900">What do chimps eat?</h3>
+                  <p className="mt-1 text-sm text-charcoal-soft">Five quick-fire questions to check your understanding before the adaptive tasks unlock.</p>
+                  <div className="mt-4 space-y-2">
+                    {["Fruit, leaves and insects", "Only fruit", "Meat and fish"].map((opt, i) => (
+                      <div key={opt} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${i === 0 ? "bg-forest-100 font-semibold text-forest-800" : "bg-cream text-charcoal-soft"}`}>
+                        <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-xs font-bold ${i === 0 ? "bg-forest-600 text-cream" : "bg-sand text-charcoal-soft"}`}>{String.fromCharCode(65 + i)}</span>
+                        {opt}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sample: Adaptive activity */}
+              <div className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5">
+                <div className="flex aspect-[9/5] items-center justify-center bg-gradient-to-br from-mist/40 to-forest-100/60">
+                  <Layers className="h-16 w-16 text-forest-600/50" aria-hidden strokeWidth={1.2} />
+                </div>
+                <div className="p-5">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-forest-600">Adaptive Activity</p>
+                  <h3 className="display mt-1 font-bold text-forest-900">Great Ape habitat map</h3>
+                  <p className="mt-1 text-sm text-charcoal-soft">Three tiers, automatically assigned based on quiz results. Every student gets exactly the right challenge.</p>
+                  <div className="mt-4 flex gap-2">
+                    {[["Foundation", "bg-clay-100 text-clay-700"], ["Core", "bg-gold/20 text-gold-700"], ["Advanced", "bg-forest-100 text-forest-700"]].map(([label, cls]) => (
+                      <span key={label} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={160}>
+            <div className="mt-10 text-center">
+              <button
+                onClick={openCodeModal}
+                className="inline-flex items-center gap-2 rounded-full bg-forest-700 px-7 py-3 text-sm font-semibold text-cream shadow-soft hover:bg-forest-800 transition-colors"
+              >
+                <Compass className="h-4 w-4" aria-hidden />
+                Enter class code to explore
+              </button>
+              <p className="mt-3 text-xs text-charcoal-soft">
+                Have a school account?{" "}
+                <a href="/login" className="font-semibold text-forest-700 hover:underline">Teacher sign in</a>
+              </p>
+            </div>
+          </Reveal>
+        </div>
       </section>
+
+      {/* ============ Footer with discrete admin link ============ */}
+      <footer className="border-t border-black/6 bg-cream px-6 py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-xs text-charcoal-soft/60 sm:flex-row">
+          <span>The Biology Bloke Edventures · Conservation education for Australian schools</span>
+          <div className="flex items-center gap-4">
+            <a href="/register" className="hover:text-charcoal-soft hover:underline">Sign up your school</a>
+            <span>·</span>
+            <a href="/login" className="hover:text-charcoal-soft hover:underline">Admin</a>
+          </div>
+        </div>
+      </footer>
 
       {/* ============ Student code modal ============ */}
       <Modal

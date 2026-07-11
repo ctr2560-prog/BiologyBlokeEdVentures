@@ -39,8 +39,8 @@ interface AppState {
   loginAs: (role: Role) => void;
   /** Demo-mode: login by specific user id (student alias tap). */
   loginAsUser: (userId: string) => void;
-  /** Real login: Supabase email + password. Returns error string or null. */
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  /** Real login: Supabase email + password. Returns error string or null, and the authenticated role. */
+  signIn: (email: string, password: string) => Promise<{ error: string | null; role: Role | null }>;
   /** Real student login: anonymous Supabase session scoped to class + animal alias. */
   signInStudent: (classCode: string, studentId: string) => Promise<{ error: string | null }>;
   logout: () => void;
@@ -87,7 +87,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     const { user, error } = await signInTeacher(email, password);
     if (user) setCurrentUser(user);
-    return { error };
+    return { error, role: user?.role ?? null };
   }, []);
 
   const signInStudent = useCallback(async (classCode: string, studentId: string) => {

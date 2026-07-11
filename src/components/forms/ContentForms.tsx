@@ -4,8 +4,8 @@
  * Forms accept optional locked* props so they can be used in topic-context
  * (where topic/unit are already known) without showing the dropdowns.
  */
-import { useState } from "react";
-import { UploadCloud, X, Check, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { UploadCloud, X, Check, Plus, BookOpen } from "lucide-react";
 import {
   FormField,
   inputClass,
@@ -18,6 +18,7 @@ import {
   createResource,
   createQuiz,
   getTopics,
+  addLessonToUnit,
 } from "@/lib/supabaseService";
 import type {
   Stage,
@@ -26,6 +27,7 @@ import type {
   QuestionType,
   Question,
   Topic,
+  Unit,
 } from "@/types";
 
 const STAGES: Stage[] = ["Stage 3", "Stage 4", "Stage 5"];
@@ -54,23 +56,40 @@ function TopicSelect({
 }
 
 // ---- Unit form ----
-export function UnitForm({ onSaved }: { onSaved: () => void }) {
-  const [title, setTitle] = useState("");
-  const [stage, setStage] = useState<Stage>("Stage 3");
+export function UnitForm({ onSaved }: { onSaved: (unit: Unit) => void }) {
+  const [title, setTitle]           = useState("");
+  const [stage, setStage]           = useState<Stage>("Stage 3");
   const [yearGroups, setYearGroups] = useState("");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState(10);
-  const [outcomes, setOutcomes] = useState("");
-  const [published, setPublished] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [duration, setDuration]     = useState(10);
+  const [outcomes, setOutcomes]     = useState("");
+  const [published, setPublished]   = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState("");
+
+  // Lesson picker
+  const [allLessons, setAllLessons]           = useState<Topic[]>([]);
+  const [lessonsLoading, setLessonsLoading]   = useState(true);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    getTopics().then((t) => { setAllLessons(t); setLessonsLoading(false); });
+  }, []);
+
+  const toggleLesson = (id: string) => {
+    setSelectedLessonIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSaving(true);
     try {
-      await createUnit({
+      const unit = await createUnit({
         title,
         stage,
         yearGroups: yearGroups.split(",").map((y) => y.trim()).filter(Boolean),
@@ -81,8 +100,15 @@ export function UnitForm({ onSaved }: { onSaved: () => void }) {
         coverImage: "/trees.png",
         coverEmoji: "",
         published,
+        program: "",
+        assessmentTask: "",
       });
-      onSaved();
+      // Allocate selected lessons in order
+      const selected = allLessons.filter((l) => selectedLessonIds.has(l.id));
+      for (let i = 0; i < selected.length; i++) {
+        await addLessonToUnit(unit.id, selected[i].id, i);
+      }
+      onSaved(unit);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create unit");
     } finally {
@@ -91,16 +117,18 @@ export function UnitForm({ onSaved }: { onSaved: () => void }) {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-5">
+      {/* Basic details */}
       <FormField label="Unit title" required>
         <input
           className={inputClass}
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Australian Ecosystems"
         />
       </FormField>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <FormField label="Stage">
           <select
             className={inputClass}
@@ -112,7 +140,7 @@ export function UnitForm({ onSaved }: { onSaved: () => void }) {
             ))}
           </select>
         </FormField>
-        <FormField label="Year groups" hint="Comma sep">
+        <FormField label="Year groups" hint="Comma separated">
           <input
             className={inputClass}
             value={yearGroups}
@@ -127,45 +155,97 @@ export function UnitForm({ onSaved }: { onSaved: () => void }) {
           rows={2}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          placeholder="Overview of what this unit covers"
         />
       </FormField>
-      <FormField label="Duration (lessons)">
-        <input
-          type="number"
-          className={inputClass}
-          value={duration}
-          onChange={(e) => setDuration(+e.target.value)}
-        />
-      </FormField>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Duration (lessons)">
+          <input
+            type="number"
+            className={inputClass}
+            value={duration}
+            onChange={(e) => setDuration(+e.target.value)}
+            min={1}
+          />
+        </FormField>
+        <div /> {/* spacer */}
+      </div>
       <FormField label="Syllabus outcomes" hint="One per line">
         <textarea
           className={inputClass}
-          rows={2}
+          rows={3}
           value={outcomes}
           onChange={(e) => setOutcomes(e.target.value)}
+          placeholder={"ST3-4LW-S\nST3-1WS-S"}
         />
       </FormField>
+
+      {/* Lesson picker */}
+      <div>
+        <p className="mb-2 text-sm font-semibold text-forest-900">
+          Add lessons{" "}
+          {selectedLessonIds.size > 0 && (
+            <span className="font-normal text-charcoal-soft">
+              ({selectedLessonIds.size} selected)
+            </span>
+          )}
+        </p>
+        {lessonsLoading ? (
+          <div className="flex items-center gap-2 py-3 text-sm text-charcoal-soft">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-forest-600 border-t-transparent" />
+            Loading lessons...
+          </div>
+        ) : allLessons.length === 0 ? (
+          <p className="text-sm text-charcoal-soft">
+            No lessons yet - create lessons from the Lessons page first.
+          </p>
+        ) : (
+          <div className="max-h-48 space-y-1 overflow-y-auto rounded-2xl border border-sand-dark bg-cream/50 p-2">
+            {allLessons.map((lesson) => {
+              const selected = selectedLessonIds.has(lesson.id);
+              return (
+                <button
+                  key={lesson.id}
+                  type="button"
+                  onClick={() => toggleLesson(lesson.id)}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                    selected
+                      ? "bg-forest-100 text-forest-900 ring-1 ring-forest-300"
+                      : "hover:bg-white text-charcoal"
+                  }`}
+                >
+                  <BookOpen
+                    className={`h-4 w-4 shrink-0 ${selected ? "text-forest-600" : "text-charcoal-soft"}`}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {lesson.title}
+                  </span>
+                  {selected && (
+                    <Check className="h-4 w-4 shrink-0 text-forest-600" aria-hidden />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <PublishToggle published={published} setPublished={setPublished} />
       {error && (
         <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm text-clay-600">{error}</p>
       )}
       <div className="flex justify-end">
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save unit"}
+          {saving ? "Creating..." : "Create unit"}
         </Button>
       </div>
     </form>
   );
 }
 
-// ---- Topic form ----
-export function TopicForm({
-  unitId,
-  onSaved,
-}: {
-  unitId: string;
-  onSaved: () => void;
-}) {
+// ---- Lesson form (standalone, no unit required) ----
+export function LessonForm({ onSaved }: { onSaved: (lesson: Topic) => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("core");
@@ -177,10 +257,10 @@ export function TopicForm({
     setError("");
     setSaving(true);
     try {
-      await createTopic({ unitId, title, description, difficulty });
-      onSaved();
+      const lesson = await createTopic({ title, description, difficulty });
+      onSaved(lesson);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create topic");
+      setError(err instanceof Error ? err.message : "Failed to create lesson");
     } finally {
       setSaving(false);
     }
@@ -188,7 +268,7 @@ export function TopicForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <FormField label="Topic title" required>
+      <FormField label="Lesson title" required>
         <input
           className={inputClass}
           required
@@ -203,7 +283,7 @@ export function TopicForm({
           rows={2}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="What students will explore in this topic"
+          placeholder="What students will explore in this lesson"
         />
       </FormField>
       <FormField label="Difficulty">
@@ -222,11 +302,16 @@ export function TopicForm({
       )}
       <div className="flex justify-end">
         <Button type="submit" disabled={saving}>
-          {saving ? "Creating..." : "Create topic"}
+          {saving ? "Creating..." : "Create lesson"}
         </Button>
       </div>
     </form>
   );
+}
+
+// Keep TopicForm as alias for backwards compat with any remaining usages
+export function TopicForm({ onSaved }: { onSaved: () => void }) {
+  return <LessonForm onSaved={() => onSaved()} />;
 }
 
 // ---- Resource form ----

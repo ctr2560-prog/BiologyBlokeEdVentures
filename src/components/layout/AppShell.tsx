@@ -1,17 +1,20 @@
 "use client";
 /*
- * AppShell, the responsive frame shared by every portal.
- * Desktop: fixed sidebar with nav + role switcher. Mobile: top bar with a
- * slide-in drawer. Redirects to the login page if no demo user is selected.
+ * AppShell - the responsive frame shared by every portal.
+ *
+ * Auth guard: waits for the Supabase session check, then:
+ *  - No session  → redirects to /login (or / for students)
+ *  - Wrong role  → redirects to the user's own portal home
+ *  - Admin       → can preview any portal (RoleSwitcher visible)
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
-import { navByRole, roleLabel } from "./navConfig";
+import { navByRole, roleHome } from "./navConfig";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { Logo } from "@/components/ui/Logo";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, Loader } from "lucide-react";
 import type { Role } from "@/types";
 
 export function AppShell({
@@ -21,26 +24,48 @@ export function AppShell({
   role: Role;
   children: React.ReactNode;
 }) {
-  const { currentUser, authReady, loginAs, logout } = useApp();
+  const { currentUser, authReady, logout } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Wait until the Supabase session check is done before falling back to the
-  // demo user — prevents a flash of the demo account when a real teacher
-  // refreshes the page.
   useEffect(() => {
-    if (authReady && !currentUser) loginAs(role);
-  }, [authReady, currentUser, role, loginAs]);
+    if (!authReady) return;
+    if (!currentUser) {
+      router.push(role === "student" ? "/" : "/login");
+      return;
+    }
+    // Admin may preview any portal. All other roles are confined to their own.
+    if (currentUser.role !== "admin" && currentUser.role !== role) {
+      router.push(roleHome[currentUser.role]);
+    }
+  }, [authReady, currentUser, role, router]);
 
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
 
+  // ── Loading / redirect suppression ───────────────────────────────────────
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream">
+        <Loader className="h-8 w-8 animate-spin text-forest-600" aria-hidden />
+      </div>
+    );
+  }
+  if (!currentUser) return null;
+  if (currentUser.role !== "admin" && currentUser.role !== role) return null;
+
+  const isAdmin = currentUser.role === "admin";
   const nav = navByRole[role];
 
   const isActive = (href: string) =>
     href === `/${role}` ? pathname === href : pathname.startsWith(href);
+
+  const handleLogout = () => {
+    logout();
+    router.push(role === "student" ? "/" : "/login");
+  };
 
   const NavLinks = () => (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
@@ -61,10 +86,17 @@ export function AppShell({
     </nav>
   );
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
-  };
+  const BottomBar = () => (
+    <div className="space-y-2 border-t border-sand p-3">
+      {isAdmin && <RoleSwitcher currentPortal={role} />}
+      <button
+        onClick={handleLogout}
+        className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-charcoal-soft hover:bg-clay-400/10 hover:text-clay-600"
+      >
+        <LogOut className="h-4 w-4" aria-hidden /> Sign out
+      </button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-cream">
@@ -74,15 +106,7 @@ export function AppShell({
           <Logo size={40} withWordmark />
         </div>
         <NavLinks />
-        <div className="space-y-2 border-t border-sand p-3">
-          <RoleSwitcher />
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-charcoal-soft hover:bg-clay-400/10 hover:text-clay-600"
-          >
-<LogOut className="h-4 w-4" aria-hidden /> Sign out
-          </button>
-        </div>
+        <BottomBar />
       </aside>
 
       {/* Mobile top bar */}
@@ -116,15 +140,7 @@ export function AppShell({
               </button>
             </div>
             <NavLinks />
-            <div className="space-y-2 border-t border-sand p-3">
-              <RoleSwitcher />
-              <button
-                onClick={handleLogout}
-                className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-charcoal-soft hover:bg-clay-400/10"
-              >
-    <LogOut className="h-4 w-4" aria-hidden /> Sign out
-              </button>
-            </div>
+            <BottomBar />
           </div>
         </div>
       )}
@@ -136,13 +152,5 @@ export function AppShell({
         </div>
       </main>
     </div>
-  );
-}
-
-export function RoleBadge({ role }: { role: Role }) {
-  return (
-    <span className="rounded-full bg-forest-50 px-3 py-1 text-xs font-semibold text-forest-700">
-      {roleLabel[role]} view
-    </span>
   );
 }

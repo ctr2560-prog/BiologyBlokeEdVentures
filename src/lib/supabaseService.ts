@@ -54,6 +54,8 @@ function mapUnit(r: Row): Unit {
     coverImage: r.cover_image ?? "",
     coverEmoji: "",
     published: Boolean(r.published),
+    program: r.program ?? "",
+    assessmentTask: r.assessment_task ?? "",
     createdAt: r.created_at ?? "",
   };
 }
@@ -281,11 +283,37 @@ export async function getTopic(id: string): Promise<Topic | null> {
 }
 
 export async function getTopicsByUnit(unitId: string): Promise<Topic[]> {
-  const { data } = await getSupabaseClient()
+  const supabase = getSupabaseClient();
+  const { data: links } = await supabase
+    .from("unit_lessons")
+    .select("lesson_id")
+    .eq("unit_id", unitId)
+    .order("order_index");
+  if (!links || links.length === 0) return [];
+  const ids = (links as Row[]).map((l) => l.lesson_id as string);
+  const { data } = await supabase
     .from("topics")
     .select("*, videos(id), quizzes(id), resources(id)")
-    .eq("unit_id", unitId);
-  return (data ?? []).map(mapTopic);
+    .in("id", ids);
+  const topicMap = new Map((data ?? []).map((t: Row) => [t.id as string, mapTopic(t)]));
+  return ids.map((id) => topicMap.get(id)).filter((t): t is Topic => !!t);
+}
+
+export async function addLessonToUnit(
+  unitId: string,
+  lessonId: string,
+  orderIndex: number
+): Promise<void> {
+  const id = newId("ul");
+  await getSupabaseClient().from("unit_lessons").insert({ id, unit_id: unitId, lesson_id: lessonId, order_index: orderIndex });
+}
+
+export async function removeLessonFromUnit(unitId: string, lessonId: string): Promise<void> {
+  await getSupabaseClient()
+    .from("unit_lessons")
+    .delete()
+    .eq("unit_id", unitId)
+    .eq("lesson_id", lessonId);
 }
 
 // ---- Videos ----
@@ -524,7 +552,7 @@ export async function getAdaptiveTasks(): Promise<AdaptiveTask[]> {
 // ---- Mutations: Topics ----
 
 export async function createTopic(data: {
-  unitId: string;
+  unitId?: string;
   title: string;
   description: string;
   difficulty: "foundation" | "core" | "advanced";
@@ -534,7 +562,7 @@ export async function createTopic(data: {
     .from("topics")
     .insert({
       id,
-      unit_id: data.unitId,
+      unit_id: data.unitId ?? null,
       title: data.title,
       description: data.description,
       difficulty: data.difficulty,
@@ -612,6 +640,25 @@ export async function attachMuxPlayback(
     .eq("mux_upload_id", muxUploadId);
 }
 
+export async function updateVideo(
+  id: string,
+  fields: { title?: string; description?: string; tags?: string[]; published?: boolean }
+): Promise<Video> {
+  const updates: Record<string, unknown> = {};
+  if (fields.title       !== undefined) updates.title       = fields.title;
+  if (fields.description !== undefined) updates.description = fields.description;
+  if (fields.tags        !== undefined) updates.tags        = fields.tags;
+  if (fields.published   !== undefined) updates.published   = fields.published;
+  const { data, error } = await getSupabaseClient()
+    .from("videos")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapVideo(data);
+}
+
 export async function createVideo(video: Omit<Video, "id">): Promise<Video> {
   const id = newId("vid");
   const { data, error } = await getSupabaseClient()
@@ -680,8 +727,30 @@ export async function createUnit(unit: Omit<Unit, "id" | "createdAt">): Promise<
       outcomes: unit.outcomes,
       cover_image: unit.coverImage,
       published: unit.published,
+      program: unit.program ?? "",
+      assessment_task: unit.assessmentTask ?? "",
       created_at: today,
     })
+    .select("*, topics(id)")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapUnit(data);
+}
+
+export async function updateUnit(
+  id: string,
+  fields: Partial<Pick<Unit, "title" | "description" | "program" | "assessmentTask" | "published">>
+): Promise<Unit> {
+  const dbFields: Record<string, unknown> = {};
+  if (fields.title !== undefined)         dbFields.title = fields.title;
+  if (fields.description !== undefined)   dbFields.description = fields.description;
+  if (fields.program !== undefined)       dbFields.program = fields.program;
+  if (fields.assessmentTask !== undefined) dbFields.assessment_task = fields.assessmentTask;
+  if (fields.published !== undefined)     dbFields.published = fields.published;
+  const { data, error } = await getSupabaseClient()
+    .from("units")
+    .update(dbFields)
+    .eq("id", id)
     .select("*, topics(id)")
     .single();
   if (error) throw new Error(error.message);
@@ -855,4 +924,210 @@ export async function upsertProgress(
 
   if (error) throw new Error(error.message);
   return mapProgress(data);
+}
+
+// ---- Lesson Items ----
+
+import type {
+  LessonItem,
+  LessonItemWithContent,
+  Activity,
+  ActivityBlock,
+  StudentActivityResponse,
+  BlockResponse,
+} from "@/types";
+
+function mapLessonItem(r: Row): LessonItem {
+  return {
+    id: r.id,
+    lessonId: r.lesson_id,
+    itemType: r.item_type,
+    itemId: r.item_id,
+    orderIndex: r.order_index,
+  };
+}
+
+function mapActivity(r: Row): Activity {
+  return {
+    id: r.id,
+    lessonId: r.lesson_id,
+    title: r.title,
+    difficulty: r.difficulty,
+    blocks: (r.blocks ?? []) as ActivityBlock[],
+    createdAt: r.created_at ?? "",
+  };
+}
+
+function mapStudentActivityResponse(r: Row): StudentActivityResponse {
+  return {
+    id: r.id,
+    activityId: r.activity_id,
+    studentId: r.student_id,
+    classId: r.class_id,
+    responses: (r.responses ?? []) as BlockResponse[],
+    submittedAt: r.submitted_at ?? undefined,
+    lastEditedAt: r.last_edited_at ?? "",
+  };
+}
+
+export async function getLessonItems(lessonId: string): Promise<LessonItemWithContent[]> {
+  const supabase = getSupabaseClient();
+
+  const { data: items } = await supabase
+    .from("lesson_items")
+    .select("*")
+    .eq("lesson_id", lessonId)
+    .order("order_index");
+
+  if (!items || items.length === 0) return [];
+
+  const videoIds = items.filter((i: Row) => i.item_type === "video").map((i: Row) => i.item_id);
+  const quizIds  = items.filter((i: Row) => i.item_type === "quiz").map((i: Row) => i.item_id);
+
+  const [videosData, quizzesData] = await Promise.all([
+    videoIds.length
+      ? supabase.from("videos").select("*").in("id", videoIds)
+      : { data: [] },
+    quizIds.length
+      ? supabase.from("quizzes").select("*, questions(*)").in("id", quizIds)
+      : { data: [] },
+  ]);
+
+  const videoMap = new Map<string, Video>((videosData.data ?? []).map((v: Row) => [v.id as string, mapVideo(v)]));
+  const quizMap  = new Map<string, Quiz>((quizzesData.data ?? []).map((q: Row) => [q.id as string, mapQuiz(q)]));
+
+  return (items as Row[]).reduce((acc: LessonItemWithContent[], r: Row) => {
+    const base = mapLessonItem(r);
+    if (r.item_type === "video") {
+      const video = videoMap.get(r.item_id);
+      if (video) acc.push({ ...base, itemType: "video", video });
+    } else {
+      const quiz = quizMap.get(r.item_id);
+      if (quiz) acc.push({ ...base, itemType: "quiz", quiz });
+    }
+    return acc;
+  }, []);
+}
+
+export async function addItemToLesson(
+  lessonId: string,
+  itemType: "video" | "quiz",
+  itemId: string,
+  orderIndex: number
+): Promise<LessonItem> {
+  const id = newId("li");
+  const { data, error } = await getSupabaseClient()
+    .from("lesson_items")
+    .insert({ id, lesson_id: lessonId, item_type: itemType, item_id: itemId, order_index: orderIndex })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapLessonItem(data);
+}
+
+export async function removeLessonItem(itemId: string): Promise<void> {
+  await getSupabaseClient().from("lesson_items").delete().eq("id", itemId);
+}
+
+export async function reorderLessonItems(
+  updates: Array<{ id: string; orderIndex: number }>
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  await Promise.all(
+    updates.map(({ id, orderIndex }) =>
+      supabase.from("lesson_items").update({ order_index: orderIndex }).eq("id", id)
+    )
+  );
+}
+
+// ---- Activities ----
+
+export async function getActivitiesForLesson(lessonId: string): Promise<Activity[]> {
+  const { data } = await getSupabaseClient()
+    .from("activities")
+    .select("*")
+    .eq("lesson_id", lessonId)
+    .order("difficulty");
+  return (data ?? []).map(mapActivity);
+}
+
+export async function upsertActivity(
+  activity: { id?: string } & Omit<Activity, "id" | "createdAt">
+): Promise<Activity> {
+  const id = activity.id ?? newId("act");
+  const { data, error } = await getSupabaseClient()
+    .from("activities")
+    .upsert({
+      id,
+      lesson_id: activity.lessonId,
+      title: activity.title,
+      difficulty: activity.difficulty,
+      blocks: activity.blocks,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapActivity(data);
+}
+
+export async function deleteActivity(id: string): Promise<void> {
+  await getSupabaseClient().from("activities").delete().eq("id", id);
+}
+
+// ---- Student Activity Responses ----
+
+export async function getStudentActivityResponse(
+  activityId: string,
+  studentId: string,
+  classId: string
+): Promise<StudentActivityResponse | null> {
+  const { data } = await getSupabaseClient()
+    .from("student_activity_responses")
+    .select("*")
+    .eq("activity_id", activityId)
+    .eq("student_id", studentId)
+    .eq("class_id", classId)
+    .maybeSingle();
+  return data ? mapStudentActivityResponse(data) : null;
+}
+
+export async function upsertStudentActivityResponse(
+  response: Omit<StudentActivityResponse, "id" | "lastEditedAt">
+): Promise<StudentActivityResponse> {
+  const supabase = getSupabaseClient();
+  const { data: existing } = await supabase
+    .from("student_activity_responses")
+    .select("id")
+    .eq("activity_id", response.activityId)
+    .eq("student_id", response.studentId)
+    .eq("class_id", response.classId)
+    .maybeSingle();
+
+  const id = existing?.id ?? newId("sar");
+  const { data, error } = await supabase
+    .from("student_activity_responses")
+    .upsert({
+      id,
+      activity_id: response.activityId,
+      student_id: response.studentId,
+      class_id: response.classId,
+      responses: response.responses,
+      submitted_at: response.submittedAt ?? null,
+      last_edited_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapStudentActivityResponse(data);
+}
+
+export async function getResponsesForActivity(
+  activityId: string
+): Promise<StudentActivityResponse[]> {
+  const { data } = await getSupabaseClient()
+    .from("student_activity_responses")
+    .select("*")
+    .eq("activity_id", activityId)
+    .order("last_edited_at", { ascending: false });
+  return (data ?? []).map(mapStudentActivityResponse);
 }

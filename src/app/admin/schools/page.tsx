@@ -1,13 +1,29 @@
 "use client";
-import { SectionHeader, Badge } from "@/components/ui/primitives";
+import { useEffect, useState } from "react";
+import { SectionHeader, Badge, EmptyState } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { getSchools } from "@/lib/dataService";
+import { getSchools } from "@/lib/supabaseService";
+import { School as SchoolIcon, Loader } from "lucide-react";
 import type { School } from "@/types";
 
 const subTone = { active: "forest", trial: "gold", lapsed: "clay" } as const;
 
 export default function SchoolsPage() {
-  const schools = getSchools();
+  const [schools, setSchools] = useState<School[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getSchools().then((s) => { setSchools(s); setLoading(false); });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader className="h-8 w-8 animate-spin text-forest-600" aria-hidden />
+      </div>
+    );
+  }
+
   const columns: Column<School>[] = [
     {
       key: "name",
@@ -31,19 +47,35 @@ export default function SchoolsPage() {
       header: "Subscription",
       render: (s) => <Badge tone={subTone[s.subscriptionStatus]}>{s.subscriptionStatus}</Badge>,
     },
-    { key: "last", header: "Last active", align: "right", render: (s) => <span className="text-charcoal-soft">{s.lastActive}</span> },
+    {
+      key: "last",
+      header: "Last active",
+      align: "right",
+      render: (s) => <span className="text-charcoal-soft">{s.lastActive}</span>,
+    },
   ];
 
   return (
     <div className="space-y-6">
       <SectionHeader title="Schools" subtitle="Every school on the platform and their subscription health" />
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Stat label="Total schools" value={schools.length} />
-        <Stat label="Active" value={schools.filter((s) => s.active).length} />
-        <Stat label="On trial" value={schools.filter((s) => s.subscriptionStatus === "trial").length} />
-        <Stat label="Lapsed" value={schools.filter((s) => s.subscriptionStatus === "lapsed").length} />
-      </div>
-      <DataTable columns={columns} rows={schools} keyOf={(s) => s.id} />
+
+      {schools.length === 0 ? (
+        <EmptyState
+          Icon={SchoolIcon}
+          title="No schools yet"
+          message="Schools will appear here once they sign up."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <Stat label="Total schools" value={schools.length} />
+            <Stat label="Active" value={schools.filter((s) => s.active).length} />
+            <Stat label="On trial" value={schools.filter((s) => s.subscriptionStatus === "trial").length} />
+            <Stat label="Lapsed" value={schools.filter((s) => s.subscriptionStatus === "lapsed").length} />
+          </div>
+          <DataTable columns={columns} rows={schools} keyOf={(s) => s.id} />
+        </>
+      )}
     </div>
   );
 }

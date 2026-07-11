@@ -75,12 +75,14 @@ export interface Unit {
   coverImage: string;
   coverEmoji: string;
   published: boolean;
+  program?: string;
+  assessmentTask?: string;
   createdAt: string;
 }
 
 export interface Topic {
   id: string;
-  unitId: string;
+  unitId?: string;
   title: string;
   description: string;
   animalFocus: string[];
@@ -226,4 +228,80 @@ export interface AdaptiveRecommendation {
   recommendedTaskMessage: string;
   exploreSuggestion?: string;
   supportSuggestion?: string;
+}
+
+// ---- Lesson content sequencing ----
+
+export type LessonItemType = "video" | "quiz";
+
+export interface LessonItem {
+  id: string;
+  lessonId: string;
+  itemType: LessonItemType;
+  itemId: string;
+  orderIndex: number;
+}
+
+export type LessonItemWithContent =
+  | (LessonItem & { itemType: "video"; video: Video })
+  | (LessonItem & { itemType: "quiz"; quiz: Quiz });
+
+// ---- Adaptive activities (post-lesson, differentiated) ----
+
+export interface QABlock {
+  id: string;
+  type: "q_and_a";
+  question: string;
+  hint?: string;
+}
+
+export interface WritingBlock {
+  id: string;
+  type: "writing";
+  prompt: string;
+  wordGuide?: number;
+}
+
+export interface ResearchBlock {
+  id: string;
+  type: "research";
+  prompt: string;
+  fields: string[];
+}
+
+export interface DrawingBlock {
+  id: string;
+  type: "drawing_canvas";
+  prompt: string;
+  backgroundImageUrl?: string;
+}
+
+export type ActivityBlock = QABlock | WritingBlock | ResearchBlock | DrawingBlock;
+export type ActivityBlockType = ActivityBlock["type"];
+
+export interface Activity {
+  id: string;
+  lessonId: string;
+  title: string;
+  difficulty: Difficulty;
+  blocks: ActivityBlock[];
+  createdAt: string;
+}
+
+// ---- Student activity responses (auto-saved, teacher-observable) ----
+
+export type BlockResponse =
+  | { blockId: string; type: "q_and_a"; answer: string }
+  | { blockId: string; type: "writing"; text: string }
+  | { blockId: string; type: "research"; fieldValues: Record<string, string> }
+  | { blockId: string; type: "drawing_canvas"; dataUrl: string };
+
+export interface StudentActivityResponse {
+  id: string;
+  activityId: string;
+  studentId: string;
+  classId: string;
+  responses: BlockResponse[];
+  submittedAt?: string;
+  lastEditedAt: string;
 }

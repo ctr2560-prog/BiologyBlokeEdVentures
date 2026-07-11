@@ -4,14 +4,16 @@ import { SectionHeader, Button, Modal } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
 import { getVideos, getTopics } from "@/lib/supabaseService";
 import { VideoUploadForm } from "@/components/forms/VideoUploadForm";
+import { VideoDetailModal } from "./VideoDetailModal";
 import { Upload, Loader } from "lucide-react";
 import type { Video, Topic } from "@/types";
 
 export default function VideosPage() {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [videos, setVideos]   = useState<Video[]>([]);
+  const [topics, setTopics]   = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
+  const [uploadOpen, setUploadOpen]     = useState(false);
+  const [selected, setSelected]         = useState<Video | null>(null);
 
   useEffect(() => {
     Promise.all([getVideos(), getTopics()]).then(([v, t]) => {
@@ -21,13 +23,18 @@ export default function VideosPage() {
     });
   }, []);
 
+  const handleUpdated = (updated: Video) => {
+    setVideos((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+    setSelected(updated);
+  };
+
   return (
     <div className="space-y-6">
       <SectionHeader
         title="Videos"
         subtitle="Short-form wildlife reels, the heart of every Edventure"
         action={
-          <Button onClick={() => setModal(true)}>
+          <Button onClick={() => setUploadOpen(true)}>
             <Upload className="h-4 w-4" aria-hidden /> Upload video
           </Button>
         }
@@ -42,8 +49,12 @@ export default function VideosPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {videos.map((v) => (
-            <div key={v.id} className="relative">
-              <VideoCard video={v} href={`/admin/analytics?video=${v.id}`} />
+            <div
+              key={v.id}
+              className="relative cursor-pointer"
+              onClick={() => setSelected(v)}
+            >
+              <VideoCard video={v} />
               {v.muxUploadId && !v.muxPlaybackId && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-forest-950/70">
                   <div className="text-center text-cream">
@@ -57,15 +68,25 @@ export default function VideosPage() {
         </div>
       )}
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Upload video" maxWidth="max-w-lg">
+      {/* Upload modal */}
+      <Modal open={uploadOpen} onClose={() => setUploadOpen(false)} title="Upload video" maxWidth="max-w-lg">
         <VideoUploadForm
           availableTopics={topics}
           onDone={(video) => {
             setVideos((prev) => [{ ...video, muxUploadId: "pending" }, ...prev]);
-            setModal(false);
+            setUploadOpen(false);
           }}
         />
       </Modal>
+
+      {/* Video detail modal */}
+      {selected && (
+        <VideoDetailModal
+          video={selected}
+          onClose={() => setSelected(null)}
+          onUpdated={handleUpdated}
+        />
+      )}
     </div>
   );
 }
