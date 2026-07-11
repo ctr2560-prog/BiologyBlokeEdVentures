@@ -1,335 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FormField, inputClass, Badge } from "@/components/ui/primitives";
+import { FormField, inputClass } from "@/components/ui/primitives";
 import { getActivities, upsertActivity } from "@/lib/supabaseService";
-import {
-  ArrowLeft,
-  BarChart2,
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
-  Loader,
-  PenLine,
-  Pencil,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
-import type {
-  Activity,
-  ActivityBlock,
-  ActivityBlockType,
-  Difficulty,
-  GraphBlock,
-  QABlock,
-  WritingBlock,
-  ResearchBlock,
-  DrawingBlock,
-} from "@/types";
+import { ArrowLeft, Loader, Plus } from "lucide-react";
+import type { ActivityBlock, ActivityBlockType, Difficulty } from "@/types";
+import { BlockEditor, BlockPicker, newBlock } from "./blocks";
 
-// ─── Block type catalogue ────────────────────────────────────────────────────
-
-const BLOCK_CATALOGUE: {
-  type: ActivityBlockType;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-}[] = [
-  {
-    type: "q_and_a",
-    label: "Question & Answer",
-    description: "A question students respond to in writing",
-    icon: <PenLine className="h-5 w-5" />,
-  },
-  {
-    type: "writing",
-    label: "Writing task",
-    description: "Open-ended prompt with optional word guide",
-    icon: <BookOpen className="h-5 w-5" />,
-  },
-  {
-    type: "research",
-    label: "Research task",
-    description: "Structured fields — source, evidence, summary",
-    icon: <Search className="h-5 w-5" />,
-  },
-  {
-    type: "drawing_canvas",
-    label: "Drawing canvas",
-    description: "Freehand sketch or annotate an image",
-    icon: <Pencil className="h-5 w-5" />,
-  },
-  {
-    type: "graph",
-    label: "Graph / chart",
-    description: "Students plot data on a bar, line, or scatter chart",
-    icon: <BarChart2 className="h-5 w-5" />,
-  },
+const DIFFICULTIES: { value: Difficulty; label: string; style: string; active: string }[] = [
+  { value: "foundation", label: "Foundation", style: "bg-cream text-charcoal-soft ring-1 ring-sand hover:bg-sand", active: "bg-clay-100 text-clay-700 ring-2 ring-clay-300" },
+  { value: "core",       label: "Core",       style: "bg-cream text-charcoal-soft ring-1 ring-sand hover:bg-sand", active: "bg-forest-100 text-forest-700 ring-2 ring-forest-400" },
+  { value: "advanced",   label: "Advanced",   style: "bg-cream text-charcoal-soft ring-1 ring-sand hover:bg-sand", active: "bg-mist-100 text-mist-700 ring-2 ring-mist-400" },
 ];
-
-const DIFF_TONE = { foundation: "clay", core: "forest", advanced: "mist" } as const;
-const DIFFICULTIES: Difficulty[] = ["foundation", "core", "advanced"];
-
-// ─── Block factory ───────────────────────────────────────────────────────────
-
-function newBlock(type: ActivityBlockType): ActivityBlock {
-  const id = `blk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  switch (type) {
-    case "q_and_a":        return { id, type, question: "", hint: "" };
-    case "writing":        return { id, type, prompt: "", wordGuide: undefined };
-    case "research":       return { id, type, prompt: "", fields: ["Source", "Evidence", "Summary"] };
-    case "drawing_canvas": return { id, type, prompt: "", backgroundImageUrl: "" };
-    case "graph":          return { id, type, prompt: "", chartType: "bar", xLabel: "", yLabel: "" };
-  }
-}
-
-// ─── Individual block editors ────────────────────────────────────────────────
-
-function BlockEditor({
-  block,
-  onChange,
-  onRemove,
-  onMoveUp,
-  onMoveDown,
-  isFirst,
-  isLast,
-}: {
-  block: ActivityBlock;
-  onChange: (b: ActivityBlock) => void;
-  onRemove: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  isFirst: boolean;
-  isLast: boolean;
-}) {
-  const meta = BLOCK_CATALOGUE.find((c) => c.type === block.type)!;
-  const tone =
-    block.type === "q_and_a" ? "forest" :
-    block.type === "writing" ? "mist" :
-    block.type === "research" ? "sand" :
-    block.type === "graph" ? "gold" : "clay";
-
-  return (
-    <div className="rounded-2xl border border-sand-dark bg-white p-5 space-y-4">
-      {/* Block header */}
-      <div className="flex items-center gap-2">
-        <Badge tone={tone as "forest" | "mist" | "sand" | "gold" | "clay"}>
-          {meta.label}
-        </Badge>
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onMoveUp}
-            disabled={isFirst}
-            className="rounded p-1 text-charcoal-soft hover:text-forest-700 disabled:opacity-25"
-            aria-label="Move up"
-          >
-            <ChevronUp className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onMoveDown}
-            disabled={isLast}
-            className="rounded p-1 text-charcoal-soft hover:text-forest-700 disabled:opacity-25"
-            aria-label="Move down"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded p-1 text-clay-400 hover:text-clay-600"
-            aria-label="Remove block"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Q&A */}
-      {block.type === "q_and_a" && (
-        <>
-          <FormField label="Question" required>
-            <input
-              className={inputClass}
-              value={(block as QABlock).question}
-              onChange={(e) => onChange({ ...block, question: e.target.value } as QABlock)}
-              placeholder="e.g. How does the wombat's thick skin help it survive predators?"
-            />
-          </FormField>
-          <FormField label="Hint (optional)" hint="Shown to students who get stuck">
-            <input
-              className={inputClass}
-              value={(block as QABlock).hint ?? ""}
-              onChange={(e) => onChange({ ...block, hint: e.target.value } as QABlock)}
-              placeholder="e.g. Think about what a predator might do..."
-            />
-          </FormField>
-        </>
-      )}
-
-      {/* Writing */}
-      {block.type === "writing" && (
-        <>
-          <FormField label="Writing prompt" required>
-            <textarea
-              className={inputClass}
-              rows={3}
-              value={(block as WritingBlock).prompt}
-              onChange={(e) => onChange({ ...block, prompt: e.target.value } as WritingBlock)}
-              placeholder="e.g. In your own words, describe what an adaptation is and give two examples from the videos."
-            />
-          </FormField>
-          <FormField label="Word guide (optional)" hint="Target word count shown to students">
-            <input
-              type="number"
-              className={inputClass}
-              value={(block as WritingBlock).wordGuide ?? ""}
-              onChange={(e) =>
-                onChange({ ...block, wordGuide: e.target.value ? +e.target.value : undefined } as WritingBlock)
-              }
-              placeholder="e.g. 100"
-              min={10}
-              max={2000}
-            />
-          </FormField>
-        </>
-      )}
-
-      {/* Research */}
-      {block.type === "research" && (
-        <>
-          <FormField label="Research prompt" required>
-            <textarea
-              className={inputClass}
-              rows={3}
-              value={(block as ResearchBlock).prompt}
-              onChange={(e) => onChange({ ...block, prompt: e.target.value } as ResearchBlock)}
-              placeholder="e.g. Choose one Australian animal and research how it has adapted to its environment."
-            />
-          </FormField>
-          <FormField label="Fields" hint="One per line — students fill in each field">
-            <textarea
-              className={inputClass}
-              rows={4}
-              value={(block as ResearchBlock).fields.join("\n")}
-              onChange={(e) =>
-                onChange({
-                  ...block,
-                  fields: e.target.value.split("\n").filter(Boolean),
-                } as ResearchBlock)
-              }
-              placeholder={"Source\nEvidence\nSummary"}
-            />
-          </FormField>
-        </>
-      )}
-
-      {/* Drawing canvas */}
-      {block.type === "drawing_canvas" && (
-        <>
-          <FormField label="Drawing prompt" required>
-            <textarea
-              className={inputClass}
-              rows={3}
-              value={(block as DrawingBlock).prompt}
-              onChange={(e) => onChange({ ...block, prompt: e.target.value } as DrawingBlock)}
-              placeholder="e.g. Draw and label a food web from the Australian bush showing at least 5 organisms."
-            />
-          </FormField>
-          <FormField
-            label="Background image URL (optional)"
-            hint="Leave blank for a plain white canvas — or paste an image URL to give students a diagram to annotate"
-          >
-            <input
-              className={inputClass}
-              value={(block as DrawingBlock).backgroundImageUrl ?? ""}
-              onChange={(e) =>
-                onChange({ ...block, backgroundImageUrl: e.target.value } as DrawingBlock)
-              }
-              placeholder="https://…"
-            />
-          </FormField>
-        </>
-      )}
-
-      {/* Graph */}
-      {block.type === "graph" && (
-        <>
-          <FormField label="Graph prompt" required>
-            <textarea
-              className={inputClass}
-              rows={3}
-              value={(block as GraphBlock).prompt}
-              onChange={(e) => onChange({ ...block, prompt: e.target.value } as GraphBlock)}
-              placeholder="e.g. Plot the population data below on a bar chart and describe the trend you notice."
-            />
-          </FormField>
-          <div className="grid grid-cols-3 gap-3">
-            <FormField label="Chart type">
-              <select
-                className={inputClass}
-                value={(block as GraphBlock).chartType}
-                onChange={(e) =>
-                  onChange({ ...block, chartType: e.target.value } as GraphBlock)
-                }
-              >
-                <option value="bar">Bar chart</option>
-                <option value="line">Line graph</option>
-                <option value="scatter">Scatter plot</option>
-              </select>
-            </FormField>
-            <FormField label="X-axis label">
-              <input
-                className={inputClass}
-                value={(block as GraphBlock).xLabel}
-                onChange={(e) => onChange({ ...block, xLabel: e.target.value } as GraphBlock)}
-                placeholder="e.g. Year"
-              />
-            </FormField>
-            <FormField label="Y-axis label">
-              <input
-                className={inputClass}
-                value={(block as GraphBlock).yLabel}
-                onChange={(e) => onChange({ ...block, yLabel: e.target.value } as GraphBlock)}
-                placeholder="e.g. Population"
-              />
-            </FormField>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── Add-block picker ────────────────────────────────────────────────────────
-
-function BlockPicker({ onAdd }: { onAdd: (type: ActivityBlockType) => void }) {
-  return (
-    <div className="rounded-2xl border-2 border-dashed border-sand-dark bg-cream/60 p-5 space-y-3">
-      <p className="text-sm font-semibold text-forest-900">Choose a block type</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-        {BLOCK_CATALOGUE.map(({ type, label, description, icon }) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => onAdd(type)}
-            className="flex flex-col items-start gap-2 rounded-2xl bg-white p-4 text-left ring-1 ring-sand transition hover:bg-forest-50 hover:ring-forest-300"
-          >
-            <span className="text-forest-600">{icon}</span>
-            <div>
-              <p className="text-xs font-semibold text-forest-900">{label}</p>
-              <p className="mt-0.5 text-[0.65rem] leading-tight text-charcoal-soft">{description}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function ActivityBuilderPage() {
   const params = useParams<{ activityId: string }>();
@@ -362,6 +44,8 @@ export default function ActivityBuilderPage() {
   const addBlock = (type: ActivityBlockType) => {
     setBlocks((prev) => [...prev, newBlock(type)]);
     setAddingBlock(false);
+    // Scroll to bottom after adding
+    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 50);
   };
 
   const updateBlock = (i: number, updated: ActivityBlock) =>
@@ -389,7 +73,7 @@ export default function ActivityBuilderPage() {
       await upsertActivity({ id: existingId, title: title.trim(), difficulty, blocks });
       router.push("/admin/resources");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : "Failed to save.");
       setSaving(false);
     }
   };
@@ -403,31 +87,34 @@ export default function ActivityBuilderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-16">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/admin/resources")}
-            className="flex items-center gap-1.5 text-sm font-medium text-charcoal-soft hover:text-forest-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Activity library
-          </button>
-        </div>
+    <div className="mx-auto max-w-3xl space-y-6 pb-20">
+      {/* Sticky header bar */}
+      <div className="sticky top-0 z-20 -mx-6 -mt-6 flex items-center justify-between gap-4 border-b border-sand bg-cream/95 px-6 py-4 backdrop-blur">
         <button
           type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center justify-center rounded-xl bg-forest-700 px-6 py-2.5 text-sm font-semibold text-cream shadow-sm transition hover:bg-forest-600 disabled:opacity-60"
+          onClick={() => router.push("/admin/resources")}
+          className="flex items-center gap-1.5 text-sm font-medium text-charcoal-soft hover:text-forest-900"
         >
-          {saving ? "Saving…" : isNew ? "Create activity" : "Save changes"}
+          <ArrowLeft className="h-4 w-4" />
+          Activity library
         </button>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-sm text-charcoal-soft sm:block">
+            {blocks.length} block{blocks.length !== 1 ? "s" : ""}
+          </span>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-forest-700 px-5 py-2 text-sm font-semibold text-cream shadow-sm transition hover:bg-forest-600 disabled:opacity-60"
+          >
+            {saving ? "Saving…" : isNew ? "Create activity" : "Save changes"}
+          </button>
+        </div>
       </div>
 
       {/* Title + difficulty */}
-      <div className="rounded-2xl bg-white p-5 shadow-soft ring-1 ring-black/5 space-y-4">
+      <div className="rounded-2xl bg-white p-6 shadow-soft ring-1 ring-black/5 space-y-5">
         <FormField label="Activity title" required>
           <input
             className={inputClass}
@@ -442,26 +129,18 @@ export default function ActivityBuilderPage() {
           <label className="mb-2 block text-sm font-semibold text-forest-900">
             Difficulty tier
             <span className="ml-2 text-xs font-normal text-charcoal-soft">
-              Served to students whose quiz result matches this level
+              Platform serves this to students whose quiz result matches this level
             </span>
           </label>
           <div className="flex gap-2">
-            {DIFFICULTIES.map((d) => (
+            {DIFFICULTIES.map(({ value, label, style, active }) => (
               <button
-                key={d}
+                key={value}
                 type="button"
-                onClick={() => setDifficulty(d)}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                  difficulty === d
-                    ? d === "foundation"
-                      ? "bg-clay-100 text-clay-700 ring-2 ring-clay-300"
-                      : d === "core"
-                      ? "bg-forest-100 text-forest-700 ring-2 ring-forest-400"
-                      : "bg-mist-100 text-mist-700 ring-2 ring-mist-400"
-                    : "bg-cream text-charcoal-soft hover:bg-sand ring-1 ring-sand"
-                }`}
+                onClick={() => setDifficulty(value)}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${difficulty === value ? active : style}`}
               >
-                {d.charAt(0).toUpperCase() + d.slice(1)}
+                {label}
               </button>
             ))}
           </div>
@@ -469,20 +148,22 @@ export default function ActivityBuilderPage() {
       </div>
 
       {/* Blocks */}
-      <div className="space-y-3">
-        {blocks.map((block, i) => (
-          <BlockEditor
-            key={block.id}
-            block={block}
-            onChange={(b) => updateBlock(i, b)}
-            onRemove={() => removeBlock(i)}
-            onMoveUp={() => moveBlock(i, -1)}
-            onMoveDown={() => moveBlock(i, 1)}
-            isFirst={i === 0}
-            isLast={i === blocks.length - 1}
-          />
-        ))}
-      </div>
+      {blocks.length > 0 && (
+        <div className="space-y-3">
+          {blocks.map((block, i) => (
+            <BlockEditor
+              key={block.id}
+              block={block}
+              onChange={(b) => updateBlock(i, b)}
+              onRemove={() => removeBlock(i)}
+              onMoveUp={() => moveBlock(i, -1)}
+              onMoveDown={() => moveBlock(i, 1)}
+              isFirst={i === 0}
+              isLast={i === blocks.length - 1}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Add block */}
       {addingBlock ? (
@@ -500,7 +181,7 @@ export default function ActivityBuilderPage() {
         <button
           type="button"
           onClick={() => setAddingBlock(true)}
-          className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-sand-dark bg-cream/60 px-5 py-3 text-sm font-semibold text-charcoal-soft transition hover:border-forest-400 hover:text-forest-700"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-sand-dark bg-cream/60 px-5 py-4 text-sm font-semibold text-charcoal-soft transition hover:border-forest-400 hover:text-forest-700"
         >
           <Plus className="h-4 w-4" />
           Add block

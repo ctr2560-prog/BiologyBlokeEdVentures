@@ -3,17 +3,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SectionHeader, Badge, EmptyState, Button } from "@/components/ui/primitives";
 import { getActivities, deleteActivity } from "@/lib/supabaseService";
-import {
-  BarChart2,
-  BookOpen,
-  Loader,
-  PenLine,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-} from "lucide-react";
-import type { Activity, ActivityBlock } from "@/types";
+import { Loader, PenLine, Pencil, Plus, Trash2 } from "lucide-react";
+import type { Activity } from "@/types";
+import { BLOCK_CATALOGUE } from "./[activityId]/blocks";
 
 const DIFF_TONE = {
   foundation: "clay",
@@ -21,21 +13,7 @@ const DIFF_TONE = {
   advanced: "mist",
 } as const;
 
-const BLOCK_ICON: Record<ActivityBlock["type"], React.ReactNode> = {
-  q_and_a: <PenLine className="h-3.5 w-3.5" />,
-  writing: <BookOpen className="h-3.5 w-3.5" />,
-  research: <Search className="h-3.5 w-3.5" />,
-  drawing_canvas: <Pencil className="h-3.5 w-3.5" />,
-  graph: <BarChart2 className="h-3.5 w-3.5" />,
-};
-
-const BLOCK_LABEL: Record<ActivityBlock["type"], string> = {
-  q_and_a: "Q&A",
-  writing: "Writing",
-  research: "Research",
-  drawing_canvas: "Drawing",
-  graph: "Graph",
-};
+const BLOCK_META = Object.fromEntries(BLOCK_CATALOGUE.map((b) => [b.type, b])) as Record<string, (typeof BLOCK_CATALOGUE)[number]>;
 
 function ActivityCard({
   activity,
@@ -69,15 +47,18 @@ function ActivityCard({
       {/* Block type chips */}
       {activity.blocks.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {Object.entries(blockTypeCounts).map(([type, count]) => (
-            <span
-              key={type}
-              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[0.65rem] font-medium text-charcoal-soft ring-1 ring-black/8"
-            >
-              {BLOCK_ICON[type as ActivityBlock["type"]]}
-              {count > 1 ? `${count}× ` : ""}{BLOCK_LABEL[type as ActivityBlock["type"]]}
-            </span>
-          ))}
+          {Object.entries(blockTypeCounts).map(([type, count]) => {
+            const meta = BLOCK_META[type];
+            return (
+              <span
+                key={type}
+                className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[0.65rem] font-medium text-charcoal-soft ring-1 ring-black/8"
+              >
+                {meta?.icon}
+                {count > 1 ? `${count}× ` : ""}{meta?.label ?? type}
+              </span>
+            );
+          })}
         </div>
       )}
 

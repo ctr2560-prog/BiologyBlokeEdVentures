@@ -285,7 +285,92 @@ export interface GraphBlock {
   yLabel: string;
 }
 
-export type ActivityBlock = QABlock | WritingBlock | ResearchBlock | DrawingBlock | GraphBlock;
+export interface ImageBlock {
+  id: string;
+  type: "image";
+  url: string;
+  caption?: string;
+}
+
+export interface InstructionBlock {
+  id: string;
+  type: "instruction";
+  content: string;
+}
+
+export interface MultipleChoiceBlock {
+  id: string;
+  type: "multiple_choice";
+  question: string;
+  options: string[];
+  correctIndex: number;
+  hint?: string;
+  allowMultiple?: boolean;
+}
+
+export interface FillBlanksBlock {
+  id: string;
+  type: "fill_blanks";
+  instructions: string;
+  text: string; // Use [blank] to mark gaps
+}
+
+export interface LabelDiagramBlock {
+  id: string;
+  type: "label_diagram";
+  prompt: string;
+  imageUrl: string;
+  labels: string[]; // Correct answers — shown to teacher, hidden from student
+}
+
+export interface MatchingBlock {
+  id: string;
+  type: "matching";
+  prompt: string;
+  pairs: { left: string; right: string }[];
+}
+
+export interface TableBlock {
+  id: string;
+  type: "table";
+  prompt: string;
+  headers: string[];
+  rows: number;
+  prefilled?: string[][];
+}
+
+export interface WordBankBlock {
+  id: string;
+  type: "word_bank";
+  instructions: string;
+  text: string; // Use [blank] to mark gaps
+  words: string[]; // All words including distractors
+}
+
+export interface SortingBlock {
+  id: string;
+  type: "sorting";
+  prompt: string;
+  categories: string[];
+  items: string[];
+}
+
+export type ActivityBlock =
+  | QABlock
+  | WritingBlock
+  | ResearchBlock
+  | DrawingBlock
+  | GraphBlock
+  | ImageBlock
+  | InstructionBlock
+  | MultipleChoiceBlock
+  | FillBlanksBlock
+  | LabelDiagramBlock
+  | MatchingBlock
+  | TableBlock
+  | WordBankBlock
+  | SortingBlock;
+
 export type ActivityBlockType = ActivityBlock["type"];
 
 export interface Activity {
@@ -303,7 +388,17 @@ export type BlockResponse =
   | { blockId: string; type: "q_and_a"; answer: string }
   | { blockId: string; type: "writing"; text: string }
   | { blockId: string; type: "research"; fieldValues: Record<string, string> }
-  | { blockId: string; type: "drawing_canvas"; dataUrl: string };
+  | { blockId: string; type: "drawing_canvas"; dataUrl: string }
+  | { blockId: string; type: "graph"; dataUrl: string; dataPoints: { x: string; y: number }[] }
+  | { blockId: string; type: "image" }
+  | { blockId: string; type: "instruction" }
+  | { blockId: string; type: "multiple_choice"; selectedIndex: number | number[] }
+  | { blockId: string; type: "fill_blanks"; answers: string[] }
+  | { blockId: string; type: "label_diagram"; labels: string[] }
+  | { blockId: string; type: "matching"; matches: number[] }
+  | { blockId: string; type: "table"; cells: string[][] }
+  | { blockId: string; type: "word_bank"; answers: string[] }
+  | { blockId: string; type: "sorting"; sorted: Record<string, string[]> };
 
 export interface StudentActivityResponse {
   id: string;

@@ -19,6 +19,15 @@ function newBlock(type: ActivityBlockType): ActivityBlock {
     case "research":       return { id, type, prompt: "", fields: ["Source", "Evidence", "Summary"] };
     case "drawing_canvas": return { id, type, prompt: "", backgroundImageUrl: "" };
     case "graph":          return { id, type, prompt: "", chartType: "bar", xLabel: "", yLabel: "" };
+    case "image":           return { id, type, url: "", caption: "" };
+    case "instruction":     return { id, type, content: "" };
+    case "multiple_choice": return { id, type, question: "", options: ["", "", "", ""], correctIndex: 0, hint: "" };
+    case "fill_blanks":    return { id, type, instructions: "", text: "" };
+    case "word_bank":      return { id, type, instructions: "", text: "", words: [] };
+    case "label_diagram":  return { id, type, prompt: "", imageUrl: "", labels: ["", "", ""] };
+    case "matching":        return { id, type, prompt: "", pairs: [{ left: "", right: "" }, { left: "", right: "" }] };
+    case "table":           return { id, type, prompt: "", headers: ["Column 1", "Column 2"], rows: 4 };
+    case "sorting":         return { id, type, prompt: "", categories: ["Category A", "Category B"], items: ["", "", ""] };
   }
 }
 
