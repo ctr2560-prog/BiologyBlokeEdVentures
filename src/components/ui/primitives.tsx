@@ -225,7 +225,8 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative z-10 flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-3xl bg-cream shadow-hero`}
+        style={{ maxHeight: "90vh" }}
+        className={`relative z-10 flex w-full ${maxWidth} flex-col overflow-hidden rounded-3xl bg-cream shadow-hero`}
       >
         <div className="flex shrink-0 items-center justify-between px-6 pt-6 pb-4">
           <h2 className="display text-xl font-bold text-forest-900">{title}</h2>
