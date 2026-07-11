@@ -4,7 +4,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, school } = await req.json();
 
     if (!name?.trim() || !email?.trim() || !password) {
       return NextResponse.json({ error: "Name, email and password are required." }, { status: 400 });
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     const publicUserId = randomUUID();
     const cleanEmail = email.toLowerCase().trim();
     const cleanName = name.trim();
+    const cleanSchool = school?.trim() ?? "";
 
     // 1. Create the public.users record first (auth_id added after auth user created).
     const { error: userError } = await supabase.from("users").insert({
@@ -45,11 +46,13 @@ export async function POST(req: NextRequest) {
         bb_role: "teacher",
         bb_name: cleanName,
         bb_school_id: null,
+        bb_school_name: cleanSchool,
       },
       app_metadata: {
         bb_role: "teacher",
         bb_user_id: publicUserId,
         bb_school_id: null,
+        bb_school_name: cleanSchool,
       },
     });
 

@@ -1,27 +1,88 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { Button, inputClass } from "@/components/ui/primitives";
-import { UserPlus } from "lucide-react";
+import { ArrowLeft, Loader, PlusCircle, School, Search, UserPlus, X } from "lucide-react";
+
+type SchoolResult = { name: string; suburb: string; state: string };
 
 export default function RegisterPage() {
   const { signIn } = useApp();
   const router = useRouter();
 
   const [name, setName] = useState("");
+  const [school, setSchool] = useState("");
+  const [schoolQuery, setSchoolQuery] = useState("");
+  const [schoolResults, setSchoolResults] = useState<SchoolResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [schoolSearching, setSchoolSearching] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const schoolRef = useRef<HTMLDivElement>(null);
+
+  // Debounced school search
+  useEffect(() => {
+    if (schoolQuery.length < 2) {
+      setSchoolResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setSchoolSearching(true);
+      try {
+        const res = await fetch(`/api/schools?q=${encodeURIComponent(schoolQuery)}`);
+        const data: SchoolResult[] = await res.json();
+        setSchoolResults(data);
+        setShowDropdown(true);
+      } catch {
+        setSchoolResults([]);
+      } finally {
+        setSchoolSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [schoolQuery]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (schoolRef.current && !schoolRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  const selectSchool = (s: SchoolResult) => {
+    setSchool(s.suburb ? `${s.name}, ${s.suburb}` : s.name);
+    setSchoolQuery("");
+    setShowDropdown(false);
+  };
+
+  const addCustomSchool = () => {
+    if (schoolQuery.trim()) {
+      setSchool(schoolQuery.trim());
+      setSchoolQuery("");
+      setShowDropdown(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
+    if (!school.trim()) {
+      setError("Please select or add your school.");
+      return;
+    }
     if (password !== confirm) {
       setError("Passwords don't match.");
       return;
@@ -36,7 +97,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, school }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -45,10 +106,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Auto sign-in after successful registration.
       const { error: signInError } = await signIn(email.trim(), password);
       if (signInError) {
-        // Registration worked but sign-in failed - redirect to login.
         router.push("/login?registered=1");
         return;
       }
@@ -100,127 +159,220 @@ export default function RegisterPage() {
       </div>
 
       {/* Right panel: form */}
-      <div className="flex flex-1 flex-col items-center justify-center bg-cream px-6 py-12">
-        <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="mb-8 flex justify-center lg:hidden">
-            <Image
-              src="/logo-home.png"
-              alt="The Biology Bloke Edventures"
-              width={100}
-              height={100}
-              className="h-16 w-auto"
-            />
-          </div>
+      <div className="flex flex-1 flex-col bg-cream px-6 py-12">
+        {/* Back to home */}
+        <div className="mb-auto w-full max-w-sm self-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-charcoal-soft hover:text-forest-900"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Back to home
+          </Link>
+        </div>
 
-          <div className="mb-1 flex items-center justify-between">
-            <h2 className="display text-2xl font-bold text-forest-900">Create teacher account</h2>
-            <Link
-              href="/login"
-              className="text-sm font-semibold text-forest-700 hover:underline"
-            >
-              Sign in
-            </Link>
-          </div>
-          <p className="mb-7 text-sm text-charcoal-soft">
-            Get started with adaptive conservation education for your class.
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-forest-900">
-                Your name
-              </label>
-              <input
-                type="text"
-                required
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ms Smith"
-                className={inputClass + " w-full"}
-                disabled={loading}
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-sm">
+            {/* Mobile logo */}
+            <div className="mb-8 flex justify-center lg:hidden">
+              <Image
+                src="/logo-home.png"
+                alt="The Biology Bloke Edventures"
+                width={100}
+                height={100}
+                className="h-16 w-auto"
               />
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-forest-900">
-                Email address
-              </label>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@school.edu.au"
-                className={inputClass + " w-full"}
-                disabled={loading}
-              />
-            </div>
+            <h2 className="display mb-1 text-2xl font-bold text-forest-900">
+              Create teacher account
+            </h2>
+            <p className="mb-7 text-sm text-charcoal-soft">
+              Get started with adaptive conservation education for your class.
+            </p>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-forest-900">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className={inputClass + " w-full"}
-                disabled={loading}
-              />
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-forest-900">
+                  Your name
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ms Smith"
+                  className={inputClass + " w-full"}
+                  disabled={loading}
+                />
+              </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-forest-900">
-                Confirm password
-              </label>
-              <input
-                type="password"
-                required
-                autoComplete="new-password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Repeat your password"
-                className={inputClass + " w-full"}
-                disabled={loading}
-              />
-            </div>
+              {/* School search */}
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-forest-900">
+                  School
+                </label>
+                <div ref={schoolRef} className="relative">
+                  {school ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-forest-300 bg-forest-50 px-3 py-2.5">
+                      <School className="h-4 w-4 shrink-0 text-forest-600" aria-hidden />
+                      <span className="flex-1 truncate text-sm font-medium text-forest-900">{school}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSchool("")}
+                        className="shrink-0 text-charcoal-soft hover:text-forest-900"
+                        aria-label="Clear school"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-charcoal-soft" aria-hidden />
+                        <input
+                          type="text"
+                          value={schoolQuery}
+                          onChange={(e) => setSchoolQuery(e.target.value)}
+                          onFocus={() => schoolResults.length > 0 && setShowDropdown(true)}
+                          placeholder="Search for your school..."
+                          className={inputClass + " w-full pl-9 pr-9"}
+                          disabled={loading}
+                          autoComplete="off"
+                        />
+                        {schoolSearching && (
+                          <Loader className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-charcoal-soft" aria-hidden />
+                        )}
+                      </div>
 
-            {error && (
-              <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm font-medium text-clay-600">
-                {error}
+                      {showDropdown && (schoolResults.length > 0 || (schoolQuery.length >= 2 && !schoolSearching)) && (
+                        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-sand bg-white shadow-xl">
+                          {schoolResults.map((s) => (
+                            <button
+                              key={`${s.name}-${s.suburb}`}
+                              type="button"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-forest-50"
+                              onClick={() => selectSchool(s)}
+                            >
+                              <School className="h-4 w-4 shrink-0 text-forest-400" aria-hidden />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-forest-900">{s.name}</p>
+                                {(s.suburb || s.state) && (
+                                  <p className="text-xs text-charcoal-soft">
+                                    {[s.suburb, s.state].filter(Boolean).join(", ")}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+
+                          {schoolResults.length === 0 && schoolQuery.length >= 2 && !schoolSearching && (
+                            <div className="px-4 py-3 text-sm text-charcoal-soft">
+                              No schools found for &ldquo;{schoolQuery}&rdquo;
+                            </div>
+                          )}
+
+                          {schoolQuery.trim() && (
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 border-t border-sand px-4 py-2.5 text-left hover:bg-forest-50"
+                              onClick={addCustomSchool}
+                            >
+                              <PlusCircle className="h-4 w-4 shrink-0 text-forest-600" aria-hidden />
+                              <span className="text-sm font-medium text-forest-700">
+                                Add &ldquo;{schoolQuery.trim()}&rdquo;
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-forest-900">
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@school.edu.au"
+                  className={inputClass + " w-full"}
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-forest-900">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className={inputClass + " w-full"}
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-forest-900">
+                  Confirm password
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Repeat your password"
+                  className={inputClass + " w-full"}
+                  disabled={loading}
+                />
+              </div>
+
+              {error && (
+                <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm font-medium text-clay-600">
+                  {error}
+                </p>
+              )}
+
+              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                <UserPlus className="h-4 w-4" aria-hidden />
+                {loading ? "Creating account..." : "Create account"}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-charcoal-soft">
+                Already have an account?{" "}
+                <Link href="/login" className="font-semibold text-forest-700 hover:underline">
+                  Sign in
+                </Link>
               </p>
-            )}
+            </div>
 
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              <UserPlus className="h-4 w-4" aria-hidden />
-              {loading ? "Creating account..." : "Create account"}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-charcoal-soft">
-              Already have an account?{" "}
-              <Link href="/login" className="font-semibold text-forest-700 hover:underline">
-                Sign in
-              </Link>
-            </p>
-          </div>
-
-          <div className="mt-8 border-t border-sand pt-6 text-center">
-            <p className="text-xs text-charcoal-soft">
-              Student?{" "}
-              <Link href="/" className="font-semibold text-forest-700 hover:underline">
-                Enter your class code on the home page
-              </Link>
-            </p>
+            <div className="mt-8 border-t border-sand pt-6 text-center">
+              <p className="text-xs text-charcoal-soft">
+                Student?{" "}
+                <Link href="/" className="font-semibold text-forest-700 hover:underline">
+                  Enter your class code on the home page
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
+
+        <div className="mt-auto" />
       </div>
     </div>
   );
