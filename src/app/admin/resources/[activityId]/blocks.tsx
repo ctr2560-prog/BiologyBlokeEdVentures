@@ -5,12 +5,16 @@ import {
   AlignLeft,
   BarChart2,
   BookOpen,
+  Camera,
   ChevronDown,
   ChevronUp,
   Columns,
+  Film,
   Grip,
   Image as ImageIcon,
   ListOrdered,
+  MapPin,
+  Network,
   PenLine,
   Pencil,
   Search,
@@ -20,11 +24,14 @@ import {
   Trash2,
   UploadCloud,
   X,
+  Zap,
 } from "lucide-react";
 import type {
   ActivityBlock,
   ActivityBlockType,
+  ConceptMapBlock,
   DrawingBlock,
+  FieldJournalBlock,
   FillBlanksBlock,
   GraphBlock,
   ImageBlock,
@@ -35,6 +42,8 @@ import type {
   QABlock,
   ResearchBlock,
   SortingBlock,
+  StemChallengeBlock,
+  StoryboardBlock,
   TableBlock,
   WordBankBlock,
   WritingBlock,
@@ -63,8 +72,12 @@ export const BLOCK_CATALOGUE: BlockMeta[] = [
   { type: "table",           label: "Table",              description: "Students fill in a structured grid",             icon: <BarChart2 className="h-5 w-5" />,           color: "bg-emerald-50 text-emerald-700" },
   { type: "graph",           label: "Graph / chart",      description: "Students plot data — bar, line, or scatter",     icon: <BarChart2 className="h-5 w-5" />,           color: "bg-gold-50 text-yellow-700" },
   { type: "research",        label: "Research task",      description: "Structured fields — source, evidence, summary",  icon: <Search className="h-5 w-5" />,             color: "bg-sand text-charcoal-soft" },
-  { type: "drawing_canvas", label: "Drawing canvas",     description: "Freehand sketch or annotate an image",           icon: <Pencil className="h-5 w-5" />,             color: "bg-clay-50 text-clay-700" },
-  { type: "sorting",         label: "Sorting",            description: "Sort items into categories or correct order",    icon: <Shuffle className="h-5 w-5" />,            color: "bg-lime-50 text-lime-700" },
+  { type: "drawing_canvas",  label: "Drawing canvas",     description: "Freehand sketch or annotate an image",              icon: <Pencil className="h-5 w-5" />,    color: "bg-clay-50 text-clay-700" },
+  { type: "sorting",         label: "Sorting",            description: "Sort items into categories or correct order",        icon: <Shuffle className="h-5 w-5" />,   color: "bg-lime-50 text-lime-700" },
+  { type: "stem_challenge",  label: "STEM Challenge",     description: "Hands-on challenge — students photo their work",     icon: <Zap className="h-5 w-5" />,       color: "bg-orange-50 text-orange-700" },
+  { type: "field_journal",   label: "Field Journal",      description: "Outdoor observation log with sketch canvas",         icon: <MapPin className="h-5 w-5" />,    color: "bg-green-50 text-green-700" },
+  { type: "storyboard",      label: "Storyboard",         description: "Plan a wildlife documentary frame by frame",         icon: <Film className="h-5 w-5" />,      color: "bg-violet-50 text-violet-700" },
+  { type: "concept_map",     label: "Concept Map",        description: "Connect ideas with nodes and labelled arrows",       icon: <Network className="h-5 w-5" />,   color: "bg-cyan-50 text-cyan-700" },
 ];
 
 // ─── Block factory ────────────────────────────────────────────────────────────
@@ -84,8 +97,12 @@ export function newBlock(type: ActivityBlockType): ActivityBlock {
     case "table":           return { id, type, prompt: "", headers: ["Column 1", "Column 2", "Column 3"], rows: 4 };
     case "graph":           return { id, type, prompt: "", chartType: "bar", xLabel: "", yLabel: "" };
     case "research":        return { id, type, prompt: "", fields: ["Source", "Evidence", "Summary"] };
-    case "drawing_canvas": return { id, type, prompt: "", backgroundImageUrl: "" };
+    case "drawing_canvas":  return { id, type, prompt: "", backgroundImageUrl: "" };
     case "sorting":         return { id, type, prompt: "", categories: ["Category A", "Category B"], items: ["", "", "", ""] };
+    case "stem_challenge":  return { id, type, title: "", challenge: "", materials: [], photoPrompt: "Take a photo of your completed work", textPrompt: "Describe what you did and what you found." };
+    case "field_journal":   return { id, type, context: "", prompts: { observations: "What did you observe?", noticed: "What did you notice or find interesting?", wondering: "What are you wondering now?" }, includeSketch: true, includeWeather: true };
+    case "storyboard":      return { id, type, prompt: "", frameCount: 4, frameLabels: ["Introduction", "Rising action", "Key moment", "Conclusion"] };
+    case "concept_map":     return { id, type, prompt: "", starterNodes: [] };
   }
 }
 
@@ -833,6 +850,312 @@ function SortingEditor({ block, onChange }: { block: SortingBlock; onChange: (b:
   );
 }
 
+// ─── STEM Challenge editor ────────────────────────────────────────────────────
+
+function StemChallengeEditor({ block, onChange }: { block: StemChallengeBlock; onChange: (b: ActivityBlock) => void }) {
+  const setMaterial = (i: number, val: string) => {
+    const materials = [...(block.materials ?? [])];
+    materials[i] = val;
+    onChange({ ...block, materials });
+  };
+  const addMaterial = () => onChange({ ...block, materials: [...(block.materials ?? []), ""] });
+  const removeMaterial = (i: number) => onChange({ ...block, materials: (block.materials ?? []).filter((_, idx) => idx !== i) });
+
+  return (
+    <>
+      <div className="rounded-xl border-2 border-orange-200 bg-orange-50 px-4 py-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-orange-800">
+          <Camera className="h-4 w-4" />
+          Students will photograph their completed work and write a response
+        </div>
+      </div>
+
+      <FormField label="Challenge title" required>
+        <input
+          className={inputClass}
+          value={block.title}
+          onChange={(e) => onChange({ ...block, title: e.target.value })}
+          placeholder="e.g. Design a miniature habitat"
+        />
+      </FormField>
+
+      <FormField label="Challenge description" hint="What students must do — be specific about the task" required>
+        <textarea
+          className={inputClass}
+          rows={4}
+          value={block.challenge}
+          onChange={(e) => onChange({ ...block, challenge: e.target.value })}
+          placeholder="e.g. Using only natural materials you can find outside (sticks, leaves, bark, rocks), design and build a shelter for a small Australian animal of your choice. Your shelter must protect the animal from rain and at least one predator."
+        />
+      </FormField>
+
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-forest-900">
+          Materials list <span className="text-xs font-normal text-charcoal-soft">(optional — what students will need)</span>
+        </label>
+        <div className="space-y-2">
+          {(block.materials ?? []).map((mat, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-charcoal-soft">·</span>
+              <input
+                className={inputClass + " flex-1"}
+                value={mat}
+                onChange={(e) => setMaterial(i, e.target.value)}
+                placeholder={`e.g. Ruler`}
+              />
+              <button type="button" onClick={() => removeMaterial(i)} className="p-1 text-clay-400 hover:text-clay-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <button type="button" onClick={addMaterial} className="text-xs font-medium text-forest-700 hover:underline">
+            + Add material
+          </button>
+        </div>
+      </div>
+
+      <FormField label="Photo prompt" hint="Tell students exactly what to photograph" required>
+        <input
+          className={inputClass}
+          value={block.photoPrompt}
+          onChange={(e) => onChange({ ...block, photoPrompt: e.target.value })}
+          placeholder="e.g. Take a photo of your completed shelter next to a ruler to show its size"
+        />
+      </FormField>
+
+      <FormField label="Written response prompt" hint="What students reflect on after completing the challenge" required>
+        <textarea
+          className={inputClass}
+          rows={3}
+          value={block.textPrompt}
+          onChange={(e) => onChange({ ...block, textPrompt: e.target.value })}
+          placeholder="e.g. Which animal did you design for and why? What features of your shelter protect it from the threats you identified?"
+        />
+      </FormField>
+    </>
+  );
+}
+
+// ─── Field Journal editor ────────────────────────────────────────────────────
+
+function FieldJournalEditor({ block, onChange }: { block: FieldJournalBlock; onChange: (b: ActivityBlock) => void }) {
+  return (
+    <>
+      <div className="rounded-xl border-2 border-green-200 bg-green-50 px-4 py-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-green-800">
+          <MapPin className="h-4 w-4" />
+          Students take this outside and record real observations
+        </div>
+      </div>
+
+      <FormField label="Context / scene-setting" hint="Optional — helps orient students before they go outside">
+        <textarea
+          className={inputClass}
+          rows={2}
+          value={block.context ?? ""}
+          onChange={(e) => onChange({ ...block, context: e.target.value })}
+          placeholder="e.g. Head to your school grounds or a nearby green space. You're looking for signs of animal activity — tracks, nests, feeding marks, or the animals themselves."
+        />
+      </FormField>
+
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-forest-900">Observation prompts <span className="text-xs font-normal text-charcoal-soft">— customise what students are asked to record</span></p>
+        <FormField label="What I observed">
+          <input
+            className={inputClass}
+            value={block.prompts.observations}
+            onChange={(e) => onChange({ ...block, prompts: { ...block.prompts, observations: e.target.value } })}
+            placeholder="What did you observe?"
+          />
+        </FormField>
+        <FormField label="What I noticed">
+          <input
+            className={inputClass}
+            value={block.prompts.noticed}
+            onChange={(e) => onChange({ ...block, prompts: { ...block.prompts, noticed: e.target.value } })}
+            placeholder="What did you notice or find interesting?"
+          />
+        </FormField>
+        <FormField label="What I'm wondering">
+          <input
+            className={inputClass}
+            value={block.prompts.wondering}
+            onChange={(e) => onChange({ ...block, prompts: { ...block.prompts, wondering: e.target.value } })}
+            placeholder="What are you wondering now?"
+          />
+        </FormField>
+      </div>
+
+      <div className="flex gap-4">
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={block.includeWeather}
+            onChange={(e) => onChange({ ...block, includeWeather: e.target.checked })}
+            className="h-4 w-4 accent-forest-600"
+          />
+          <span className="text-sm text-forest-900">Include weather conditions field</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={block.includeSketch}
+            onChange={(e) => onChange({ ...block, includeSketch: e.target.checked })}
+            className="h-4 w-4 accent-forest-600"
+          />
+          <span className="text-sm text-forest-900">Include sketch canvas</span>
+        </label>
+      </div>
+    </>
+  );
+}
+
+// ─── Storyboard editor ───────────────────────────────────────────────────────
+
+function StoryboardEditor({ block, onChange }: { block: StoryboardBlock; onChange: (b: ActivityBlock) => void }) {
+  const setFrameLabel = (i: number, val: string) => {
+    const frameLabels = [...block.frameLabels];
+    frameLabels[i] = val;
+    onChange({ ...block, frameLabels });
+  };
+
+  const setFrameCount = (count: number) => {
+    const clamped = Math.min(6, Math.max(2, count));
+    const frameLabels = Array.from({ length: clamped }, (_, i) => block.frameLabels[i] ?? `Frame ${i + 1}`);
+    onChange({ ...block, frameCount: clamped, frameLabels });
+  };
+
+  return (
+    <>
+      <FormField label="Storyboard prompt" hint="What should students create a storyboard about?" required>
+        <textarea
+          className={inputClass}
+          rows={3}
+          value={block.prompt}
+          onChange={(e) => onChange({ ...block, prompt: e.target.value })}
+          placeholder="e.g. Create a storyboard for a short wildlife documentary about an Australian animal's daily life. Think about how you'd introduce the animal, show a key challenge it faces, and end with a conservation message."
+        />
+      </FormField>
+
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Number of frames" hint="2–6">
+          <input
+            type="number"
+            className={inputClass}
+            value={block.frameCount}
+            onChange={(e) => setFrameCount(+e.target.value)}
+            min={2}
+            max={6}
+          />
+        </FormField>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-forest-900">
+          Frame labels <span className="text-xs font-normal text-charcoal-soft">— guide students on what each frame should show</span>
+        </label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {Array.from({ length: block.frameCount }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-charcoal-soft">Frame {i + 1}</span>
+              <input
+                className={inputClass}
+                value={block.frameLabels[i] ?? ""}
+                onChange={(e) => setFrameLabel(i, e.target.value)}
+                placeholder={`Frame ${i + 1}`}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Preview */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Preview — students fill in each frame</p>
+        <div className={`grid gap-3 ${block.frameCount <= 3 ? "grid-cols-" + block.frameCount : "grid-cols-3"}`}>
+          {Array.from({ length: block.frameCount }).map((_, i) => (
+            <div key={i} className="rounded-xl border-2 border-dashed border-sand-dark bg-white p-3">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-charcoal-soft">
+                {i + 1}. {block.frameLabels[i] || `Frame ${i + 1}`}
+              </p>
+              <div className="mt-2 space-y-1.5">
+                <div className="h-2 rounded bg-sand/60 w-3/4" />
+                <div className="h-2 rounded bg-sand/60 w-full" />
+                <div className="h-2 rounded bg-sand/60 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Concept Map editor ──────────────────────────────────────────────────────
+
+function ConceptMapEditor({ block, onChange }: { block: ConceptMapBlock; onChange: (b: ActivityBlock) => void }) {
+  const setNode = (i: number, val: string) => {
+    const nodes = [...block.starterNodes];
+    nodes[i] = val;
+    onChange({ ...block, starterNodes: nodes });
+  };
+
+  return (
+    <>
+      <FormField label="Prompt" hint="What concept or question should the map explore?" required>
+        <textarea
+          className={inputClass}
+          rows={3}
+          value={block.prompt}
+          onChange={(e) => onChange({ ...block, prompt: e.target.value })}
+          placeholder="e.g. Create a concept map showing how a kangaroo is connected to its ecosystem. Include at least 8 concepts and label every arrow to show the relationship."
+        />
+      </FormField>
+
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-forest-900">
+          Starter nodes <span className="text-xs font-normal text-charcoal-soft">— optional concepts pre-placed to help students begin</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {block.starterNodes.map((node, i) => (
+            <div key={i} className="flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 pl-3 pr-1 py-1">
+              <input
+                className="w-24 bg-transparent text-xs font-medium text-cyan-800 outline-none"
+                value={node}
+                onChange={(e) => setNode(i, e.target.value)}
+                placeholder="Concept"
+              />
+              <button
+                type="button"
+                onClick={() => onChange({ ...block, starterNodes: block.starterNodes.filter((_, idx) => idx !== i) })}
+                className="rounded-full p-0.5 text-cyan-400 hover:text-cyan-700"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          {block.starterNodes.length < 8 && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...block, starterNodes: [...block.starterNodes, ""] })}
+              className="rounded-full border border-dashed border-cyan-300 px-3 py-1 text-xs font-medium text-cyan-600 hover:border-cyan-500"
+            >
+              + Add starter node
+            </button>
+          )}
+        </div>
+        {block.starterNodes.length === 0 && (
+          <p className="mt-1.5 text-xs text-charcoal-soft">No starter nodes — students build the map from scratch</p>
+        )}
+      </div>
+
+      <div className="rounded-xl bg-cyan-50 px-4 py-3 text-xs text-cyan-700">
+        <strong>Student experience:</strong> an interactive canvas where they add nodes, type labels, and draw arrows between concepts. Starter nodes appear pre-placed.
+      </div>
+    </>
+  );
+}
+
 // ─── Block dispatcher ─────────────────────────────────────────────────────────
 
 export function BlockEditor({
@@ -890,6 +1213,10 @@ export function BlockEditor({
       {block.type === "research"        && <ResearchEditor        block={block} onChange={onChange} />}
       {block.type === "drawing_canvas" && <DrawingEditor         block={block} onChange={onChange} />}
       {block.type === "sorting"         && <SortingEditor         block={block} onChange={onChange} />}
+      {block.type === "stem_challenge"  && <StemChallengeEditor  block={block} onChange={onChange} />}
+      {block.type === "field_journal"   && <FieldJournalEditor   block={block} onChange={onChange} />}
+      {block.type === "storyboard"      && <StoryboardEditor     block={block} onChange={onChange} />}
+      {block.type === "concept_map"     && <ConceptMapEditor     block={block} onChange={onChange} />}
     </div>
   );
 }

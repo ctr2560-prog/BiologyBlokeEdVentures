@@ -355,6 +355,44 @@ export interface SortingBlock {
   items: string[];
 }
 
+export interface StemChallengeBlock {
+  id: string;
+  type: "stem_challenge";
+  title: string;
+  challenge: string;        // What students must do
+  materials?: string[];     // Optional list of materials needed
+  photoPrompt: string;      // What to photograph ("Take a photo of your completed…")
+  textPrompt: string;       // Written reflection prompt
+}
+
+export interface FieldJournalBlock {
+  id: string;
+  type: "field_journal";
+  context?: string;         // Optional scene-setting (location, topic)
+  prompts: {
+    observations: string;
+    noticed: string;
+    wondering: string;
+  };
+  includeSketch: boolean;
+  includeWeather: boolean;
+}
+
+export interface StoryboardBlock {
+  id: string;
+  type: "storyboard";
+  prompt: string;
+  frameCount: number;       // 2–6 frames
+  frameLabels: string[];    // Labels for each frame (e.g. "Introduction", "Rising action")
+}
+
+export interface ConceptMapBlock {
+  id: string;
+  type: "concept_map";
+  prompt: string;
+  starterNodes: string[];   // Pre-seeded concepts admin adds to get students started
+}
+
 export type ActivityBlock =
   | QABlock
   | WritingBlock
@@ -369,7 +407,11 @@ export type ActivityBlock =
   | MatchingBlock
   | TableBlock
   | WordBankBlock
-  | SortingBlock;
+  | SortingBlock
+  | StemChallengeBlock
+  | FieldJournalBlock
+  | StoryboardBlock
+  | ConceptMapBlock;
 
 export type ActivityBlockType = ActivityBlock["type"];
 
@@ -398,7 +440,11 @@ export type BlockResponse =
   | { blockId: string; type: "matching"; matches: number[] }
   | { blockId: string; type: "table"; cells: string[][] }
   | { blockId: string; type: "word_bank"; answers: string[] }
-  | { blockId: string; type: "sorting"; sorted: Record<string, string[]> };
+  | { blockId: string; type: "sorting"; sorted: Record<string, string[]> }
+  | { blockId: string; type: "stem_challenge"; photoUrl: string; text: string }
+  | { blockId: string; type: "field_journal"; location: string; weather: string; observations: string; noticed: string; wondering: string; sketchDataUrl?: string }
+  | { blockId: string; type: "storyboard"; frames: { scene: string; onScreen: string; narration: string }[] }
+  | { blockId: string; type: "concept_map"; nodes: { id: string; label: string }[]; edges: { from: string; to: string; label: string }[] };
 
 export interface StudentActivityResponse {
   id: string;

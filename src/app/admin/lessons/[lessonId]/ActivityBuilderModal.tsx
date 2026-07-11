@@ -28,6 +28,10 @@ function newBlock(type: ActivityBlockType): ActivityBlock {
     case "matching":        return { id, type, prompt: "", pairs: [{ left: "", right: "" }, { left: "", right: "" }] };
     case "table":           return { id, type, prompt: "", headers: ["Column 1", "Column 2"], rows: 4 };
     case "sorting":         return { id, type, prompt: "", categories: ["Category A", "Category B"], items: ["", "", ""] };
+    case "stem_challenge":  return { id, type, title: "", challenge: "", materials: [], photoPrompt: "Take a photo of your completed work", textPrompt: "Describe what you did and what you found." };
+    case "field_journal":   return { id, type, context: "", prompts: { observations: "What did you observe?", noticed: "What did you notice or find interesting?", wondering: "What are you wondering now?" }, includeSketch: true, includeWeather: true };
+    case "storyboard":      return { id, type, prompt: "", frameCount: 4, frameLabels: ["Introduction", "Rising action", "Key moment", "Conclusion"] };
+    case "concept_map":     return { id, type, prompt: "", starterNodes: [] };
   }
 }
 
