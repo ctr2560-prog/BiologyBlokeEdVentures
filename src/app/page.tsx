@@ -381,7 +381,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <a href="/register" className="hover:text-charcoal-soft hover:underline">Sign up your school</a>
             <span>·</span>
-            <a href="/login" className="hover:text-charcoal-soft hover:underline">Admin</a>
+            <a href="/admin-login" className="hover:text-charcoal-soft hover:underline">Admin</a>
           </div>
         </div>
       </footer>
