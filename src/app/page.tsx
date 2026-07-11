@@ -100,7 +100,7 @@ export default function LandingPage() {
       <ScrollProgress />
       {/* ============ Top nav ============ */}
       <header className="absolute inset-x-0 top-0 z-30">
-        <div className="mx-auto flex max-w-6xl items-center justify-end px-6 py-5">
+        <div className="mx-auto flex max-w-7xl items-center justify-end px-8 py-5">
           <nav className="flex items-center gap-3">
             <a
               href="/login"
