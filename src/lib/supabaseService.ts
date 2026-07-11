@@ -521,6 +521,83 @@ export async function getAdaptiveTasks(): Promise<AdaptiveTask[]> {
   return (data ?? []).map(mapAdaptiveTask);
 }
 
+// ---- Mutations: Topics ----
+
+export async function createTopic(data: {
+  unitId: string;
+  title: string;
+  description: string;
+  difficulty: "foundation" | "core" | "advanced";
+}): Promise<Topic> {
+  const id = newId("topic");
+  const { data: row, error } = await getSupabaseClient()
+    .from("topics")
+    .insert({
+      id,
+      unit_id: data.unitId,
+      title: data.title,
+      description: data.description,
+      difficulty: data.difficulty,
+    })
+    .select("*, videos(id), quizzes(id), resources(id)")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapTopic(row);
+}
+
+// ---- Mutations: Quizzes ----
+
+export async function createQuiz(quiz: Omit<Quiz, "id">): Promise<Quiz> {
+  const supabase = getSupabaseClient();
+  const id = newId("quiz");
+
+  const { error } = await supabase.from("quizzes").insert({
+    id,
+    title: quiz.title,
+    topic_id: quiz.topicId,
+  });
+  if (error) throw new Error(error.message);
+
+  if (quiz.questions.length > 0) {
+    const { error: qError } = await supabase.from("questions").insert(
+      quiz.questions.map((q, i) => ({
+        id: newId("q"),
+        quiz_id: id,
+        question_text: q.questionText,
+        type: q.type,
+        options: q.options,
+        correct_answer: q.correctAnswer,
+        explanation: q.explanation,
+        difficulty: q.difficulty,
+        linked_concept: q.linkedConcept,
+        sort_order: i,
+      }))
+    );
+    if (qError) throw new Error(qError.message);
+  }
+
+  return (await getQuiz(id))!;
+}
+
+// ---- Queries: Resources and Quizzes by topic ----
+
+export async function getResourcesByTopic(topicId: string): Promise<Resource[]> {
+  const { data } = await getSupabaseClient()
+    .from("resources")
+    .select("*")
+    .eq("topic_id", topicId)
+    .order("title");
+  return (data ?? []).map(mapResource);
+}
+
+export async function getQuizzesByTopic(topicId: string): Promise<Quiz[]> {
+  const { data } = await getSupabaseClient()
+    .from("quizzes")
+    .select("*, questions(*)")
+    .eq("topic_id", topicId);
+  return (data ?? []).map(mapQuiz);
+}
+
 // ---- Mutations: Content ----
 
 export async function attachMuxPlayback(
