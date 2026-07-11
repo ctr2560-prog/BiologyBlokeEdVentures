@@ -21,7 +21,7 @@ import {
   ContentShowcase,
   FounderStory,
 } from "@/components/layout/LandingSections";
-import { getClasses, getStudentsByClass } from "@/lib/dataService";
+import { getClassByCode, getStudentsByClass } from "@/lib/supabaseService";
 import { getAnimal } from "@/data/animals";
 import { getAnimalIcon, getAnimalColor } from "@/lib/icons";
 import {
@@ -34,7 +34,7 @@ import {
   Check,
   type LucideIcon,
 } from "lucide-react";
-import type { Role, ClassGroup } from "@/types";
+import type { Role, ClassGroup, User } from "@/types";
 
 const roleMeta: { role: Role; Icon: LucideIcon; blurb: string }[] = [
   { role: "admin", Icon: UserCog, blurb: "Manage the whole learning ecosystem" },
@@ -43,7 +43,7 @@ const roleMeta: { role: Role; Icon: LucideIcon; blurb: string }[] = [
 ];
 
 const features = [
-  "Curriculum-aligned units for Stage 3–5",
+  "Curriculum-aligned units for Stage 3-5",
   "Short, high-quality wildlife reels",
   "Adaptive tasks personalised to each student",
   "Live class insights & printable reports",
@@ -51,36 +51,65 @@ const features = [
 ];
 
 export default function LandingPage() {
-  const { loginAs, loginAsUser } = useApp();
+  const { loginAs, signIn, signInStudent } = useApp();
   const router = useRouter();
   const [selected, setSelected] = useState<Role>("teacher");
+
+  // Real sign-in form state.
+  const [email, setEmail] = useState("thebiologybloke@gmail.com");
+  const [password, setPassword] = useState("");
+  const [signInError, setSignInError] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
 
   // Student login: step 1 = class code, step 2 = pick your animal.
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [codeLoading, setCodeLoading] = useState(false);
   const [pickClass, setPickClass] = useState<ClassGroup | null>(null);
+  const [pickStudents, setPickStudents] = useState<User[]>([]);
+  const [pickLoading, setPickLoading] = useState(false);
 
   const enter = (role: Role) => {
     loginAs(role);
     router.push(roleHome[role]);
   };
 
-  const submitCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    const match = getClasses().find(
-      (c) => c.classCode.toLowerCase() === code.trim().toLowerCase()
-    );
-    if (!match) {
-      setCodeError("We couldn't find that class code. Try KOALA-5J for the demo.");
-      return;
-    }
-    // Step 2: show the class's animals to pick from.
-    setPickClass(match);
+  const openCodeModal = () => {
+    setCode("");
+    setCodeError("");
+    setPickClass(null);
+    setPickStudents([]);
+    setCodeOpen(true);
   };
 
-  const pickAnimal = (studentId: string) => {
-    loginAsUser(studentId);
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCodeError("");
+    setCodeLoading(true);
+    const cls = await getClassByCode(code.trim());
+    if (!cls) {
+      setCodeError("We couldn't find that class code. Check with your teacher.");
+      setCodeLoading(false);
+      return;
+    }
+    const students = await getStudentsByClass(cls.id);
+    setPickClass(cls);
+    setPickStudents(students);
+    setCodeLoading(false);
+  };
+
+  const pickAnimal = async (studentId: string) => {
+    if (!pickClass) return;
+    setPickLoading(true);
+    const { error } = await signInStudent(code.trim(), studentId);
+    if (error) {
+      setCodeError(error);
+      setPickClass(null);
+      setPickStudents([]);
+      setPickLoading(false);
+      return;
+    }
     router.push(roleHome.student);
   };
 
@@ -95,10 +124,10 @@ export default function LandingPage() {
               Teacher login
             </a>
             <button
-              onClick={() => { setCode(""); setCodeError(""); setPickClass(null); setCodeOpen(true); }}
+              onClick={openCodeModal}
               className="glass rounded-full px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream"
             >
-              Student code 
+              Student code
             </button>
           </nav>
         </div>
@@ -218,7 +247,7 @@ export default function LandingPage() {
             {/* Floating stat cards */}
             <div className="float-y-slow absolute -left-4 top-10 rounded-2xl bg-white p-4 shadow-lift ring-1 ring-black/5">
               <p className="display text-3xl font-bold text-clay-500">3</p>
-              <p className="text-xs font-medium text-charcoal-soft">Stages · Yr 5–10</p>
+              <p className="text-xs font-medium text-charcoal-soft">Stages · Yr 5-10</p>
             </div>
             <div className="float-y absolute -right-5 bottom-14 rounded-2xl bg-white p-4 shadow-lift ring-1 ring-black/5">
               <p className="display text-3xl font-bold text-forest-600">100%</p>
@@ -268,7 +297,7 @@ export default function LandingPage() {
 
           <div className="mt-7 rounded-3xl bg-cream p-7 text-left shadow-hero">
             {/* Account type selector */}
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">I am a…</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">I am a...</p>
             <div className="grid grid-cols-3 gap-2">
               {roleMeta.map((r) => (
                 <button
@@ -287,17 +316,45 @@ export default function LandingPage() {
               {roleMeta.find((r) => r.role === selected)?.blurb}
             </p>
 
-            {/* Email / password (visual only for MVP) */}
+            {/* Sign-in form */}
             <form
               className="mt-5 space-y-3"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                enter(selected);
+                if (selected === "student") {
+                  openCodeModal();
+                  return;
+                }
+                setSignInError("");
+                setSigningIn(true);
+                const { error } = await signIn(email, password);
+                setSigningIn(false);
+                if (error) { setSignInError(error); return; }
+                router.push(roleHome[selected]);
               }}
             >
-              <input type="email" placeholder="Email address" defaultValue="demo@biobloke.com" className="w-full rounded-2xl border border-sand-dark bg-white px-4 py-3 text-sm focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-500/30" />
-              <input type="password" placeholder="Password" defaultValue="explorer" className="w-full rounded-2xl border border-sand-dark bg-white px-4 py-3 text-sm focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-500/30" />
-              <Button type="submit" size="lg" className="w-full">Sign in as {roleLabel[selected]} </Button>
+              <input
+                type="email"
+                placeholder="Email address"
+                value={selected === "student" ? "" : email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={selected === "student" || signingIn}
+                className={inputClass + " w-full"}
+              />
+              <input
+                type="password"
+                placeholder={selected === "student" ? "Use your class code instead" : "Password"}
+                value={selected === "student" ? "" : password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={selected === "student" || signingIn}
+                className={inputClass + " w-full"}
+              />
+              {signInError && (
+                <p className="text-xs text-red-600">{signInError}</p>
+              )}
+              <Button type="submit" size="lg" className="w-full" disabled={signingIn}>
+                {signingIn ? "Signing in..." : selected === "student" ? "Enter class code" : `Sign in as ${roleLabel[selected]}`}
+              </Button>
             </form>
 
             {/* Demo logins */}
@@ -348,44 +405,48 @@ export default function LandingPage() {
             <input
               value={code}
               onChange={(e) => { setCode(e.target.value); setCodeError(""); }}
-              placeholder="e.g. KOALA-5J"
+              placeholder="Your class code"
               autoFocus
               className={`${inputClass} text-center text-lg font-bold uppercase tracking-widest`}
             />
             {codeError && <p className="text-center text-sm font-medium text-clay-600">{codeError}</p>}
-            <Button type="submit" size="lg" className="w-full">Next</Button>
-            <p className="text-center text-xs text-charcoal-soft">
-              Demo code: <b>KOALA-5J</b>
-            </p>
+            <Button type="submit" size="lg" className="w-full" disabled={codeLoading}>
+              {codeLoading ? "Looking up..." : "Next"}
+            </Button>
           </form>
         ) : (
           <div className="space-y-4">
             <p className="text-center text-sm text-charcoal-soft">
               Tap your explorer animal for <b>{pickClass.name}</b>.
             </p>
-            <div className="grid max-h-[55vh] grid-cols-3 gap-2.5 overflow-y-auto sm:grid-cols-4">
-              {getStudentsByClass(pickClass.id).map((s) => {
-                const animal = getAnimal(s.animalId ?? "");
-                if (!animal) return null;
-                const Icon = getAnimalIcon(animal.kind);
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => pickAnimal(s.id)}
-                    className="card-lift group flex flex-col items-center gap-2 overflow-hidden rounded-2xl p-3 text-cream shadow-soft"
-                    style={{ background: `linear-gradient(150deg, ${getAnimalColor(animal.id)}, #0d2419)` }}
-                  >
-                    <Icon className="h-8 w-8 transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
-                    <span className="text-xs font-semibold">{animal.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {pickLoading ? (
+              <div className="py-8 text-center text-sm text-charcoal-soft">Signing you in...</div>
+            ) : (
+              <div className="grid max-h-[55vh] grid-cols-3 gap-2.5 overflow-y-auto sm:grid-cols-4">
+                {pickStudents.map((s) => {
+                  const animal = getAnimal(s.animalId ?? "");
+                  if (!animal) return null;
+                  const Icon = getAnimalIcon(animal.kind);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => pickAnimal(s.id)}
+                      className="card-lift group flex flex-col items-center gap-2 overflow-hidden rounded-2xl p-3 text-cream shadow-soft"
+                      style={{ background: `linear-gradient(150deg, ${getAnimalColor(animal.id)}, #0d2419)` }}
+                    >
+                      <Icon className="h-8 w-8 transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
+                      <span className="text-xs font-semibold">{animal.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {codeError && <p className="text-center text-sm font-medium text-clay-600">{codeError}</p>}
             <button
-              onClick={() => setPickClass(null)}
+              onClick={() => { setPickClass(null); setPickStudents([]); setCodeError(""); }}
               className="w-full text-center text-xs font-semibold text-forest-700 hover:underline"
             >
-              ← Wrong class? Go back
+              Wrong class? Go back
             </button>
           </div>
         )}

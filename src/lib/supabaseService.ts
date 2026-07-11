@@ -91,6 +91,9 @@ function mapVideo(r: Row): Video {
     learningIntent: r.learning_intent ?? "",
     successCriteria: r.success_criteria ?? [],
     published: Boolean(r.published),
+    muxUploadId: r.mux_upload_id ?? undefined,
+    muxAssetId: r.mux_asset_id ?? undefined,
+    muxPlaybackId: r.mux_playback_id ?? undefined,
   };
 }
 
@@ -444,6 +447,15 @@ export async function getClassesByTeacher(teacherId: string): Promise<ClassGroup
   return (data ?? []).map(mapClass);
 }
 
+export async function getClassByCode(code: string): Promise<ClassGroup | null> {
+  const { data } = await getSupabaseClient()
+    .from("classes")
+    .select(CLASS_SELECT)
+    .eq("class_code", code.toUpperCase())
+    .maybeSingle();
+  return data ? mapClass(data) : null;
+}
+
 export async function getStudentsByClass(classId: string): Promise<User[]> {
   const { data } = await getSupabaseClient()
     .from("users")
@@ -510,6 +522,18 @@ export async function getAdaptiveTasks(): Promise<AdaptiveTask[]> {
 }
 
 // ---- Mutations: Content ----
+
+export async function attachMuxPlayback(
+  muxUploadId: string,
+  muxAssetId: string,
+  muxPlaybackId: string,
+  durationSeconds: number
+): Promise<void> {
+  await getSupabaseClient()
+    .from("videos")
+    .update({ mux_asset_id: muxAssetId, mux_playback_id: muxPlaybackId, duration_seconds: durationSeconds })
+    .eq("mux_upload_id", muxUploadId);
+}
 
 export async function createVideo(video: Omit<Video, "id">): Promise<Video> {
   const id = newId("vid");
@@ -635,6 +659,14 @@ export async function createClass(
   }
 
   return (await getClass(id))!;
+}
+
+export async function removeStudentFromClass(classId: string, studentId: string): Promise<void> {
+  await getSupabaseClient()
+    .from("class_students")
+    .delete()
+    .eq("class_id", classId)
+    .eq("student_id", studentId);
 }
 
 export async function addAlias(classId: string): Promise<User | null> {

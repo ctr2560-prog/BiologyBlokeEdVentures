@@ -21,39 +21,49 @@ alter table public.analytics_events  enable row level security;
 alter table public.adaptive_tasks    enable row level security;
 
 -- ============================================================
--- Helper functions in public schema (auth schema is locked by Supabase)
--- security definer so they bypass RLS when reading the users table
+-- Helper functions in public schema
+--
+-- Role/identity information is read from the JWT (app_metadata / user_metadata)
+-- rather than querying public.users. This avoids infinite recursion: Supabase's
+-- Postgres environment does not bypass RLS inside SECURITY DEFINER functions, so
+-- any function that reads public.users from within a public.users policy would
+-- recurse forever.
+--
+-- app_metadata is set via the Supabase admin API (set-jwt-metadata.ts) and
+-- cannot be modified by the client — safe for role checks.
 -- ============================================================
 
+-- Returns true if the current JWT belongs to an admin.
 create or replace function public.bb_is_admin()
-returns boolean language sql stable security definer as $$
-  select exists (
-    select 1 from public.users
-    where auth_id = auth.uid() and role = 'admin'
-  )
+returns boolean language sql stable as $$
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'bb_role', '') = 'admin'
 $$;
 
+-- Returns true if the current JWT belongs to a teacher.
 create or replace function public.bb_is_teacher()
-returns boolean language sql stable security definer as $$
-  select exists (
-    select 1 from public.users
-    where auth_id = auth.uid() and role = 'teacher'
-  )
+returns boolean language sql stable as $$
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'bb_role', '') = 'teacher'
 $$;
 
--- Returns the current teacher/admin's public.users.id
+-- Returns the current teacher/admin's public.users.id (from JWT app_metadata).
 create or replace function public.bb_my_user_id()
-returns text language sql stable security definer as $$
-  select id from public.users where auth_id = auth.uid()
+returns text language sql stable as $$
+  select auth.jwt() -> 'app_metadata' ->> 'bb_user_id'
 $$;
 
--- Returns the student_id stored in anonymous JWT metadata
+-- Returns the current teacher/admin's school_id (from JWT app_metadata).
+create or replace function public.bb_my_school_id()
+returns text language sql stable as $$
+  select auth.jwt() -> 'app_metadata' ->> 'bb_school_id'
+$$;
+
+-- Returns the student_id stored in anonymous JWT user_metadata.
 create or replace function public.bb_my_student_id()
 returns text language sql stable as $$
   select nullif(auth.jwt() -> 'user_metadata' ->> 'student_id', '')
 $$;
 
--- Returns the class_id stored in anonymous JWT metadata
+-- Returns the class_id stored in anonymous JWT user_metadata.
 create or replace function public.bb_my_class_id()
 returns text language sql stable as $$
   select nullif(auth.jwt() -> 'user_metadata' ->> 'class_id', '')
@@ -68,17 +78,18 @@ create policy "Admin: full access to schools"
 
 create policy "Teachers: read own school"
   on public.schools for select
-  using (
-    exists (
-      select 1 from public.users
-      where users.auth_id = auth.uid()
-        and users.school_id = schools.id
-    )
-  );
+  using (id = public.bb_my_school_id());
 
 -- ============================================================
 -- users
 -- ============================================================
+-- Any authenticated user (teacher or admin) can read their own row by auth_id.
+-- This avoids a circular dependency: bb_is_admin() itself reads public.users,
+-- so without this direct policy the admin can't read their own row on first login.
+create policy "Authenticated users can read own row"
+  on public.users for select
+  using (auth_id = auth.uid());
+
 create policy "Admin: full access to users"
   on public.users for all
   using (public.bb_is_admin());
@@ -86,9 +97,7 @@ create policy "Admin: full access to users"
 create policy "Teachers: read users in own school"
   on public.users for select
   using (
-    public.bb_is_teacher() and (
-      school_id = (select school_id from public.users where auth_id = auth.uid())
-    )
+    public.bb_is_teacher() and school_id = public.bb_my_school_id()
   );
 
 create policy "Students: read own user record"

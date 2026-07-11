@@ -21,17 +21,17 @@ export function AppShell({
   role: Role;
   children: React.ReactNode;
 }) {
-  const { currentUser, loginAs, logout } = useApp();
+  const { currentUser, authReady, loginAs, logout } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // If no user yet (e.g. deep-link / refresh), auto-log in as the demo user for
-  // this section so the preview is always usable. Real auth would redirect to
-  // /login instead.
+  // Wait until the Supabase session check is done before falling back to the
+  // demo user — prevents a flash of the demo account when a real teacher
+  // refreshes the page.
   useEffect(() => {
-    if (!currentUser) loginAs(role);
-  }, [currentUser, role, loginAs]);
+    if (authReady && !currentUser) loginAs(role);
+  }, [authReady, currentUser, role, loginAs]);
 
   useEffect(() => {
     setDrawerOpen(false);

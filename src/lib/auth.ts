@@ -3,23 +3,41 @@
 import { getSupabaseClient } from "./supabase/client";
 import type { User } from "@/types";
 
-// ---- Helpers ----
+// ---- Internal helpers ----
 
-function mapUser(row: Record<string, unknown>, classIds: string[] = []): User {
+function userFromMeta(
+  meta: Record<string, unknown>,
+  email: string,
+  createdAt: string,
+  classIds: string[] = []
+): User {
   return {
-    id: String(row.id),
-    name: String(row.name),
-    email: String(row.email ?? ""),
-    role: row.role as User["role"],
-    schoolId: row.school_id ? String(row.school_id) : undefined,
+    id: String(meta.bb_id ?? ""),
+    name: String(meta.bb_name ?? ""),
+    email,
+    role: (meta.bb_role as User["role"]) ?? "teacher",
+    schoolId: meta.bb_school_id ? String(meta.bb_school_id) : undefined,
     classIds,
-    avatarUrl: String(row.avatar_url ?? ""),
-    createdAt: String(row.created_at),
-    animalId: row.animal_id ? String(row.animal_id) : undefined,
+    avatarUrl: "",
+    createdAt,
+    animalId: undefined,
   };
 }
 
+async function teacherClassIds(userId: string): Promise<string[]> {
+  const supabase = getSupabaseClient();
+  const { data } = await supabase
+    .from("classes")
+    .select("id")
+    .eq("teacher_id", userId);
+  return (data ?? []).map((c: Record<string, unknown>) => String(c.id));
+}
+
 // ---- Teacher / Admin sign-in ----
+//
+// Profile is read from user_metadata in the JWT (set server-side by
+// set-jwt-metadata.ts). This avoids querying public.users from the client,
+// which previously triggered infinite RLS recursion.
 
 export async function signInTeacher(
   email: string,
@@ -29,26 +47,20 @@ export async function signInTeacher(
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { user: null, error: error.message };
 
-  // Fetch their row in public.users (linked via auth_id).
-  const { data: row } = await supabase
-    .from("users")
-    .select("*")
-    .eq("auth_id", data.user.id)
-    .single();
-
-  if (!row) return { user: null, error: "Account not found in the platform." };
-
-  // Derive classIds for teachers (classes where teacher_id = their public id).
-  let classIds: string[] = [];
-  if (row.role === "teacher") {
-    const { data: classes } = await supabase
-      .from("classes")
-      .select("id")
-      .eq("teacher_id", String(row.id));
-    classIds = (classes ?? []).map((c: Record<string, unknown>) => String(c.id));
+  const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+  if (!meta.bb_id) {
+    return { user: null, error: "Account not linked to the platform." };
   }
 
-  return { user: mapUser(row, classIds), error: null };
+  const classIds =
+    meta.bb_role === "teacher"
+      ? await teacherClassIds(String(meta.bb_id))
+      : [];
+
+  return {
+    user: userFromMeta(meta, data.user.email ?? email, data.user.created_at, classIds),
+    error: null,
+  };
 }
 
 // ---- Student two-tap sign-in (anonymous session + JWT metadata) ----
@@ -96,7 +108,21 @@ export async function signInStudent(
 
   if (!row) return { user: null, error: "Student record not found." };
 
-  return { user: mapUser(row, [String(cls.id)]), error: null };
+  const r = row as Record<string, unknown>;
+  return {
+    user: {
+      id: String(r.id),
+      name: String(r.name),
+      email: "",
+      role: "student",
+      schoolId: r.school_id ? String(r.school_id) : undefined,
+      classIds: [String(cls.id)],
+      avatarUrl: String(r.avatar_url ?? ""),
+      createdAt: String(r.created_at),
+      animalId: r.animal_id ? String(r.animal_id) : undefined,
+    },
+    error: null,
+  };
 }
 
 // ---- Sign out ----
@@ -105,7 +131,10 @@ export async function signOut(): Promise<void> {
   await getSupabaseClient().auth.signOut();
 }
 
-// ---- Get currently authenticated DB user ----
+// ---- Restore session on page load ----
+//
+// For teachers/admins: profile comes from JWT user_metadata (no DB query).
+// For students: profile comes from public.users (scoped by student_id policy).
 
 export async function getCurrentDbUser(): Promise<User | null> {
   const supabase = getSupabaseClient();
@@ -114,7 +143,7 @@ export async function getCurrentDbUser(): Promise<User | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Students have no email — identify them by JWT metadata.
+  // Students: identified by JWT user_metadata (anonymous session)
   const studentId = user.user_metadata?.student_id as string | undefined;
   if (studentId) {
     const classId = user.user_metadata?.class_id as string | undefined;
@@ -123,25 +152,29 @@ export async function getCurrentDbUser(): Promise<User | null> {
       .select("*")
       .eq("id", studentId)
       .single();
-    return row ? mapUser(row, classId ? [classId] : []) : null;
+    if (!row) return null;
+    const r = row as Record<string, unknown>;
+    return {
+      id: String(r.id),
+      name: String(r.name),
+      email: "",
+      role: "student",
+      schoolId: r.school_id ? String(r.school_id) : undefined,
+      classIds: classId ? [classId] : [],
+      avatarUrl: String(r.avatar_url ?? ""),
+      createdAt: String(r.created_at),
+      animalId: r.animal_id ? String(r.animal_id) : undefined,
+    };
   }
 
-  // Teachers / admins are linked by their Supabase auth UUID.
-  const { data: row } = await supabase
-    .from("users")
-    .select("*")
-    .eq("auth_id", user.id)
-    .single();
-  if (!row) return null;
+  // Teachers / admins: profile stored in user_metadata (set by set-jwt-metadata.ts)
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  if (!meta.bb_id) return null;
 
-  let classIds: string[] = [];
-  if (row.role === "teacher") {
-    const { data: classes } = await supabase
-      .from("classes")
-      .select("id")
-      .eq("teacher_id", String(row.id));
-    classIds = (classes ?? []).map((c: Record<string, unknown>) => String(c.id));
-  }
+  const classIds =
+    meta.bb_role === "teacher"
+      ? await teacherClassIds(String(meta.bb_id))
+      : [];
 
-  return mapUser(row, classIds);
+  return userFromMeta(meta, user.email ?? "", user.created_at, classIds);
 }

@@ -1,31 +1,43 @@
 "use client";
 /*
  * Printable explorer cards. One card per student alias (animal + class code),
- * designed to print cleanly (no reliance on background colours) so a teacher
- * can print, cut out and hand them to students. The animal-to-child mapping
- * only exists once the teacher writes a name on the back, never in the app.
+ * designed to print cleanly so a teacher can cut and hand them out.
+ * The animal-to-child mapping only exists once the teacher writes a name on
+ * the back - never in the app.
  */
-import { use, useMemo } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { useApp } from "@/lib/store";
 import { SectionHeader, Button, EmptyState } from "@/components/ui/primitives";
-import { getClass, getStudentsByClass } from "@/lib/dataService";
+import { getClass, getStudentsByClass } from "@/lib/supabaseService";
 import { getAnimal } from "@/data/animals";
 import { getAnimalIcon, getAnimalColor } from "@/lib/icons";
 import { Printer, ArrowLeft } from "lucide-react";
+import type { ClassGroup, User } from "@/types";
 
 export default function ExplorerCardsPage({ params }: { params: Promise<{ classId: string }> }) {
   const { classId } = use(params);
-  const { version } = useApp();
 
-  const cls = useMemo(() => {
-    void version;
-    return getClass(classId);
-  }, [version, classId]);
-  const students = useMemo(() => {
-    void version;
-    return getStudentsByClass(classId);
-  }, [version, classId]);
+  const [cls, setCls] = useState<ClassGroup | null>(null);
+  const [students, setStudents] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getClass(classId), getStudentsByClass(classId)]).then(([c, s]) => {
+      setCls(c);
+      setStudents(s);
+      setLoading(false);
+    });
+  }, [classId]);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-52 animate-pulse rounded-2xl bg-charcoal/8" />
+        ))}
+      </div>
+    );
+  }
 
   if (!cls) {
     return <EmptyState title="Class not found" message="This class may have been removed." />;
@@ -35,7 +47,10 @@ export default function ExplorerCardsPage({ params }: { params: Promise<{ classI
     <div className="space-y-6">
       {/* Screen-only controls */}
       <div className="no-print space-y-4">
-        <Link href={`/teacher/classes/${cls.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline">
+        <Link
+          href={`/teacher/classes/${cls.id}`}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline"
+        >
           <ArrowLeft className="h-4 w-4" aria-hidden /> Back to class
         </Link>
         <SectionHeader
@@ -63,15 +78,22 @@ export default function ExplorerCardsPage({ params }: { params: Promise<{ classI
               style={{ borderTop: `6px solid ${color}` }}
             >
               <div className="p-5">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full ring-2" style={{ color, borderColor: color }}>
+                <div
+                  className="mx-auto grid h-16 w-16 place-items-center rounded-full ring-2"
+                  style={{ color, borderColor: color }}
+                >
                   <Icon className="h-8 w-8" aria-hidden strokeWidth={1.5} />
                 </div>
                 <h3 className="display mt-3 text-xl font-bold text-forest-900">{animal.name}</h3>
                 <p className="mt-0.5 text-xs text-charcoal-soft">{cls.name}</p>
 
                 <div className="mt-3 rounded-xl border border-sand bg-forest-50 py-2 print:bg-white">
-                  <p className="text-[0.6rem] font-semibold uppercase tracking-wide text-charcoal-soft">Class code</p>
-                  <p className="display text-lg font-bold tracking-widest text-forest-800">{cls.classCode}</p>
+                  <p className="text-[0.6rem] font-semibold uppercase tracking-wide text-charcoal-soft">
+                    Class code
+                  </p>
+                  <p className="display text-lg font-bold tracking-widest text-forest-800">
+                    {cls.classCode}
+                  </p>
                 </div>
 
                 <p className="mt-2 text-[0.65rem] text-charcoal-soft">

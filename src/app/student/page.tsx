@@ -1,42 +1,71 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { Button, Badge, ProgressBar } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
 import {
-  getUser,
-  getClass,
   getAssignmentsByClass,
-  getTopicsByUnit,
   getVideosByTopic,
   getProgressByStudent,
-  getBadges,
-} from "@/lib/dataService";
-import { explorerPoints, earnedBadges } from "@/data/progress";
+} from "@/lib/supabaseService";
 import { conservationFacts, exploreEcosystems } from "@/data/content";
 import { DEMO_STUDENT_ID } from "@/data/people";
-import { getBadgeIcon, getEcoIcon } from "@/lib/icons";
+import { getEcoIcon } from "@/lib/icons";
 import { Play, Star, Film, Award, Globe, type LucideIcon } from "lucide-react";
+import type { Assignment, Video, StudentProgress } from "@/types";
 
 export default function StudentHome() {
   const { currentUser } = useApp();
   const studentId = currentUser?.id ?? DEMO_STUDENT_ID;
-  const student = getUser(studentId);
-  const points = explorerPoints[studentId] ?? 0;
-  const myBadges = (earnedBadges[studentId] ?? []).map((id) => getBadges().find((b) => b.id === id)).filter(Boolean);
+  const classId = currentUser?.classIds[0];
 
-  // Find the next unfinished assigned video.
-  const classId = student?.classIds[0];
-  const assignments = classId ? getAssignmentsByClass(classId) : [];
-  const progress = getProgressByStudent(studentId);
-  const watchedIds = new Set(progress.filter((p) => p.videoCompletionPercentage >= 90).map((p) => p.videoId));
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignedVideos, setAssignedVideos] = useState<Video[]>([]);
+  const [progress, setProgress] = useState<StudentProgress[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const assignedVideos = assignments.flatMap((a) =>
-    a.topicIds.flatMap((tid) => getVideosByTopic(tid))
+  useEffect(() => {
+    if (!classId) {
+      setLoading(false);
+      return;
+    }
+    Promise.all([
+      getAssignmentsByClass(classId),
+      getProgressByStudent(studentId),
+    ]).then(async ([asgn, prog]) => {
+      setAssignments(asgn);
+      setProgress(prog);
+      // Flatten all topic IDs across all assignments, then load videos
+      const allTopicIds = [...new Set(asgn.flatMap((a) => a.topicIds))];
+      const videoArrays = await Promise.all(allTopicIds.map(getVideosByTopic));
+      setAssignedVideos(videoArrays.flat());
+      setLoading(false);
+    });
+  }, [classId, studentId]);
+
+  const watchedIds = new Set(
+    progress.filter((p) => p.videoCompletionPercentage >= 90).map((p) => p.videoId)
   );
   const continueVideo = assignedVideos.find((v) => !watchedIds.has(v.id)) ?? assignedVideos[0];
+  const points = progress.length * 20;
+
   const fact = conservationFacts[new Date().getDate() % conservationFacts.length];
   const featured = exploreEcosystems[new Date().getDate() % exploreEcosystems.length];
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="h-48 animate-pulse rounded-3xl bg-charcoal/8" />
+        <div className="h-6 w-48 animate-pulse rounded-full bg-charcoal/8" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-56 animate-pulse rounded-3xl bg-charcoal/8" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -45,11 +74,16 @@ export default function StudentHome() {
         className="relative overflow-hidden rounded-3xl p-8 text-cream shadow-hero"
         style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 55%, #40916c 100%)" }}
       >
-        <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.08]"
+          style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "22px 22px" }}
+        />
         <div className="relative flex flex-wrap items-center justify-between gap-6">
           <div>
             <p className="text-sm font-medium text-forest-100/80">Welcome back, Explorer</p>
-            <h1 className="display mt-1 text-3xl font-bold md:text-4xl">Hi {student?.name?.split(" ")[0]}!</h1>
+            <h1 className="display mt-1 text-3xl font-bold md:text-4xl">
+              Hi {currentUser?.name?.split(" ")[0] ?? "Explorer"}!
+            </h1>
             <p className="mt-2 max-w-md text-forest-100/90">
               Continue your Edventure and unlock your next conservation challenge.
             </p>
@@ -66,12 +100,6 @@ export default function StudentHome() {
             <p className="display flex items-center justify-center gap-1.5 text-4xl font-bold">
               <Star className="h-7 w-7 fill-gold-400 text-gold-500" aria-hidden /> {points}
             </p>
-            <div className="mt-2 flex justify-center gap-1.5">
-              {myBadges.slice(0, 4).map((b) => {
-                const I = getBadgeIcon(b!.id);
-                return <I key={b!.id} className="h-5 w-5 text-forest-700" aria-hidden />;
-              })}
-            </div>
           </div>
         </div>
       </div>
@@ -80,7 +108,9 @@ export default function StudentHome() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="display text-xl font-bold text-forest-900">Your current class work</h2>
-          <Link href="/student/classwork" className="text-sm font-semibold text-forest-700 hover:underline">See all </Link>
+          <Link href="/student/classwork" className="text-sm font-semibold text-forest-700 hover:underline">
+            See all
+          </Link>
         </div>
         {assignedVideos.length ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -98,7 +128,9 @@ export default function StudentHome() {
             })}
           </div>
         ) : (
-          <p className="rounded-3xl bg-white p-6 text-charcoal-soft shadow-soft">No lessons assigned yet, check back soon!</p>
+          <p className="rounded-3xl bg-white p-6 text-charcoal-soft shadow-soft">
+            No lessons assigned yet, check back soon!
+          </p>
         )}
       </div>
 
@@ -111,7 +143,10 @@ export default function StudentHome() {
         >
           <Badge tone="gold">Featured ecosystem</Badge>
           <div className="mt-4 flex items-center gap-4">
-            {(() => { const I = getEcoIcon(featured.id); return <I className="h-14 w-14 shrink-0" aria-hidden strokeWidth={1.5} />; })()}
+            {(() => {
+              const I = getEcoIcon(featured.id);
+              return <I className="h-14 w-14 shrink-0" aria-hidden strokeWidth={1.5} />;
+            })()}
             <div>
               <h3 className="display text-2xl font-bold">{featured.name}</h3>
               <p className="mt-1 max-w-sm text-forest-100/90">{featured.blurb}</p>
@@ -130,15 +165,19 @@ export default function StudentHome() {
       <div className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-black/5">
         <div className="flex items-center justify-between">
           <h2 className="display text-xl font-bold text-forest-900">Your journey</h2>
-          <Link href="/student/progress" className="text-sm font-semibold text-forest-700 hover:underline">View progress </Link>
+          <Link href="/student/progress" className="text-sm font-semibold text-forest-700 hover:underline">
+            View progress
+          </Link>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <JourneyStat label="Reels watched" value={progress.length} Icon={Film} />
-          <JourneyStat label="Badges earned" value={myBadges.length} Icon={Award} />
+          <JourneyStat label="Badges earned" value={0} Icon={Award} />
           <div className="rounded-2xl bg-cream/60 p-4">
             <p className="text-sm text-charcoal-soft">Next badge</p>
-            <p className="display mt-1 font-bold text-forest-900">Rainforest Ranger </p>
-            <div className="mt-2"><ProgressBar value={Math.min(100, (points / 150) * 100)} tone="gold" /></div>
+            <p className="display mt-1 font-bold text-forest-900">Rainforest Ranger</p>
+            <div className="mt-2">
+              <ProgressBar value={Math.min(100, (points / 150) * 100)} tone="gold" />
+            </div>
           </div>
         </div>
       </div>

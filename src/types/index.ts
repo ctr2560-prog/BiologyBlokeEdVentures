@@ -103,6 +103,9 @@ export interface Video {
   thumbnailUrl: string;
   thumbEmoji: string;
   durationSeconds: number;
+  muxUploadId?: string;
+  muxAssetId?: string;
+  muxPlaybackId?: string;
   tags: string[];
   stage: Stage;
   yearGroups: string[];

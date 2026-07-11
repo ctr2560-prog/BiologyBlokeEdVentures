@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
 import {
@@ -11,7 +11,7 @@ import {
   inputClass,
 } from "@/components/ui/primitives";
 import { Film, Tablet, MonitorPlay } from "lucide-react";
-import type { DeliveryMode } from "@/types";
+import type { DeliveryMode, Unit, ClassGroup, Topic, Video } from "@/types";
 import { UnitCard } from "@/components/cards/ContentCards";
 import {
   getPublishedUnits,
@@ -20,62 +20,104 @@ import {
   getClassesByTeacher,
   assignLessonToClass,
   getUnit,
-} from "@/lib/dataService";
+} from "@/lib/supabaseService";
 import { DEMO_TEACHER_ID } from "@/data/people";
 
+type TopicWithVideos = Topic & { videos: Video[] };
+
 function AssignInner() {
-  const { currentUser, version, bump } = useApp();
+  const { currentUser } = useApp();
   const teacherId = currentUser?.id ?? DEMO_TEACHER_ID;
   const searchParams = useSearchParams();
   const preselectedClass = searchParams.get("class");
 
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [classes, setClasses] = useState<ClassGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Preview modal
   const [previewUnit, setPreviewUnit] = useState<string | null>(null);
+  const [previewUnitData, setPreviewUnitData] = useState<Unit | null>(null);
+  const [previewTopics, setPreviewTopics] = useState<TopicWithVideos[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Assign modal
   const [assignUnit, setAssignUnit] = useState<string | null>(null);
+  const [assignTopics, setAssignTopics] = useState<Topic[]>([]);
   const [confirmed, setConfirmed] = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   // Assign form state
-  const [selectedClasses, setSelectedClasses] = useState<string[]>(preselectedClass ? [preselectedClass] : []);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(
+    preselectedClass ? [preselectedClass] : []
+  );
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [dueDate, setDueDate] = useState("2026-07-25");
+  const [dueDate, setDueDate] = useState("2026-08-01");
   const [adaptive, setAdaptive] = useState(true);
   const [points, setPoints] = useState(true);
   const [mode, setMode] = useState<DeliveryMode>("student-led");
 
-  const units = useMemo(() => {
-    void version;
-    return getPublishedUnits();
-  }, [version]);
-  const classes = getClassesByTeacher(teacherId);
+  // Load units + classes on mount
+  useEffect(() => {
+    Promise.all([getPublishedUnits(), getClassesByTeacher(teacherId)]).then(([u, c]) => {
+      setUnits(u);
+      setClasses(c);
+      setLoading(false);
+    });
+  }, [teacherId]);
 
-  const openAssign = (unitId: string) => {
+  // Load preview data when a unit is previewed
+  useEffect(() => {
+    if (!previewUnit) return;
+    setPreviewLoading(true);
+    Promise.all([getUnit(previewUnit), getTopicsByUnit(previewUnit)]).then(async ([unit, topics]) => {
+      setPreviewUnitData(unit);
+      const videoArrays = await Promise.all(topics.map((t) => getVideosByTopic(t.id)));
+      setPreviewTopics(topics.map((t, i) => ({ ...t, videos: videoArrays[i] })));
+      setPreviewLoading(false);
+    });
+  }, [previewUnit]);
+
+  const openAssign = useCallback(async (unitId: string) => {
     setAssignUnit(unitId);
     setPreviewUnit(null);
     setConfirmed(false);
-    setSelectedTopics(getTopicsByUnit(unitId).map((t) => t.id));
     if (preselectedClass) setSelectedClasses([preselectedClass]);
-  };
+    const topics = await getTopicsByUnit(unitId);
+    setAssignTopics(topics);
+    setSelectedTopics(topics.map((t) => t.id));
+  }, [preselectedClass]);
 
   const toggle = (arr: string[], id: string, set: (v: string[]) => void) =>
     set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
 
-  const doAssign = () => {
+  const doAssign = async () => {
     if (!assignUnit || selectedClasses.length === 0) return;
-    selectedClasses.forEach((classId) =>
-      assignLessonToClass({
-        classId,
-        unitId: assignUnit,
-        topicIds: selectedTopics,
-        dueDate,
-        adaptiveTasksEnabled: adaptive,
-        explorerPointsEnabled: points,
-        deliveryMode: mode,
-      })
-    );
-    bump();
-    setConfirmed(true);
+    setAssigning(true);
+    try {
+      await Promise.all(
+        selectedClasses.map((classId) =>
+          assignLessonToClass({
+            classId,
+            unitId: assignUnit,
+            topicIds: selectedTopics,
+            dueDate,
+            adaptiveTasksEnabled: adaptive,
+            explorerPointsEnabled: points,
+            deliveryMode: mode,
+          })
+        )
+      );
+      setConfirmed(true);
+    } finally {
+      setAssigning(false);
+    }
   };
 
-  const previewTopics = previewUnit ? getTopicsByUnit(previewUnit) : [];
+  const assignedUnitTitle =
+    previewUnitData?.title ??
+    units.find((u) => u.id === assignUnit)?.title ??
+    "Unit";
 
   return (
     <div className="space-y-6">
@@ -84,29 +126,48 @@ function AssignInner() {
         subtitle="Browse Edventures, preview the content, and assign to your classes"
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {units.map((u) => (
-          <div key={u.id} className="space-y-2">
-            <div onClick={() => setPreviewUnit(u.id)} className="cursor-pointer">
-              <UnitCard unit={u} href="#" />
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-48 animate-pulse rounded-3xl bg-charcoal/8" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {units.map((u) => (
+            <div key={u.id} className="space-y-2">
+              <div onClick={() => setPreviewUnit(u.id)} className="cursor-pointer">
+                <UnitCard unit={u} href="#" />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" className="flex-1" onClick={() => setPreviewUnit(u.id)}>
+                  Preview
+                </Button>
+                <Button size="sm" className="flex-1" onClick={() => openAssign(u.id)}>
+                  Assign
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" className="flex-1" onClick={() => setPreviewUnit(u.id)}>
-                 Preview
-              </Button>
-              <Button size="sm" className="flex-1" onClick={() => openAssign(u.id)}>
-                 Assign
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Preview modal */}
-      <Modal open={!!previewUnit} onClose={() => setPreviewUnit(null)} title={getUnit(previewUnit ?? "")?.title ?? "Unit"} maxWidth="max-w-2xl">
-        {previewUnit && (
+      <Modal
+        open={!!previewUnit}
+        onClose={() => setPreviewUnit(null)}
+        title={previewUnitData?.title ?? "Loading..."}
+        maxWidth="max-w-2xl"
+      >
+        {previewLoading ? (
+          <div className="space-y-3">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-24 animate-pulse rounded-2xl bg-charcoal/8" />
+            ))}
+          </div>
+        ) : (
           <div className="space-y-4">
-            <p className="text-sm text-charcoal-soft">{getUnit(previewUnit)?.description}</p>
+            <p className="text-sm text-charcoal-soft">{previewUnitData?.description}</p>
             {previewTopics.map((t) => (
               <div key={t.id} className="rounded-2xl bg-cream/60 p-4">
                 <div className="flex items-center justify-between">
@@ -115,7 +176,7 @@ function AssignInner() {
                 </div>
                 <p className="mt-1 text-sm text-charcoal-soft">{t.description}</p>
                 <div className="mt-2 space-y-1">
-                  {getVideosByTopic(t.id).map((v) => (
+                  {t.videos.map((v) => (
                     <div key={v.id} className="flex items-center gap-2 text-sm text-charcoal">
                       <Film className="h-4 w-4 text-forest-600" aria-hidden /> {v.title}
                     </div>
@@ -123,21 +184,28 @@ function AssignInner() {
                 </div>
               </div>
             ))}
-            <Button className="w-full" onClick={() => openAssign(previewUnit)}>
-              Assign this unit 
-            </Button>
+            {previewUnit && (
+              <Button className="w-full" onClick={() => openAssign(previewUnit)}>
+                Assign this unit
+              </Button>
+            )}
           </div>
         )}
       </Modal>
 
       {/* Assign modal */}
-      <Modal open={!!assignUnit} onClose={() => setAssignUnit(null)} title="Assign lesson" maxWidth="max-w-lg">
+      <Modal
+        open={!!assignUnit}
+        onClose={() => setAssignUnit(null)}
+        title="Assign lesson"
+        maxWidth="max-w-lg"
+      >
         {confirmed ? (
           <div className="text-center">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl"></div>
             <h3 className="display mt-3 text-lg font-bold text-forest-900">Lesson assigned!</h3>
             <p className="mt-1 text-sm text-charcoal-soft">
-              {getUnit(assignUnit ?? "")?.title} is now available to {selectedClasses.length}{" "}
+              {assignedUnitTitle} is now available to {selectedClasses.length}{" "}
               {selectedClasses.length === 1 ? "class" : "classes"}.
             </p>
             <Button className="mt-4" onClick={() => setAssignUnit(null)}>Done</Button>
@@ -148,8 +216,17 @@ function AssignInner() {
               <p className="mb-2 text-sm font-semibold text-forest-900">Choose classes</p>
               <div className="space-y-2">
                 {classes.map((c) => (
-                  <label key={c.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3 ${selectedClasses.includes(c.id) ? "border-forest-600 bg-forest-50" : "border-sand"}`}>
-                    <input type="checkbox" checked={selectedClasses.includes(c.id)} onChange={() => toggle(selectedClasses, c.id, setSelectedClasses)} />
+                  <label
+                    key={c.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3 ${
+                      selectedClasses.includes(c.id) ? "border-forest-600 bg-forest-50" : "border-sand"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedClasses.includes(c.id)}
+                      onChange={() => toggle(selectedClasses, c.id, setSelectedClasses)}
+                    />
                     <span className="text-sm font-semibold text-forest-900">{c.name}</span>
                     <Badge tone="sand" className="ml-auto">{c.yearGroup}</Badge>
                   </label>
@@ -160,11 +237,15 @@ function AssignInner() {
             <div>
               <p className="mb-2 text-sm font-semibold text-forest-900">Topics to include</p>
               <div className="flex flex-wrap gap-2">
-                {getTopicsByUnit(assignUnit ?? "").map((t) => (
+                {assignTopics.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => toggle(selectedTopics, t.id, setSelectedTopics)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${selectedTopics.includes(t.id) ? "bg-forest-700 text-cream" : "bg-forest-50 text-forest-700"}`}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      selectedTopics.includes(t.id)
+                        ? "bg-forest-700 text-cream"
+                        : "bg-forest-50 text-forest-700"
+                    }`}
                   >
                     {t.title}
                   </button>
@@ -173,22 +254,43 @@ function AssignInner() {
             </div>
 
             <FormField label="Due date">
-              <input type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <input
+                type="date"
+                className={inputClass}
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
             </FormField>
 
             {/* Delivery mode */}
             <div>
               <p className="mb-2 text-sm font-semibold text-forest-900">How will they learn?</p>
               <div className="grid grid-cols-2 gap-2">
-                {([
-                  { m: "student-led" as const, Icon: Tablet, t: "Student-led", d: "Each student on a device, self-paced and adaptive." },
-                  { m: "teacher-led" as const, Icon: MonitorPlay, t: "Teacher-led", d: "One screen for the class, no devices needed." },
-                ]).map((o) => (
+                {(
+                  [
+                    {
+                      m: "student-led" as const,
+                      Icon: Tablet,
+                      t: "Student-led",
+                      d: "Each student on a device, self-paced and adaptive.",
+                    },
+                    {
+                      m: "teacher-led" as const,
+                      Icon: MonitorPlay,
+                      t: "Teacher-led",
+                      d: "One screen for the class, no devices needed.",
+                    },
+                  ] as const
+                ).map((o) => (
                   <button
                     key={o.m}
                     type="button"
                     onClick={() => setMode(o.m)}
-                    className={`rounded-2xl border-2 p-3 text-left transition-all ${mode === o.m ? "border-forest-600 bg-forest-50 shadow-soft" : "border-sand hover:border-forest-400"}`}
+                    className={`rounded-2xl border-2 p-3 text-left transition-all ${
+                      mode === o.m
+                        ? "border-forest-600 bg-forest-50 shadow-soft"
+                        : "border-sand hover:border-forest-400"
+                    }`}
                   >
                     <o.Icon className="h-5 w-5 text-forest-700" aria-hidden />
                     <p className="mt-1 text-sm font-semibold text-forest-900">{o.t}</p>
@@ -199,12 +301,28 @@ function AssignInner() {
             </div>
 
             <div className="space-y-2">
-              <ToggleRow label="Adaptive tasks" desc="Auto-assign support/core/extension tasks" value={adaptive} onChange={setAdaptive} />
-              <ToggleRow label="Explorer points" desc="Students earn points for completing work" value={points} onChange={setPoints} />
+              <ToggleRow
+                label="Adaptive tasks"
+                desc="Auto-assign support/core/extension tasks"
+                value={adaptive}
+                onChange={setAdaptive}
+              />
+              <ToggleRow
+                label="Explorer points"
+                desc="Students earn points for completing work"
+                value={points}
+                onChange={setPoints}
+              />
             </div>
 
-            <Button className="w-full" onClick={doAssign} disabled={selectedClasses.length === 0}>
-              Assign to {selectedClasses.length || "…"} {selectedClasses.length === 1 ? "class" : "classes"}
+            <Button
+              className="w-full"
+              onClick={doAssign}
+              disabled={selectedClasses.length === 0 || assigning}
+            >
+              {assigning
+                ? "Assigning..."
+                : `Assign to ${selectedClasses.length || "..."} ${selectedClasses.length === 1 ? "class" : "classes"}`}
             </Button>
           </div>
         )}
@@ -213,7 +331,17 @@ function AssignInner() {
   );
 }
 
-function ToggleRow({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) {
+function ToggleRow({
+  label,
+  desc,
+  value,
+  onChange,
+}: {
+  label: string;
+  desc: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-cream/60 px-4 py-3">
       <div className="flex-1">
@@ -223,10 +351,16 @@ function ToggleRow({ label, desc, value, onChange }: { label: string; desc: stri
       <button
         type="button"
         onClick={() => onChange(!value)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${value ? "bg-forest-600" : "bg-charcoal/20"}`}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+          value ? "bg-forest-600" : "bg-charcoal/20"
+        }`}
         aria-pressed={value}
       >
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${value ? "translate-x-5" : "translate-x-0.5"}`} />
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+            value ? "translate-x-5" : "translate-x-0.5"
+          }`}
+        />
       </button>
     </div>
   );
@@ -234,7 +368,7 @@ function ToggleRow({ label, desc, value, onChange }: { label: string; desc: stri
 
 export default function AssignPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-charcoal-soft">Loading Edventures…</div>}>
+    <Suspense fallback={<div className="p-8 text-charcoal-soft">Loading Edventures...</div>}>
       <AssignInner />
     </Suspense>
   );
