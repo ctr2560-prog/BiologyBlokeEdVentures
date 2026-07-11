@@ -3,7 +3,8 @@
  * Small reusable primitives: Button, Badge, ProgressBar, StatCard, EmptyState,
  * Modal, FormField, SearchFilterBar. Cohesive, rounded, nature-toned.
  */
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Sprout, X, type LucideIcon } from "lucide-react";
 
 // ---- Button ----
@@ -178,6 +179,9 @@ export function EmptyState({
 }
 
 // ---- Modal ----
+// Rendered via createPortal into document.body so that CSS transforms on
+// ancestor elements (e.g. the rise-in animation) don't create a new
+// containing block that breaks position:fixed.
 export function Modal({
   open,
   onClose,
@@ -191,6 +195,12 @@ export function Modal({
   children: ReactNode;
   maxWidth?: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -202,35 +212,37 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+  if (!mounted || !open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="fixed inset-0 bg-forest-950/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-forest-950/40 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          className={`rise-in relative z-10 w-full ${maxWidth} rounded-3xl bg-cream p-6 shadow-hero`}
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="display text-xl font-bold text-forest-900">{title}</h2>
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="grid h-9 w-9 place-items-center rounded-full text-charcoal-soft hover:bg-charcoal/8"
-            >
-              <X className="h-5 w-5" aria-hidden />
-            </button>
-          </div>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`relative z-10 flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-3xl bg-cream shadow-hero`}
+      >
+        <div className="flex shrink-0 items-center justify-between px-6 pt-6 pb-4">
+          <h2 className="display text-xl font-bold text-forest-900">{title}</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="grid h-9 w-9 place-items-center rounded-full text-charcoal-soft hover:bg-charcoal/8"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
