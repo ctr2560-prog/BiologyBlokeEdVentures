@@ -1,45 +1,94 @@
 import { NextRequest, NextResponse } from "next/server";
 
+type NominatimResult = {
+  name: string;
+  class: string;
+  type: string;
+  address: Record<string, string>;
+};
+
 type SchoolResult = { name: string; suburb: string; state: string };
 
-// data.gov.au CKAN API — ACARA school profiles dataset
-// resource_id can be verified at: https://data.gov.au/dataset/acara-school-profile
-const RESOURCE_ID = "34b1553e-4d7f-469f-b4c9-6d90b3e0bf7a";
+// Known school-related terms — if the query already contains one, don't append "school"
+const SCHOOL_TERMS = /school|college|academy|grammar|institute|high|primary|junior|senior|tafe/i;
+
+function bestSuburb(address: Record<string, string>): string {
+  return (
+    address.suburb ??
+    address.quarter ??
+    address.neighbourhood ??
+    address.city_district ??
+    address.town ??
+    address.village ??
+    address.hamlet ??
+    address.city ??
+    ""
+  );
+}
+
+function abbreviateState(state: string): string {
+  const map: Record<string, string> = {
+    "New South Wales": "NSW",
+    Victoria: "VIC",
+    Queensland: "QLD",
+    "South Australia": "SA",
+    "Western Australia": "WA",
+    Tasmania: "TAS",
+    "Australian Capital Territory": "ACT",
+    "Northern Territory": "NT",
+  };
+  return map[state] ?? state;
+}
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) return NextResponse.json([]);
 
+  const query = SCHOOL_TERMS.test(q) ? q : `${q} school`;
+
   try {
     const url =
-      `https://data.gov.au/api/3/action/datastore_search` +
-      `?resource_id=${RESOURCE_ID}` +
-      `&q=${encodeURIComponent(q)}` +
-      `&limit=8`;
+      `https://nominatim.openstreetmap.org/search` +
+      `?q=${encodeURIComponent(query)}` +
+      `&countrycodes=au` +
+      `&format=json` +
+      `&addressdetails=1` +
+      `&limit=12`;
 
     const res = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: {
+        "User-Agent": "BiologyBlokeEdventures/1.0 (ctr2560@gmail.com)",
+        Accept: "application/json",
+      },
       next: { revalidate: 3600 },
     });
 
-    if (!res.ok) throw new Error(`data.gov.au ${res.status}`);
+    if (!res.ok) throw new Error(`Nominatim ${res.status}`);
 
-    const body = await res.json();
-    if (!body.success) throw new Error("CKAN returned success:false");
+    const raw: NominatimResult[] = await res.json();
 
-    const records: Record<string, string>[] = body.result?.records ?? [];
+    // Filter to schools / education amenities and deduplicate by name+state
+    const seen = new Set<string>();
+    const schools: SchoolResult[] = [];
 
-    const schools: SchoolResult[] = records
-      .map((r) => ({
-        name: r["School Name"] ?? r["school_name"] ?? r["name"] ?? "",
-        suburb: r["Suburb"] ?? r["suburb"] ?? r["town_suburb"] ?? "",
-        state: r["State"] ?? r["state"] ?? "",
-      }))
-      .filter((s) => s.name);
+    for (const r of raw) {
+      if (r.class !== "amenity" || !["school", "college", "university"].includes(r.type)) {
+        continue;
+      }
+      if (!r.name) continue;
 
-    return NextResponse.json(schools);
+      const suburb = bestSuburb(r.address);
+      const state = abbreviateState(r.address.state ?? "");
+      const key = `${r.name.toLowerCase()}|${state}`;
+
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      schools.push({ name: r.name, suburb, state });
+    }
+
+    return NextResponse.json(schools.slice(0, 8));
   } catch {
-    // Gracefully return empty — the "Add school" fallback handles this
     return NextResponse.json([]);
   }
 }
