@@ -120,8 +120,8 @@ export default function LandingPage() {
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-end px-6 py-5">
           <nav className="flex items-center gap-2">
-            <a href="#signin" className="rounded-full px-4 py-2 text-sm font-semibold text-cream/90 hover:text-cream">
-              Teacher login
+            <a href="/login" className="rounded-full px-4 py-2 text-sm font-semibold text-cream/90 hover:text-cream">
+              Teacher sign in
             </a>
             <button
               onClick={openCodeModal}
@@ -381,9 +381,13 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <p className="mt-8 text-xs text-forest-100/60">
-            The Biology Bloke · Conservation education for schools
-          </p>
+          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-forest-100/60">
+            <a href="/register" className="font-semibold text-forest-300/80 hover:text-cream hover:underline">
+              Create teacher account
+            </a>
+            <span>·</span>
+            <span>The Biology Bloke · Conservation education for schools</span>
+          </div>
         </Reveal>
       </section>
 
