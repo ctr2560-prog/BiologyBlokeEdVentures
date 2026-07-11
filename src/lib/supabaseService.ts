@@ -1042,6 +1042,14 @@ export async function reorderLessonItems(
 
 // ---- Activities ----
 
+export async function getActivities(): Promise<Activity[]> {
+  const { data } = await getSupabaseClient()
+    .from("activities")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return (data ?? []).map(mapActivity);
+}
+
 export async function getActivitiesForLesson(lessonId: string): Promise<Activity[]> {
   const { data } = await getSupabaseClient()
     .from("activities")
@@ -1059,7 +1067,7 @@ export async function upsertActivity(
     .from("activities")
     .upsert({
       id,
-      lesson_id: activity.lessonId,
+      lesson_id: activity.lessonId ?? null,
       title: activity.title,
       difficulty: activity.difficulty,
       blocks: activity.blocks,

@@ -18,6 +18,7 @@ function newBlock(type: ActivityBlockType): ActivityBlock {
     case "writing":        return { id, type, prompt: "", wordGuide: undefined };
     case "research":       return { id, type, prompt: "", fields: ["Source", "Evidence", "Summary"] };
     case "drawing_canvas": return { id, type, prompt: "", backgroundImageUrl: "" };
+    case "graph":          return { id, type, prompt: "", chartType: "bar", xLabel: "", yLabel: "" };
   }
 }
 

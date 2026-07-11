@@ -276,12 +276,21 @@ export interface DrawingBlock {
   backgroundImageUrl?: string;
 }
 
-export type ActivityBlock = QABlock | WritingBlock | ResearchBlock | DrawingBlock;
+export interface GraphBlock {
+  id: string;
+  type: "graph";
+  prompt: string;
+  chartType: "bar" | "line" | "scatter";
+  xLabel: string;
+  yLabel: string;
+}
+
+export type ActivityBlock = QABlock | WritingBlock | ResearchBlock | DrawingBlock | GraphBlock;
 export type ActivityBlockType = ActivityBlock["type"];
 
 export interface Activity {
   id: string;
-  lessonId: string;
+  lessonId?: string;
   title: string;
   difficulty: Difficulty;
   blocks: ActivityBlock[];
