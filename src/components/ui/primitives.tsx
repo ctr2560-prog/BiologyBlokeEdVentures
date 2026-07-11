@@ -204,31 +204,31 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto">
       <div
         className="fixed inset-0 bg-forest-950/40 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <div className="flex min-h-full items-center justify-center">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className={`rise-in relative z-10 my-4 w-full ${maxWidth} rounded-3xl bg-cream p-6 shadow-hero`}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="display text-xl font-bold text-forest-900">{title}</h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="grid h-9 w-9 place-items-center rounded-full text-charcoal-soft hover:bg-charcoal/8"
-          >
-            <X className="h-5 w-5" aria-hidden />
-          </button>
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          className={`rise-in relative z-10 w-full ${maxWidth} rounded-3xl bg-cream p-6 shadow-hero`}
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="display text-xl font-bold text-forest-900">{title}</h2>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="grid h-9 w-9 place-items-center rounded-full text-charcoal-soft hover:bg-charcoal/8"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+          {children}
         </div>
-        {children}
-      </div>
       </div>
     </div>
   );
