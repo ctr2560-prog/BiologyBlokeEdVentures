@@ -348,15 +348,12 @@ export function ResourceForm({
   const [error, setError] = useState("");
   // For the dropdown in non-locked context
   const [availableTopics, setAvailableTopics] = useState<Topic[]>([]);
-  const [topicsLoaded, setTopicsLoaded] = useState(!!lockedTopicId);
+  const [topicsLoading, setTopicsLoading] = useState(!lockedTopicId);
 
-  // Load topics lazily if no locked topic
-  const onFocusTopicSelect = async () => {
-    if (topicsLoaded || lockedTopicId) return;
-    const topics = await getTopics();
-    setAvailableTopics(topics);
-    setTopicsLoaded(true);
-  };
+  useEffect(() => {
+    if (lockedTopicId) return;
+    getTopics().then((t) => { setAvailableTopics(t); setTopicsLoading(false); });
+  }, [lockedTopicId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -440,9 +437,9 @@ export function ResourceForm({
               className={inputClass}
               value={topicId}
               onChange={(e) => setTopicId(e.target.value)}
-              onFocus={onFocusTopicSelect}
+              disabled={topicsLoading}
             >
-              <option value="">Select a topic…</option>
+              <option value="">{topicsLoading ? "Loading topics…" : "Select a topic…"}</option>
               {availableTopics.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.title}
@@ -521,14 +518,13 @@ export function QuizForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [availableTopics, setAvailableTopics] = useState<Topic[]>([]);
-  const [topicsLoaded, setTopicsLoaded] = useState(!!lockedTopicId);
+  const [topicsLoading, setTopicsLoading] = useState(!lockedTopicId);
 
-  const onFocusTopicSelect = async () => {
-    if (topicsLoaded || lockedTopicId) return;
-    const topics = await getTopics();
-    setAvailableTopics(topics);
-    setTopicsLoaded(true);
-  };
+  // Load topics on mount so the dropdown is immediately usable
+  useEffect(() => {
+    if (lockedTopicId) return;
+    getTopics().then((t) => { setAvailableTopics(t); setTopicsLoading(false); });
+  }, [lockedTopicId]);
 
   function blankQuestion(): Question {
     return {
@@ -544,7 +540,7 @@ export function QuizForm({
   }
 
   const addQuestion = () => {
-    if (!draft.questionText) return;
+    if (!draft.questionText.trim()) return;
     setQuestions((q) => [...q, { ...draft, id: `q-${Date.now()}` }]);
     setDraft(blankQuestion());
   };
@@ -557,10 +553,21 @@ export function QuizForm({
       setError("Please select a topic.");
       return;
     }
+    // Auto-commit the in-progress draft if the user filled in a question text
+    let finalQuestions = questions;
+    if (draft.questionText.trim()) {
+      finalQuestions = [...questions, { ...draft, id: `q-${Date.now()}` }];
+      setQuestions(finalQuestions);
+      setDraft(blankQuestion());
+    }
+    if (finalQuestions.length === 0) {
+      setError("Add at least one question before saving.");
+      return;
+    }
     setError("");
     setSaving(true);
     try {
-      await createQuiz({ title, topicId: resolvedTopicId, questions });
+      await createQuiz({ title, topicId: resolvedTopicId, questions: finalQuestions });
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save quiz");
@@ -593,9 +600,9 @@ export function QuizForm({
               className={inputClass}
               value={topicId}
               onChange={(e) => setTopicId(e.target.value)}
-              onFocus={onFocusTopicSelect}
+              disabled={topicsLoading}
             >
-              <option value="">Select a topic…</option>
+              <option value="">{topicsLoading ? "Loading topics…" : "Select a topic…"}</option>
               {availableTopics.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.title}
@@ -755,10 +762,15 @@ export function QuizForm({
       {error && (
         <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm text-clay-600">{error}</p>
       )}
-      <div className="flex justify-end">
-        <Button type="submit" disabled={questions.length === 0 || saving}>
-          {saving ? "Saving..." : `Save quiz (${questions.length})`}
-        </Button>
+      <div className="flex items-center justify-between gap-3">
+        {questions.length === 0 && !draft.questionText.trim() && (
+          <p className="text-xs text-charcoal-soft">Add at least one question above first.</p>
+        )}
+        <div className="ml-auto">
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving..." : questions.length > 0 ? `Save quiz (${questions.length})` : "Save quiz"}
+          </Button>
+        </div>
       </div>
     </form>
   );
