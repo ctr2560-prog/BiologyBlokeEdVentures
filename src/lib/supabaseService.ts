@@ -1231,7 +1231,6 @@ export async function upsertActivity(
     .upsert({
       id,
       lesson_id: activity.lessonId ?? null,
-      set_id: activity.setId ?? null,
       topic_tags: activity.topicTags ?? null,
       title: activity.title,
       difficulty: activity.difficulty,
