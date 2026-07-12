@@ -52,6 +52,7 @@ function ReportsInner() {
     getClassesByTeacher(teacherId).then((cls) => {
       setClasses(cls);
       if (cls.length) setClassId(cls[0].id);
+      else setLoading(false);
     });
   }, [teacherId]);
 
@@ -90,25 +91,39 @@ function ReportsInner() {
         title="Reports"
         subtitle="A clean class summary you can share or print"
         action={
-          <div className="flex gap-2">
-            <select
-              className="rounded-2xl border border-sand-dark bg-white px-4 py-2.5 text-sm font-semibold text-forest-900"
-              value={classId}
-              onChange={(e) => setClassId(e.target.value)}
-            >
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <Button variant="secondary" onClick={() => window.print()}>
-              Print / PDF
-            </Button>
-          </div>
+          classes.length ? (
+            <div className="flex gap-2">
+              <select
+                className="rounded-2xl border border-sand-dark bg-white px-4 py-2.5 text-sm font-semibold text-forest-900"
+                value={classId}
+                onChange={(e) => setClassId(e.target.value)}
+              >
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <Button variant="secondary" onClick={() => window.print()}>
+                Print / PDF
+              </Button>
+            </div>
+          ) : null
         }
       />
 
       {loading ? (
         <div className="h-96 animate-pulse rounded-3xl bg-charcoal/8" />
+      ) : !classes.length ? (
+        <div className="rounded-3xl bg-white p-10 text-center shadow-soft ring-1 ring-black/5">
+          <p className="text-4xl">📋</p>
+          <h3 className="display mt-3 text-lg font-bold text-forest-900">No classes yet</h3>
+          <p className="mt-1 text-sm text-charcoal-soft">
+            Create your first class on the{" "}
+            <a href="/teacher/classes" className="font-semibold text-forest-700 underline underline-offset-2">
+              My Classes
+            </a>{" "}
+            page, then reports will appear here once students start learning.
+          </p>
+        </div>
       ) : (
         <div className="rounded-3xl bg-white p-8 shadow-soft ring-1 ring-black/5">
           <div className="flex items-center justify-between border-b border-sand pb-4">

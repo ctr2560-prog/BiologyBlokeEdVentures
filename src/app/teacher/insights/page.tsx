@@ -73,6 +73,7 @@ function InsightsInner() {
       setClasses(cls);
       if (!classId && cls.length) setClassId(cls[0].id);
       setClassLoading(false);
+      if (!cls.length) setDataLoading(false);
     });
   }, [teacherId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -228,7 +229,7 @@ function InsightsInner() {
         action={
           classLoading ? (
             <div className="h-10 w-48 animate-pulse rounded-2xl bg-charcoal/8" />
-          ) : (
+          ) : classes.length ? (
             <select
               className="rounded-2xl border border-sand-dark bg-white px-4 py-2.5 text-sm font-semibold text-forest-900"
               value={classId}
@@ -238,7 +239,7 @@ function InsightsInner() {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-          )
+          ) : null
         }
       />
 
@@ -251,6 +252,18 @@ function InsightsInner() {
           </div>
           <div className="h-56 animate-pulse rounded-3xl bg-charcoal/8" />
           <div className="h-64 animate-pulse rounded-3xl bg-charcoal/8" />
+        </div>
+      ) : !classes.length ? (
+        <div className="rounded-3xl bg-white p-10 text-center shadow-soft ring-1 ring-black/5">
+          <p className="text-4xl">🌿</p>
+          <h3 className="display mt-3 text-lg font-bold text-forest-900">No classes yet</h3>
+          <p className="mt-1 text-sm text-charcoal-soft">
+            Create your first class on the{" "}
+            <a href="/teacher/classes" className="font-semibold text-forest-700 underline underline-offset-2">
+              My Classes
+            </a>{" "}
+            page, then insights will appear here as students start exploring.
+          </p>
         </div>
       ) : (
         <>
