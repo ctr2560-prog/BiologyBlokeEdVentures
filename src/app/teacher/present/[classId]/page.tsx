@@ -1,306 +1,781 @@
 "use client";
-/*
- * Teacher-led "Present" mode. The teacher runs a reel on the projector for the
- * whole class (no student devices), leads a discussion of the quick-check, taps
- * a quick class pulse, and gets support / core / extension groupings to run as
- * stations. No per-student data is captured; the pulse is the teacher's read.
- */
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useApp } from "@/lib/store";
-import { SectionHeader, Button, Badge, EmptyState } from "@/components/ui/primitives";
+import { SectionHeader, Button, EmptyState } from "@/components/ui/primitives";
 import {
   getClass,
   getTopic,
   getTopicsByUnit,
   getVideosByTopic,
   getQuizByTopic,
-  getResource,
-} from "@/lib/dataService";
-import { adaptiveTasks } from "@/data/content";
-import { taskTypeMeta } from "@/lib/adaptive";
-import type { TaskType } from "@/types";
-import { Film, Play, Check, ArrowLeft, ArrowRight, Compass } from "lucide-react";
+  getAssignmentsByClass,
+  getActivityForVideoTags,
+  saveClassSession,
+} from "@/lib/supabaseService";
+import type { ClassGroup, Topic, Video, Quiz, Activity, Difficulty } from "@/types";
+import {
+  Film,
+  Check,
+  ArrowLeft,
+  ArrowRight,
+  Loader,
+  ThumbsUp,
+  ThumbsDown,
+  Minus,
+  X,
+  Sparkles,
+} from "lucide-react";
 
-type Stage = "watch" | "discuss" | "pulse" | "groups";
-const bandTypes: TaskType[] = ["support", "core", "extension"];
-const bandLabel: Record<string, string> = {
-  support: "Needs support",
-  core: "On track",
-  extension: "Ready to extend",
+type SessionStage = "pick" | "watch" | "react" | "quiz" | "worksheet";
+type Reaction = "loved" | "meh" | "skip";
+
+interface QuizResult {
+  questionId: string;
+  locked: string;
+  correct: boolean;
+}
+
+const NEXT_DIFFICULTY: Record<Difficulty, Difficulty | null> = {
+  foundation: "core",
+  core: "advanced",
+  advanced: null,
 };
+
+function pctToDifficulty(pct: number): Difficulty {
+  if (pct >= 80) return "advanced";
+  if (pct >= 50) return "core";
+  return "foundation";
+}
+
+function buildRecommendations(
+  blocks: Activity["blocks"],
+  difficulty: Difficulty,
+  reaction: Reaction
+) {
+  const recommended: number[] = [];
+  const challenge: number[] = [];
+  const challengeDiff = NEXT_DIFFICULTY[difficulty];
+
+  let qNum = 0;
+  blocks.forEach((b) => {
+    // instruction and image blocks are not numbered on the printed worksheet — skip them
+    if (b.type === "instruction" || b.type === "image") return;
+    qNum++;
+    if (reaction === "meh" && b.topicTag) return;
+    if (!b.blockDifficulty || b.blockDifficulty === difficulty) {
+      recommended.push(qNum);
+    } else if (challengeDiff && b.blockDifficulty === challengeDiff) {
+      challenge.push(qNum);
+    }
+  });
+
+  return { recommended, challenge };
+}
 
 export default function PresentPage({ params }: { params: Promise<{ classId: string }> }) {
   const { classId } = use(params);
-  const { version } = useApp();
 
-  const cls = useMemo(() => {
-    void version;
-    return getClass(classId);
-  }, [version, classId]);
+  const [cls, setCls] = useState<ClassGroup | null>(null);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const topics = useMemo(() => {
-    if (!cls) return [];
-    return cls.assignedUnitIds
-      .flatMap((u) => getTopicsByUnit(u))
-      .filter((t) => getVideosByTopic(t.id).length > 0);
-  }, [cls]);
+  useEffect(() => {
+    (async () => {
+      const [classData, assignments] = await Promise.all([
+        getClass(classId),
+        getAssignmentsByClass(classId),
+      ]);
+      setCls(classData);
+      if (classData) {
+        const unitIds = [...new Set(assignments.map((a) => a.unitId))];
+        const topicArrays = await Promise.all(unitIds.map((u) => getTopicsByUnit(u)));
+        const allTopics = topicArrays.flat();
+        const withVideos = await Promise.all(
+          allTopics.map(async (t) => {
+            const vids = await getVideosByTopic(t.id);
+            return vids.length > 0 ? t : null;
+          })
+        );
+        setTopics(withVideos.filter(Boolean) as Topic[]);
+      }
+      setLoading(false);
+    })();
+  }, [classId]);
 
-  const [topicId, setTopicId] = useState<string | null>(null);
-  const [stage, setStage] = useState<Stage>("watch");
-  const [watched, setWatched] = useState(false);
-  const [qIndex, setQIndex] = useState(0);
+  // Session state
+  const [stage, setStage] = useState<SessionStage>("pick");
+  const [topicData, setTopicData] = useState<{
+    topic: Topic;
+    video: Video | null;
+    quiz: Quiz | null;
+    activity: Activity | null;
+  } | null>(null);
+  const [topicLoading, setTopicLoading] = useState(false);
+
+  // Stage 2 reaction
+  const [reaction, setReaction] = useState<Reaction | null>(null);
+
+  // Stage 3 quiz
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [lockedAnswer, setLockedAnswer] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const [pulse, setPulse] = useState<TaskType | null>(null);
+  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
+
+  // Stage 4 worksheet
+  const [classDifficulty, setClassDifficulty] = useState<Difficulty>("core");
+  const [recommendations, setRecommendations] = useState<{
+    recommended: number[];
+    challenge: number[];
+  } | null>(null);
+  const [sessionSaved, setSessionSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const startTopic = async (topicId: string) => {
+    setTopicLoading(true);
+    setStage("watch");
+    setReaction(null);
+    setQuizIndex(0);
+    setLockedAnswer(null);
+    setRevealed(false);
+    setQuizResults([]);
+    setRecommendations(null);
+    setSessionSaved(false);
+
+    const [topic, videos, quiz] = await Promise.all([
+      getTopic(topicId),
+      getVideosByTopic(topicId),
+      getQuizByTopic(topicId),
+    ]);
+    const video = videos[0] ?? null;
+    const activity = video?.tags?.length
+      ? await getActivityForVideoTags(video.tags)
+      : null;
+
+    setTopicData({ topic: topic!, video, quiz, activity });
+    setTopicLoading(false);
+  };
+
+  const allQuestions = useMemo(() => topicData?.quiz?.questions ?? [], [topicData]);
+  const currentQuestion = allQuestions[quizIndex] ?? null;
+
+  const revealAnswer = () => {
+    if (!lockedAnswer || !currentQuestion) return;
+    const correct = lockedAnswer === currentQuestion.correctAnswer;
+    setQuizResults((prev) => [
+      ...prev,
+      { questionId: currentQuestion.id, locked: lockedAnswer, correct },
+    ]);
+    setRevealed(true);
+  };
+
+  const goToWorksheet = (results: QuizResult[], reactionOverride?: Reaction) => {
+    const eff = reactionOverride ?? reaction ?? "skip";
+    const mcqQs = allQuestions.filter((q) => q.type !== "shortResponse");
+    const mcqCorrect = results.filter((r) => {
+      const q = allQuestions.find((q2) => q2.id === r.questionId);
+      return q && q.type !== "shortResponse" && r.correct;
+    }).length;
+    const pct =
+      mcqQs.length === 0 ? 65 : Math.round((mcqCorrect / mcqQs.length) * 100);
+    const diff = pctToDifficulty(pct);
+    setClassDifficulty(diff);
+    if (topicData?.activity) {
+      setRecommendations(buildRecommendations(topicData.activity.blocks, diff, eff));
+    }
+    setStage("worksheet");
+  };
+
+  const handleSaveSession = async (pct: number | null) => {
+    if (!topicData || sessionSaved) return;
+    setSaving(true);
+    try {
+      await saveClassSession({
+        classId,
+        topicId: topicData.topic.id,
+        videoId: topicData.video?.id ?? null,
+        teacherId: null,
+        classReaction: reaction,
+        classScore: pct ?? 0,
+        classDifficulty,
+        recommendedQs: recommendations?.recommended ?? [],
+        challengeQs: recommendations?.challenge ?? [],
+      });
+      setSessionSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const advanceQuiz = () => {
+    const next = quizIndex + 1;
+    if (next < allQuestions.length) {
+      setQuizIndex(next);
+      setLockedAnswer(null);
+      setRevealed(false);
+    } else {
+      goToWorksheet(quizResults);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader className="h-8 w-8 animate-spin text-forest-600" />
+      </div>
+    );
+  }
 
   if (!cls) {
     return <EmptyState title="Class not found" message="This class may have been removed." />;
   }
 
-  const topic = topicId ? getTopic(topicId) : null;
-  const video = topic ? getVideosByTopic(topic.id)[0] : null;
-  const quiz = topic ? getQuizByTopic(topic.id) : null;
-
-  const startTopic = (id: string) => {
-    setTopicId(id);
-    setStage("watch");
-    setWatched(false);
-    setQIndex(0);
-    setRevealed(false);
-    setPulse(null);
-  };
-
-  const taskFor = (type: TaskType) =>
-    adaptiveTasks.find((t) => t.topicId === topic?.id && t.type === type) ??
-    adaptiveTasks.find((t) => t.type === type);
-
-  // ---- Topic picker ----
-  if (!topic) {
+  // STAGE: PICK
+  if (stage === "pick" || topicLoading) {
     return (
       <div className="space-y-6">
-        <Link href={`/teacher/classes/${cls.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline">
+        <Link
+          href={`/teacher/classes/${cls.id}`}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline"
+        >
           <ArrowLeft className="h-4 w-4" aria-hidden /> Back to class
         </Link>
         <SectionHeader
           title="Present to the class"
-          subtitle={`${cls.name} · one screen, no devices needed. Pick a reel to run together.`}
+          subtitle={`${cls.name} · one screen, no student devices needed`}
         />
-        {topics.length === 0 ? (
-          <EmptyState title="Nothing to present yet" message="Assign a unit to this class first, then come back to run it on the projector." />
+        {topicLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader className="h-8 w-8 animate-spin text-forest-600" />
+          </div>
+        ) : topics.length === 0 ? (
+          <EmptyState
+            title="Nothing to present yet"
+            message="Assign a unit to this class first, then come back to run it on the projector."
+          />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {topics.map((t) => {
-              const v = getVideosByTopic(t.id)[0];
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => startTopic(t.id)}
-                  className="card-lift overflow-hidden rounded-3xl bg-white text-left shadow-soft ring-1 ring-black/5"
+            {topics.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => startTopic(t.id)}
+                className="card-lift overflow-hidden rounded-3xl bg-white text-left shadow-soft ring-1 ring-black/5"
+              >
+                <div
+                  className="flex h-28 items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
                 >
-                  <div className="flex h-28 items-center justify-center" style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}>
-                    <Film className="h-10 w-10 text-cream/90" aria-hidden strokeWidth={1.5} />
-                  </div>
-                  <div className="p-4">
-                    <p className="text-xs font-semibold text-forest-600">{t.title}</p>
-                    <h3 className="display font-bold text-forest-900">{v?.title}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-charcoal-soft">{v?.description}</p>
-                  </div>
-                </button>
-              );
-            })}
+                  <Film className="h-10 w-10 text-cream/90" aria-hidden strokeWidth={1.5} />
+                </div>
+                <div className="p-4">
+                  <p className="font-semibold text-forest-900">{t.title}</p>
+                  <p className="mt-1 text-sm text-charcoal-soft line-clamp-2">{t.description}</p>
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>
     );
   }
 
-  const questions = quiz?.questions ?? [];
-  const q = questions[qIndex];
+  const { topic, video, quiz, activity } = topicData!;
+  const STAGE_ORDER: SessionStage[] = ["watch", "react", "quiz", "worksheet"];
 
-  return (
-    <div className="space-y-6">
-      {/* Top bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button onClick={() => setTopicId(null)} className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline">
-          <ArrowLeft className="h-4 w-4" aria-hidden /> All reels
+  function StageBar() {
+    return (
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setStage("pick")}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden /> All topics
         </button>
-        <div className="flex items-center gap-1.5">
-          {(["watch", "discuss", "pulse", "groups"] as Stage[]).map((s, i) => (
-            <span key={s} className={`h-1.5 rounded-full transition-all ${stage === s ? "w-8 bg-forest-600" : "w-2 bg-sand-dark"}`} title={s} />
+        <span className="truncate text-xs text-charcoal-soft">{topic.title}</span>
+        <div className="ml-auto flex items-center gap-1.5">
+          {STAGE_ORDER.map((s, i) => (
+            <span
+              key={s}
+              className={`h-1.5 rounded-full transition-all ${
+                s === stage
+                  ? "w-8 bg-forest-600"
+                  : STAGE_ORDER.indexOf(stage) > i
+                  ? "w-3 bg-forest-400"
+                  : "w-2 bg-sand-dark"
+              }`}
+            />
           ))}
         </div>
       </div>
+    );
+  }
 
-      {/* WATCH */}
-      {stage === "watch" && video && (
-        <div className="mx-auto max-w-4xl">
-          <p className="text-sm font-semibold text-forest-600">{topic.title}</p>
-          <h1 className="display text-3xl font-bold text-forest-900 md:text-4xl">{video.title}</h1>
-          <div className="relative mt-5 flex aspect-video items-center justify-center overflow-hidden rounded-3xl shadow-hero" style={{ background: "linear-gradient(160deg, #0d2419, #1b4332 55%, #2d6a4f)" }}>
-            <Film className="h-24 w-24 text-cream/20" aria-hidden strokeWidth={1} />
-            {!watched && (
-              <button onClick={() => setWatched(true)} aria-label="Play reel" className="absolute grid h-24 w-24 place-items-center rounded-full glass text-forest-800 shadow-lift transition-transform hover:scale-105">
-                <Play className="h-10 w-10" aria-hidden />
-              </button>
-            )}
-            {watched && (
-              <div className="glass-dark absolute inset-x-0 bottom-0 p-5 text-cream">
-                <p className="text-sm font-semibold uppercase tracking-wide text-forest-100/80">Learning intention</p>
-                <p className="text-lg">{video.learningIntent}</p>
+  // STAGE: WATCH
+  if (stage === "watch") {
+    return (
+      <div className="space-y-5">
+        <StageBar />
+        <div className="mx-auto max-w-4xl space-y-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-forest-600">Now watching</p>
+            <h1 className="display mt-0.5 text-2xl font-bold text-forest-900 md:text-3xl">
+              {video?.title ?? topic.title}
+            </h1>
+          </div>
+
+          <div
+            className="relative flex aspect-video items-center justify-center overflow-hidden rounded-3xl shadow-hero"
+            style={{ background: "linear-gradient(160deg, #0d2419, #1b4332 55%, #2d6a4f)" }}
+          >
+            {video?.muxPlaybackId ? (
+              <iframe
+                src={`https://stream.mux.com/${video.muxPlaybackId}`}
+                allow="autoplay; fullscreen"
+                className="absolute inset-0 h-full w-full rounded-3xl"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-cream/50">
+                <Film className="h-20 w-20" aria-hidden strokeWidth={1} />
+                <p className="text-sm">
+                  {video ? "Video processing — play when ready" : "No video for this topic yet"}
+                </p>
               </div>
             )}
           </div>
-          <div className="mt-5 flex justify-end">
-            <Button size="lg" disabled={!watched} onClick={() => { setStage("discuss"); }}>
-              {watched ? "Discuss as a class" : "Play the reel first"} <ArrowRight className="h-4 w-4" aria-hidden />
+
+          <div className="flex justify-end">
+            <Button size="lg" onClick={() => setStage("react")}>
+              Done watching <ArrowRight className="h-4 w-4" aria-hidden />
             </Button>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* DISCUSS (quiz, tap to reveal) */}
-      {stage === "discuss" && (
-        <div className="mx-auto max-w-3xl">
-          <p className="text-sm font-semibold text-forest-600">Quick check together</p>
-          {q ? (
-            <>
-              <h1 className="display mt-1 text-2xl font-bold text-forest-900 md:text-3xl">
-                {qIndex + 1}. {q.questionText}
-              </h1>
-              <div className="mt-5 space-y-3">
-                {q.type === "shortResponse" ? (
-                  <div className={`rounded-3xl p-5 text-lg ${revealed ? "bg-forest-50 text-forest-900" : "bg-white text-charcoal-soft ring-1 ring-sand"}`}>
-                    {revealed ? q.correctAnswer : "Discuss with the class, then reveal the model answer."}
+  // STAGE: REACT
+  if (stage === "react") {
+    const handleReaction = (r: Reaction) => {
+      setReaction(r);
+      if (quiz && quiz.questions.length > 0) {
+        setStage("quiz");
+      } else {
+        goToWorksheet([], r);
+      }
+    };
+
+    const OPTIONS: {
+      key: Reaction;
+      hands: string;
+      label: string;
+      Icon: typeof ThumbsUp;
+      bg: string;
+      ring: string;
+      iconColor: string;
+    }[] = [
+      {
+        key: "loved",
+        hands: "Hands on heads",
+        label: "Loved it",
+        Icon: ThumbsUp,
+        bg: "bg-forest-50",
+        ring: "ring-forest-300",
+        iconColor: "text-forest-600",
+      },
+      {
+        key: "meh",
+        hands: "Hands on shoulders",
+        label: "Not for them",
+        Icon: ThumbsDown,
+        bg: "bg-clay-50",
+        ring: "ring-clay-300",
+        iconColor: "text-clay-500",
+      },
+      {
+        key: "skip",
+        hands: "Skip vote",
+        label: "Move on",
+        Icon: Minus,
+        bg: "bg-sand",
+        ring: "ring-sand-dark",
+        iconColor: "text-charcoal-soft",
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <StageBar />
+        <div className="mx-auto max-w-2xl space-y-6 text-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-forest-600">Class reaction</p>
+            <h1 className="display mt-1 text-2xl font-bold text-forest-900 md:text-3xl">
+              How did the class feel about it?
+            </h1>
+            <p className="mt-2 text-charcoal-soft">
+              Ask the class to vote with their hands. Tap the majority read.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {OPTIONS.map(({ key, hands, label, Icon, bg, ring, iconColor }) => (
+              <button
+                key={key}
+                onClick={() => handleReaction(key)}
+                className={`card-lift rounded-3xl p-6 text-center ${bg} ring-1 ${ring}`}
+              >
+                <Icon className={`mx-auto h-10 w-10 ${iconColor}`} aria-hidden strokeWidth={1.5} />
+                <p className="display mt-3 text-lg font-bold text-forest-900">{hands}</p>
+                <p className="mt-0.5 text-sm text-charcoal-soft">{label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // STAGE: QUIZ
+  if (stage === "quiz") {
+    const q = currentQuestion;
+
+    if (!q) {
+      goToWorksheet(quizResults);
+      return null;
+    }
+
+    const isShortResponse = q.type === "shortResponse";
+
+    const handleShortReveal = () => {
+      setQuizResults((prev) => [
+        ...prev,
+        { questionId: q.id, locked: "discussion", correct: true },
+      ]);
+      setRevealed(true);
+    };
+
+    return (
+      <div className="space-y-6">
+        <StageBar />
+        <div className="mx-auto max-w-3xl space-y-5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
+              Hands-up quiz · {quizIndex + 1} of {allQuestions.length}
+            </p>
+            <div className="flex gap-1">
+              {allQuestions.map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i < quizIndex
+                      ? "w-4 bg-forest-500"
+                      : i === quizIndex
+                      ? "w-6 bg-forest-700"
+                      : "w-2 bg-sand-dark"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-black/5">
+            <p className="text-xl font-bold text-forest-900 md:text-2xl">{q.questionText}</p>
+          </div>
+
+          {/* Short response */}
+          {isShortResponse && (
+            <div className="space-y-3">
+              <p className="text-sm text-charcoal-soft">
+                Ask the class to discuss. Reveal the model answer when ready.
+              </p>
+              {!revealed ? (
+                <Button onClick={handleShortReveal}>Reveal model answer</Button>
+              ) : (
+                <>
+                  <div className="rounded-2xl bg-forest-50 p-5 ring-1 ring-forest-200">
+                    <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
+                      Model answer
+                    </p>
+                    <p className="mt-1 text-charcoal">{q.correctAnswer}</p>
+                    {q.explanation && (
+                      <p className="mt-2 text-sm text-clay-600">{q.explanation}</p>
+                    )}
                   </div>
-                ) : (
-                  q.options.map((opt) => {
-                    const correct = opt === q.correctAnswer;
-                    return (
-                      <div
-                        key={opt}
-                        className={`flex items-center gap-3 rounded-2xl border-2 px-5 py-4 text-lg transition-colors ${
-                          revealed && correct ? "border-forest-600 bg-forest-50 font-semibold text-forest-900" : "border-sand text-charcoal"
+                  <div className="flex justify-end">
+                    <Button onClick={advanceQuiz}>
+                      {quizIndex + 1 < allQuestions.length ? "Next question" : "See worksheet"}{" "}
+                      <ArrowRight className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* MCQ — two-step reveal */}
+          {!isShortResponse && (
+            <div className="space-y-3">
+              {!lockedAnswer && (
+                <p className="text-sm text-charcoal-soft">
+                  Students raise their hand for their answer. Tap the option most hands chose.
+                </p>
+              )}
+              {lockedAnswer && !revealed && (
+                <p className="text-sm font-semibold text-forest-700">
+                  Class chose:{" "}
+                  <span className="rounded-lg bg-forest-600 px-2 py-0.5 text-cream">
+                    {lockedAnswer}
+                  </span>{" "}
+                  — tap Reveal when ready.
+                </p>
+              )}
+
+              <div className="grid gap-3">
+                {q.options.map((opt, i) => {
+                  const isLocked = lockedAnswer === opt;
+                  const isDimmed = lockedAnswer !== null && !isLocked;
+                  const isCorrect = revealed && opt === q.correctAnswer;
+                  const isWrong = revealed && isLocked && opt !== q.correctAnswer;
+
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        if (!lockedAnswer) setLockedAnswer(opt);
+                      }}
+                      disabled={!!lockedAnswer}
+                      className={`flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left text-lg font-semibold transition-all ${
+                        isCorrect
+                          ? "border-forest-500 bg-forest-50 text-forest-900 shadow-lift"
+                          : isWrong
+                          ? "border-clay-400 bg-clay-50 text-clay-800"
+                          : isLocked
+                          ? "border-forest-700 bg-forest-700 text-white shadow-lift"
+                          : isDimmed
+                          ? "border-sand bg-white/50 text-charcoal/30"
+                          : "border-sand bg-white text-charcoal hover:border-forest-400 hover:shadow-soft"
+                      }`}
+                    >
+                      <span
+                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-bold ${
+                          isCorrect
+                            ? "bg-forest-600 text-white"
+                            : isWrong
+                            ? "bg-clay-400 text-white"
+                            : isLocked
+                            ? "bg-white/20 text-white"
+                            : "bg-sand-dark text-charcoal"
                         }`}
                       >
-                        <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${revealed && correct ? "bg-forest-600 text-white" : "border-2 border-sand-dark"}`}>
-                          {revealed && correct && <Check className="h-4 w-4" aria-hidden />}
-                        </span>
-                        {opt}
-                      </div>
-                    );
-                  })
-                )}
+                        {isCorrect ? (
+                          <Check className="h-5 w-5" aria-hidden />
+                        ) : isWrong ? (
+                          <X className="h-5 w-5" aria-hidden />
+                        ) : (
+                          String.fromCharCode(65 + i)
+                        )}
+                      </span>
+                      {opt}
+                    </button>
+                  );
+                })}
               </div>
-              {revealed && q.explanation && (
-                <p className="mt-4 rounded-2xl bg-gold-300/20 px-4 py-3 text-sm text-clay-600">{q.explanation}</p>
+
+              {lockedAnswer && !revealed && (
+                <div className="flex justify-end pt-1">
+                  <Button size="lg" onClick={revealAnswer}>
+                    Reveal answer
+                  </Button>
+                </div>
               )}
-              <div className="mt-6 flex justify-between">
-                {!revealed ? (
-                  <Button variant="secondary" onClick={() => setRevealed(true)}>Reveal answer</Button>
-                ) : (
-                  <span />
-                )}
-                <Button
-                  onClick={() => {
-                    if (qIndex + 1 < questions.length) { setQIndex(qIndex + 1); setRevealed(false); }
-                    else setStage("pulse");
-                  }}
-                  disabled={!revealed}
-                >
-                  {qIndex + 1 < questions.length ? "Next question" : "How did the class go?"} <ArrowRight className="h-4 w-4" aria-hidden />
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="mt-4">
-              <p className="text-charcoal-soft">No quick check for this reel, discuss the success criteria instead.</p>
-              <ul className="mt-3 space-y-2">
-                {video?.successCriteria.map((c) => (
-                  <li key={c} className="flex items-start gap-2 text-charcoal"><Check className="mt-1 h-4 w-4 text-forest-600" aria-hidden /> {c}</li>
-                ))}
-              </ul>
-              <Button className="mt-6" onClick={() => setStage("pulse")}>How did the class go? <ArrowRight className="h-4 w-4" aria-hidden /></Button>
+
+              {revealed && q.explanation && (
+                <div className="rounded-2xl bg-gold-300/20 px-4 py-3 text-sm text-clay-700">
+                  {q.explanation}
+                </div>
+              )}
+
+              {revealed && (
+                <div className="flex justify-end pt-1">
+                  <Button onClick={advanceQuiz}>
+                    {quizIndex + 1 < allQuestions.length ? "Next question" : "See worksheet"}{" "}
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* PULSE */}
-      {stage === "pulse" && (
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="display text-2xl font-bold text-forest-900 md:text-3xl">How did the class go?</h1>
-          <p className="mt-2 text-charcoal-soft">Your read of the room sets where to focus. Everyone still gets a task.</p>
-          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              { type: "support" as TaskType, label: "Most need support" },
-              { type: "core" as TaskType, label: "A real mix" },
-              { type: "extension" as TaskType, label: "Most are flying" },
-            ].map((b) => {
-              const meta = taskTypeMeta(b.type);
-              return (
-                <button
-                  key={b.type}
-                  onClick={() => { setPulse(b.type); setStage("groups"); }}
-                  className="card-lift rounded-3xl bg-white p-6 text-center shadow-soft ring-1 ring-black/5"
-                >
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-cream" style={{ background: meta.color }}>
-                    <meta.Icon className="h-7 w-7" aria-hidden strokeWidth={1.75} />
-                  </span>
-                  <p className="display mt-3 font-bold text-forest-900">{b.label}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+  // STAGE: WORKSHEET
+  if (stage === "worksheet") {
+    const DIFF_LABEL: Record<Difficulty, string> = {
+      foundation: "Foundation",
+      core: "Core",
+      advanced: "Advanced",
+    };
+    const DIFF_STYLE: Record<Difficulty, string> = {
+      foundation: "text-clay-700 bg-clay-50 ring-clay-200",
+      core: "text-forest-700 bg-forest-50 ring-forest-200",
+      advanced: "text-gold-700 bg-gold-100 ring-gold-300",
+    };
 
-      {/* GROUPS */}
-      {stage === "groups" && (
-        <div className="mx-auto max-w-5xl">
+    const mcqQs = allQuestions.filter((q) => q.type !== "shortResponse");
+    const mcqCorrect = quizResults.filter((r) => {
+      const q = allQuestions.find((q2) => q2.id === r.questionId);
+      return q && q.type !== "shortResponse" && r.correct;
+    }).length;
+    const classPct =
+      mcqQs.length > 0 ? Math.round((mcqCorrect / mcqQs.length) * 100) : null;
+
+    return (
+      <div className="space-y-6">
+        <StageBar />
+        <div className="mx-auto max-w-3xl space-y-5">
           <div className="text-center">
-            <p className="text-sm font-semibold text-forest-600">Differentiate the class</p>
-            <h1 className="display mt-1 text-2xl font-bold text-forest-900 md:text-3xl">Three groups, ready to run</h1>
-            <p className="mt-2 text-charcoal-soft">Set these up as stations or hand out the linked resources.</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
+              Worksheet recommendations
+            </p>
+            <h1 className="display mt-1 text-2xl font-bold text-forest-900 md:text-3xl">
+              Here's what the class should focus on
+            </h1>
+            {classPct !== null && (
+              <p className="mt-2 text-charcoal-soft">
+                Class quiz score:{" "}
+                <span className="font-semibold text-forest-900">{classPct}%</span>
+              </p>
+            )}
           </div>
-          <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-            {bandTypes.map((type) => {
-              const meta = taskTypeMeta(type);
-              const task = taskFor(type);
-              const resource = task?.linkedResourceId ? getResource(task.linkedResourceId) : undefined;
-              const focus = pulse === type;
-              return (
-                <div key={type} className={`rounded-3xl bg-white p-5 shadow-soft ring-1 transition-all ${focus ? "ring-2 ring-forest-500 shadow-lift" : "ring-black/5"}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="grid h-10 w-10 place-items-center rounded-2xl text-cream" style={{ background: meta.color }}>
-                      <meta.Icon className="h-5 w-5" aria-hidden strokeWidth={1.75} />
-                    </span>
-                    {focus && <Badge tone="forest">Focus here</Badge>}
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <div
+              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold ring-1 ${DIFF_STYLE[classDifficulty]}`}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+              Class level: {DIFF_LABEL[classDifficulty]}
+            </div>
+            {reaction && reaction !== "skip" && (
+              <div className="inline-flex items-center gap-2 rounded-2xl bg-sand px-4 py-2 text-sm font-semibold text-charcoal ring-1 ring-sand-dark">
+                {reaction === "loved" ? (
+                  <ThumbsUp className="h-4 w-4 text-forest-600" aria-hidden />
+                ) : (
+                  <ThumbsDown className="h-4 w-4 text-clay-500" aria-hidden />
+                )}
+                {reaction === "loved" ? "Class loved it" : "Low engagement"}
+              </div>
+            )}
+          </div>
+
+          {activity && recommendations ? (
+            <div className="space-y-4">
+              {recommendations.recommended.length > 0 && (
+                <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+                  <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
+                    Start with these questions
+                  </p>
+                  <p className="mt-0.5 text-sm text-charcoal-soft">
+                    Matched to today's class level.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {recommendations.recommended.map((n) => (
+                      <span
+                        key={n}
+                        className="grid h-11 w-11 place-items-center rounded-xl bg-forest-600 text-base font-bold text-cream shadow-soft"
+                      >
+                        {n}
+                      </span>
+                    ))}
                   </div>
-                  <p className="display mt-3 font-bold text-forest-900">{bandLabel[type]}</p>
-                  {task ? (
-                    <>
-                      <p className="mt-1 text-sm font-semibold text-forest-700">{task.title}</p>
-                      <p className="mt-1 text-sm text-charcoal-soft">{task.instructions}</p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <Badge tone="sand">~{task.estimatedTimeMinutes} min</Badge>
-                        {resource && <Badge tone="mist">{resource.title}</Badge>}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="mt-1 text-sm text-charcoal-soft">Discuss and extend as a group.</p>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-2">
-            <Button variant="secondary" onClick={() => { setStage("watch"); setWatched(false); }}>
-              <Compass className="h-4 w-4" aria-hidden /> Run it again
+              )}
+
+              {recommendations.challenge.length > 0 && (
+                <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gold-700">
+                    Challenge questions
+                  </p>
+                  <p className="mt-0.5 text-sm text-charcoal-soft">
+                    For students who finish early or want to stretch further.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {recommendations.challenge.map((n) => (
+                      <span
+                        key={n}
+                        className="grid h-11 w-11 place-items-center rounded-xl bg-gold-100 text-base font-bold text-gold-800 ring-1 ring-gold-300"
+                      >
+                        {n}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-2xl bg-sand px-4 py-3 text-sm ring-1 ring-sand-dark">
+                <span className="font-semibold text-charcoal">Remind the class: </span>
+                <span className="text-charcoal-soft">
+                  all questions are on the worksheet — anyone who wants to attempt others is welcome
+                  to.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between rounded-2xl bg-forest-50 px-4 py-3 ring-1 ring-forest-200">
+                <p className="text-sm text-forest-800">Need to print worksheets?</p>
+                <Link
+                  href="/admin/resources"
+                  className="text-sm font-semibold text-forest-700 hover:underline"
+                >
+                  Go to Resources →
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl bg-white p-6 text-center shadow-soft ring-1 ring-black/5">
+              <p className="text-charcoal-soft">
+                No worksheet activity linked to this topic yet.
+              </p>
+              <Link
+                href="/admin/resources"
+                className="mt-3 inline-block text-sm font-semibold text-forest-700 hover:underline"
+              >
+                Go to Resources to add one →
+              </Link>
+            </div>
+          )}
+
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
+            {!sessionSaved ? (
+              <button
+                onClick={() => handleSaveSession(classPct)}
+                disabled={saving}
+                className="rounded-2xl bg-forest-700 px-5 py-3 text-sm font-semibold text-cream transition hover:bg-forest-800 disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save session results"}
+              </button>
+            ) : (
+              <div className="rounded-2xl bg-forest-50 px-5 py-3 text-sm font-semibold text-forest-700 ring-1 ring-forest-200">
+                Session saved
+              </div>
+            )}
+            <Button variant="secondary" onClick={() => startTopic(topic.id)}>
+              Run again
             </Button>
-            <Button onClick={() => setTopicId(null)}>Finish, back to reels</Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setTopicData(null);
+                setStage("pick");
+              }}
+            >
+              Pick another topic
+            </Button>
+            <Link href={`/teacher/classes/${cls.id}`}>
+              <Button>Finish session</Button>
+            </Link>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return null;
 }

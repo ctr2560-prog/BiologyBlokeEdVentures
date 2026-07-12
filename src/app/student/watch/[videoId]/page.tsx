@@ -13,10 +13,13 @@ import {
   getResource,
   getAdaptiveTasks,
   upsertProgress,
+  getActivityForVideoTags,
+  logAnalyticsEvent,
+  awardPoints,
 } from "@/lib/supabaseService";
 import { generateAdaptiveRecommendation } from "@/lib/adaptive";
 import { DEMO_STUDENT_ID } from "@/data/people";
-import type { Video, Topic, Quiz, Resource, AdaptiveTask, AdaptiveRecommendation } from "@/types";
+import type { Video, Topic, Quiz, Resource, AdaptiveTask, AdaptiveRecommendation, Activity } from "@/types";
 
 type Stage = "watch" | "quiz" | "reflect" | "result";
 
@@ -35,9 +38,11 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [linkedResource, setLinkedResource] = useState<Resource | null>(null);
+  const [topicActivity, setTopicActivity] = useState<Activity | null>(null);
 
   const [stage, setStage] = useState<Stage>("watch");
   const [signals, setSignals] = useState<WatchSignals | null>(null);
+  const [reaction, setReaction] = useState<"like" | "dislike" | undefined>(undefined);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [reflection, setReflection] = useState("");
   const [pointsEarned, setPointsEarned] = useState(0);
@@ -56,6 +61,10 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
       ]);
       const quiz = topic ? await getQuizByTopic(topic.id) : null;
       setPageData({ video, topic, quiz, adaptiveTasks: tasks });
+      // Find the activity whose blocks are tagged with the same tags as this video
+      if (video.tags.length > 0) {
+        getActivityForVideoTags(video.tags).then(setTopicActivity);
+      }
       setPageLoading(false);
     });
   }, [videoId]);
@@ -130,10 +139,50 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
         adaptiveFocusArea: rec.adaptiveFocusArea,
         engagementLevel: rec.engagementLevel,
         recommendedTaskType: rec.recommendedTaskType,
+        videoReaction: reaction,
         lastActive: new Date().toISOString().slice(0, 10),
       });
     } catch (err) {
       console.error("Failed to save progress:", err);
+    }
+
+    const classId = currentUser?.classIds[0] ?? "";
+
+    logAnalyticsEvent({
+      userId: studentId,
+      role: "student",
+      eventType: "video_completed",
+      videoId: video.id,
+      topicId: video.topicId,
+      unitId: video.unitId,
+      classId,
+      metadata: {
+        watchTimeSeconds: signals.watchTimeSeconds,
+        completion: signals.completion,
+        quizScore: quizScore ?? -1,
+        reaction: reaction ?? "none",
+      },
+    });
+    if (quizScore !== null) {
+      logAnalyticsEvent({
+        userId: studentId,
+        role: "student",
+        eventType: "quiz_submitted",
+        videoId: video.id,
+        topicId: video.topicId,
+        unitId: video.unitId,
+        classId,
+        metadata: { score: quizScore },
+      });
+    }
+
+    // Award points — all fire-and-forget, failures never block the flow
+    await awardPoints(studentId, classId, "video_completed", video.id);
+    if (quizScore !== null && quizScore >= 80) {
+      await awardPoints(studentId, classId, "quiz_ace", video.id);
+    }
+    if (signals.clickedCurious) {
+      await awardPoints(studentId, classId, "curious_click", video.id);
     }
 
     setSaving(false);
@@ -193,23 +242,57 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
 
       {/* WATCH */}
       {stage === "watch" && (
-        video.muxPlaybackId ? (
-          <VideoPlayer
-            video={video}
-            onComplete={(s) => {
-              setSignals(s);
-              setStage(quiz ? "quiz" : "reflect");
-            }}
-          />
-        ) : (
-          <VideoPlayerMock
-            video={video}
-            onComplete={(s) => {
-              setSignals(s);
-              setStage(quiz ? "quiz" : "reflect");
-            }}
-          />
-        )
+        <div className="space-y-4">
+          {video.muxPlaybackId ? (
+            <VideoPlayer
+              video={video}
+              onComplete={(s) => setSignals(s)}
+            />
+          ) : (
+            <VideoPlayerMock
+              video={video}
+              onComplete={(s) => setSignals(s)}
+            />
+          )}
+
+          {/* Like / dislike — shown once video is done */}
+          {signals && (
+            <div className="flex flex-col items-center gap-3 rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+              <p className="text-sm font-semibold text-forest-900">What did you think of this video?</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setReaction(reaction === "like" ? undefined : "like")}
+                  className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                    reaction === "like"
+                      ? "bg-forest-700 text-cream"
+                      : "bg-cream text-charcoal-soft ring-1 ring-sand-dark hover:bg-forest-50 hover:text-forest-700"
+                  }`}
+                >
+                  👍 Liked it
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReaction(reaction === "dislike" ? undefined : "dislike")}
+                  className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                    reaction === "dislike"
+                      ? "bg-clay-400/30 text-clay-700"
+                      : "bg-cream text-charcoal-soft ring-1 ring-sand-dark hover:bg-clay-50 hover:text-clay-600"
+                  }`}
+                >
+                  👎 Not for me
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStage(quiz ? "quiz" : "reflect")}
+                className="mt-1 inline-flex items-center gap-2 rounded-full bg-forest-700 px-8 py-3 text-sm font-bold text-cream shadow-soft transition hover:bg-forest-800"
+              >
+                {quiz ? "Continue to quiz →" : "Continue →"}
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* QUIZ */}
@@ -316,6 +399,23 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
           </div>
 
           <AdaptiveRecommendationPanel rec={rec} audience="student" />
+
+          {topicActivity && (
+            <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-50 text-forest-700">
+                  <span className="text-xl">📝</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-forest-900">{topicActivity.title}</p>
+                  <p className="text-xs text-charcoal-soft">Personalised activity based on your quiz results</p>
+                </div>
+              </div>
+              <Link href={`/student/activity/${topicActivity.id}?videoId=${videoId}`} className="mt-4 block">
+                <Button className="w-full">Start your activity →</Button>
+              </Link>
+            </div>
+          )}
 
           {recommendedTask && (
             <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">

@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SectionHeader, Badge, inputClass } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { getUsers, getSchool, getClass } from "@/lib/dataService";
-import type { Role, User } from "@/types";
+import { getUsers, getSchools, getClasses } from "@/lib/supabaseService";
+import type { Role, User, School, ClassGroup } from "@/types";
+import { Loader } from "lucide-react";
 
-/** Shared admin view for browsing teachers or students, filterable by school. */
 export function UserManagement({
   role,
   title,
@@ -15,13 +15,25 @@ export function UserManagement({
   title: string;
   subtitle: string;
 }) {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [schoolMap, setSchoolMap] = useState<Map<string, School>>(new Map());
+  const [classMap, setClassMap] = useState<Map<string, ClassGroup>>(new Map());
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [schoolFilter, setSchoolFilter] = useState("all");
 
-  const all = getUsers().filter((u) => u.role === role);
-  const schoolIds = [...new Set(all.map((u) => u.schoolId).filter(Boolean))] as string[];
+  useEffect(() => {
+    Promise.all([getUsers(), getSchools(), getClasses()]).then(([users, schools, classes]) => {
+      setAllUsers(users.filter((u) => u.role === role));
+      setSchoolMap(new Map(schools.map((s) => [s.id, s])));
+      setClassMap(new Map(classes.map((c) => [c.id, c])));
+      setLoading(false);
+    });
+  }, [role]);
 
-  const rows = all.filter(
+  const schools = [...schoolMap.values()];
+
+  const rows = allUsers.filter(
     (u) =>
       u.name.toLowerCase().includes(query.toLowerCase()) &&
       (schoolFilter === "all" || u.schoolId === schoolFilter)
@@ -40,8 +52,16 @@ export function UserManagement({
         </div>
       ),
     },
-    { key: "email", header: "Email", render: (u) => <span className="text-charcoal-soft">{u.email}</span> },
-    { key: "school", header: "School", render: (u) => getSchool(u.schoolId ?? "")?.name ?? "-" },
+    {
+      key: "email",
+      header: "Email",
+      render: (u) => <span className="text-charcoal-soft">{u.email ?? "-"}</span>,
+    },
+    {
+      key: "school",
+      header: "School",
+      render: (u) => schoolMap.get(u.schoolId ?? "")?.name ?? "-",
+    },
     {
       key: "classes",
       header: role === "teacher" ? "Classes" : "Class",
@@ -49,7 +69,7 @@ export function UserManagement({
         <div className="flex flex-wrap gap-1">
           {u.classIds.map((c) => (
             <Badge key={c} tone="sand">
-              {getClass(c)?.name ?? c}
+              {classMap.get(c)?.name ?? c}
             </Badge>
           ))}
           {u.classIds.length === 0 && <span className="text-charcoal-soft">-</span>}
@@ -57,6 +77,17 @@ export function UserManagement({
       ),
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <SectionHeader title={title} subtitle={subtitle} />
+        <div className="flex items-center justify-center py-16">
+          <Loader className="h-8 w-8 animate-spin text-forest-600" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -68,11 +99,15 @@ export function UserManagement({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select className={`${inputClass} w-auto`} value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)}>
+        <select
+          className={`${inputClass} w-auto`}
+          value={schoolFilter}
+          onChange={(e) => setSchoolFilter(e.target.value)}
+        >
           <option value="all">All schools</option>
-          {schoolIds.map((id) => (
-            <option key={id} value={id}>
-              {getSchool(id)?.name}
+          {schools.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
             </option>
           ))}
         </select>

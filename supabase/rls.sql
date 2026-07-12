@@ -294,3 +294,77 @@ create policy "Teachers: read analytics for own classes"
 create policy "Students: insert own events"
   on public.analytics_events for insert
   with check (user_id = public.bb_my_student_id());
+
+-- ============================================================
+-- unit_lessons  (ordered topic sequence within a unit)
+-- ============================================================
+alter table public.unit_lessons enable row level security;
+
+create policy "Authenticated read: unit_lessons"
+  on public.unit_lessons for select
+  using (auth.role() in ('authenticated', 'anon'));
+
+create policy "Admin write: unit_lessons"
+  on public.unit_lessons for all
+  using (public.bb_is_admin());
+
+create policy "Teachers: manage unit_lessons"
+  on public.unit_lessons for all
+  using (public.bb_is_teacher());
+
+-- ============================================================
+-- lesson_items  (ordered videos/quizzes within a topic/lesson)
+-- ============================================================
+alter table public.lesson_items enable row level security;
+
+create policy "Authenticated read: lesson_items"
+  on public.lesson_items for select
+  using (auth.role() in ('authenticated', 'anon'));
+
+create policy "Admin write: lesson_items"
+  on public.lesson_items for all
+  using (public.bb_is_admin());
+
+create policy "Teachers: manage lesson_items"
+  on public.lesson_items for all
+  using (public.bb_is_teacher());
+
+-- ============================================================
+-- activities  (adaptive block-based activities)
+-- ============================================================
+alter table public.activities enable row level security;
+
+create policy "Authenticated read: activities"
+  on public.activities for select
+  using (auth.role() in ('authenticated', 'anon'));
+
+create policy "Admin write: activities"
+  on public.activities for all
+  using (public.bb_is_admin());
+
+create policy "Teachers: write activities"
+  on public.activities for all
+  using (public.bb_is_teacher());
+
+-- ============================================================
+-- student_activity_responses
+-- ============================================================
+alter table public.student_activity_responses enable row level security;
+
+create policy "Admin: full access to student_activity_responses"
+  on public.student_activity_responses for all
+  using (public.bb_is_admin());
+
+create policy "Teachers: read responses for students in own classes"
+  on public.student_activity_responses for select
+  using (
+    exists (
+      select 1 from public.classes
+      where classes.id = student_activity_responses.class_id
+        and classes.teacher_id = public.bb_my_user_id()
+    )
+  );
+
+create policy "Students: read/write own activity responses"
+  on public.student_activity_responses for all
+  using (student_id = public.bb_my_student_id());

@@ -30,6 +30,7 @@ import type {
   ActivityBlock,
   ActivityBlockType,
   ConceptMapBlock,
+  Difficulty,
   DrawingBlock,
   FieldJournalBlock,
   FillBlanksBlock,
@@ -45,6 +46,7 @@ import type {
   StemChallengeBlock,
   StoryboardBlock,
   TableBlock,
+  TaggedActivityBlock,
   WordBankBlock,
   WritingBlock,
 } from "@/types";
@@ -82,7 +84,7 @@ export const BLOCK_CATALOGUE: BlockMeta[] = [
 
 // ─── Block factory ────────────────────────────────────────────────────────────
 
-export function newBlock(type: ActivityBlockType): ActivityBlock {
+export function newBlock(type: ActivityBlockType): TaggedActivityBlock {
   const id = `blk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   switch (type) {
     case "instruction":     return { id, type, content: "" };
@@ -1167,8 +1169,8 @@ export function BlockEditor({
   isFirst,
   isLast,
 }: {
-  block: ActivityBlock;
-  onChange: (b: ActivityBlock) => void;
+  block: TaggedActivityBlock;
+  onChange: (b: TaggedActivityBlock) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -1176,6 +1178,10 @@ export function BlockEditor({
   isLast: boolean;
 }) {
   const meta = BLOCK_CATALOGUE.find((c) => c.type === block.type)!;
+
+  // Preserve adaptive meta fields when individual editors call onChange with plain ActivityBlock
+  const patchChange = (b: ActivityBlock): void =>
+    onChange({ ...b, blockDifficulty: block.blockDifficulty, topicTag: block.topicTag });
 
   return (
     <div className="rounded-2xl border border-sand-dark bg-white p-5 space-y-4">
@@ -1198,25 +1204,85 @@ export function BlockEditor({
         </div>
       </div>
 
+      {/* Adaptive targeting */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-sand/60 pt-2.5">
+        {/* Level */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-charcoal-soft">Level:</span>
+          {([undefined, "foundation", "core", "advanced"] as const).map((d) => (
+            <button
+              key={d ?? "all"}
+              type="button"
+              onClick={() => onChange({ ...block, blockDifficulty: d as Difficulty | undefined })}
+              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                block.blockDifficulty === d
+                  ? d === "foundation" ? "bg-clay-400/30 text-clay-700"
+                  : d === "core" ? "bg-forest-100 text-forest-700"
+                  : d === "advanced" ? "bg-mist-100 text-mist-700"
+                  : "bg-charcoal/10 text-charcoal"
+                : "bg-transparent text-charcoal-soft hover:bg-cream-dark"
+              }`}
+            >
+              {d ?? "All"}
+            </button>
+          ))}
+        </div>
+
+        {/* Topic tag */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-charcoal-soft">Topic:</span>
+          {block.topicTag ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-forest-700 px-2.5 py-0.5 text-[11px] font-semibold text-cream">
+              {block.topicTag}
+              <button
+                type="button"
+                onClick={() => onChange({ ...block, topicTag: undefined })}
+                className="ml-0.5 leading-none hover:opacity-70"
+                aria-label="Clear topic tag"
+              >
+                ×
+              </button>
+            </span>
+          ) : (
+            <input
+              type="text"
+              placeholder="e.g. adaptations"
+              className="h-6 w-32 rounded-full border border-sand-dark bg-cream px-2.5 text-[11px] text-charcoal placeholder:text-charcoal-soft/50 focus:border-forest-400 focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.currentTarget.value.trim()) {
+                  e.preventDefault();
+                  onChange({ ...block, topicTag: e.currentTarget.value.trim().toLowerCase() });
+                }
+              }}
+              onBlur={(e) => {
+                if (e.currentTarget.value.trim()) {
+                  onChange({ ...block, topicTag: e.currentTarget.value.trim().toLowerCase() });
+                }
+              }}
+            />
+          )}
+        </div>
+      </div>
+
       {/* Editor */}
-      {block.type === "instruction"     && <InstructionEditor     block={block} onChange={onChange} />}
-      {block.type === "image"           && <ImageEditor           block={block} onChange={onChange} />}
-      {block.type === "q_and_a"        && <QAEditor              block={block} onChange={onChange} />}
-      {block.type === "multiple_choice" && <MultipleChoiceEditor  block={block} onChange={onChange} />}
-      {block.type === "writing"         && <WritingEditor         block={block} onChange={onChange} />}
-      {block.type === "fill_blanks"    && <FillBlanksEditor      block={block} onChange={onChange} />}
-      {block.type === "word_bank"      && <WordBankEditor        block={block} onChange={onChange} />}
-      {block.type === "label_diagram"  && <LabelDiagramEditor    block={block} onChange={onChange} />}
-      {block.type === "matching"        && <MatchingEditor        block={block} onChange={onChange} />}
-      {block.type === "table"           && <TableEditor           block={block} onChange={onChange} />}
-      {block.type === "graph"           && <GraphEditor           block={block} onChange={onChange} />}
-      {block.type === "research"        && <ResearchEditor        block={block} onChange={onChange} />}
-      {block.type === "drawing_canvas" && <DrawingEditor         block={block} onChange={onChange} />}
-      {block.type === "sorting"         && <SortingEditor         block={block} onChange={onChange} />}
-      {block.type === "stem_challenge"  && <StemChallengeEditor  block={block} onChange={onChange} />}
-      {block.type === "field_journal"   && <FieldJournalEditor   block={block} onChange={onChange} />}
-      {block.type === "storyboard"      && <StoryboardEditor     block={block} onChange={onChange} />}
-      {block.type === "concept_map"     && <ConceptMapEditor     block={block} onChange={onChange} />}
+      {block.type === "instruction"     && <InstructionEditor     block={block} onChange={patchChange} />}
+      {block.type === "image"           && <ImageEditor           block={block} onChange={patchChange} />}
+      {block.type === "q_and_a"        && <QAEditor              block={block} onChange={patchChange} />}
+      {block.type === "multiple_choice" && <MultipleChoiceEditor  block={block} onChange={patchChange} />}
+      {block.type === "writing"         && <WritingEditor         block={block} onChange={patchChange} />}
+      {block.type === "fill_blanks"    && <FillBlanksEditor      block={block} onChange={patchChange} />}
+      {block.type === "word_bank"      && <WordBankEditor        block={block} onChange={patchChange} />}
+      {block.type === "label_diagram"  && <LabelDiagramEditor    block={block} onChange={patchChange} />}
+      {block.type === "matching"        && <MatchingEditor        block={block} onChange={patchChange} />}
+      {block.type === "table"           && <TableEditor           block={block} onChange={patchChange} />}
+      {block.type === "graph"           && <GraphEditor           block={block} onChange={patchChange} />}
+      {block.type === "research"        && <ResearchEditor        block={block} onChange={patchChange} />}
+      {block.type === "drawing_canvas" && <DrawingEditor         block={block} onChange={patchChange} />}
+      {block.type === "sorting"         && <SortingEditor         block={block} onChange={patchChange} />}
+      {block.type === "stem_challenge"  && <StemChallengeEditor  block={block} onChange={patchChange} />}
+      {block.type === "field_journal"   && <FieldJournalEditor   block={block} onChange={patchChange} />}
+      {block.type === "storyboard"      && <StoryboardEditor     block={block} onChange={patchChange} />}
+      {block.type === "concept_map"     && <ConceptMapEditor     block={block} onChange={patchChange} />}
     </div>
   );
 }

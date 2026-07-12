@@ -1,15 +1,20 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useApp } from "@/lib/store";
 import { SectionHeader, FormField, inputClass, Button } from "@/components/ui/primitives";
 import { InsightCard } from "@/components/cards/InsightCards";
-import { getSchool } from "@/lib/dataService";
-import { DEMO_TEACHER_ID } from "@/data/people";
-import { getUser } from "@/lib/dataService";
+import { getSchool } from "@/lib/supabaseService";
+import type { School } from "@/types";
 
 export default function TeacherSettings() {
   const { currentUser } = useApp();
-  const teacher = currentUser ?? getUser(DEMO_TEACHER_ID);
-  const school = getSchool(teacher?.schoolId ?? "");
+  const [school, setSchool] = useState<School | null>(null);
+
+  useEffect(() => {
+    if (currentUser?.schoolId) {
+      getSchool(currentUser.schoolId).then(setSchool);
+    }
+  }, [currentUser?.schoolId]);
 
   return (
     <div className="space-y-6">
@@ -18,13 +23,17 @@ export default function TeacherSettings() {
         <div className="space-y-4 rounded-3xl bg-white p-6 shadow-soft ring-1 ring-black/5">
           <h3 className="display text-lg font-bold text-forest-900">Profile</h3>
           <FormField label="Name">
-            <input className={inputClass} defaultValue={teacher?.name} />
+            <input className={inputClass} defaultValue={currentUser?.name ?? ""} />
           </FormField>
           <FormField label="Email">
-            <input className={inputClass} defaultValue={teacher?.email} />
+            <input className={inputClass} defaultValue={currentUser?.email ?? ""} />
           </FormField>
           <FormField label="School">
-            <input className={inputClass} defaultValue={school?.name} disabled />
+            <input
+              className={inputClass}
+              defaultValue={school?.name ?? ""}
+              disabled
+            />
           </FormField>
           <Button>Save changes</Button>
         </div>

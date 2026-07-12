@@ -5,7 +5,7 @@ import { SectionHeader, Button, Badge, EmptyState } from "@/components/ui/primit
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { AliasChip } from "@/components/ui/AliasChip";
 import { EngagementPill } from "@/components/cards/InsightCards";
-import { Leaf, Printer, Plus, MonitorPlay } from "lucide-react";
+import { Leaf, Printer, Plus, MonitorPlay, ClipboardList } from "lucide-react";
 import {
   getClass,
   getStudentsByClass,
@@ -13,8 +13,10 @@ import {
   getProgressByClass,
   addAlias,
   removeStudentFromClass,
+  getResponsesByClass,
+  getActivity,
 } from "@/lib/supabaseService";
-import type { ClassGroup, User, Unit, StudentProgress } from "@/types";
+import type { ClassGroup, User, Unit, StudentProgress, StudentActivityResponse, Activity } from "@/types";
 
 export default function ClassDetailPage({ params }: { params: Promise<{ classId: string }> }) {
   const { classId } = use(params);
@@ -23,17 +25,21 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
   const [students, setStudents] = useState<User[]>([]);
   const [allProgress, setAllProgress] = useState<StudentProgress[]>([]);
   const [unitMap, setUnitMap] = useState<Map<string, Unit>>(new Map());
+  const [activityResponses, setActivityResponses] = useState<StudentActivityResponse[]>([]);
+  const [activityMap, setActivityMap] = useState<Map<string, Activity>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [clsData, studentsData, progressData] = await Promise.all([
+    const [clsData, studentsData, progressData, responsesData] = await Promise.all([
       getClass(classId),
       getStudentsByClass(classId),
       getProgressByClass(classId),
+      getResponsesByClass(classId),
     ]);
     setCls(clsData);
     setStudents(studentsData);
     setAllProgress(progressData);
+    setActivityResponses(responsesData);
 
     if (clsData?.assignedUnitIds.length) {
       const unitResults = await Promise.all(clsData.assignedUnitIds.map(getUnit));
@@ -41,6 +47,13 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
       unitResults.forEach((u) => { if (u) map.set(u.id, u); });
       setUnitMap(map);
     }
+
+    const uniqueActivityIds = [...new Set(responsesData.map((r) => r.activityId))];
+    const activities = await Promise.all(uniqueActivityIds.map((id) => getActivity(id)));
+    const aMap = new Map<string, Activity>();
+    activities.forEach((a) => { if (a) aMap.set(a.id, a); });
+    setActivityMap(aMap);
+
     setLoading(false);
   }, [classId]);
 
@@ -203,6 +216,41 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
           />
         }
       />
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-5 w-5 text-forest-600" aria-hidden />
+          <h2 className="display text-lg font-bold text-forest-900">Activity responses</h2>
+        </div>
+        {activityResponses.length === 0 ? (
+          <p className="text-sm text-charcoal-soft">No activity responses yet — they appear here once students submit work.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {[...new Set(activityResponses.map((r) => r.activityId))].map((actId) => {
+              const resps = activityResponses.filter((r) => r.activityId === actId);
+              const submitted = resps.filter((r) => r.submittedAt).length;
+              const inProgress = resps.filter((r) => !r.submittedAt).length;
+              const act = activityMap.get(actId);
+              return (
+                <div key={actId} className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-forest-900">{act?.title ?? "Activity"}</p>
+                    <div className="flex shrink-0 gap-1.5">
+                      {submitted > 0 && <Badge tone="forest">{submitted} submitted</Badge>}
+                      {inProgress > 0 && <Badge tone="gold">{inProgress} in progress</Badge>}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Link href={`/teacher/classes/${classId}/activity/${actId}`}>
+                      <Button variant="secondary" className="w-full">View responses →</Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,21 +1,27 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SectionHeader, Badge, Modal } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
 import { exploreEcosystems } from "@/data/content";
-import { getVideos } from "@/lib/dataService";
+import { getVideos } from "@/lib/supabaseService";
 import { getEcoIcon } from "@/lib/icons";
+import type { Video } from "@/types";
 
 export default function Explore() {
   const [active, setActive] = useState<string | null>(null);
+  const [allVideos, setAllVideos] = useState<Video[]>([]);
   const activeEco = exploreEcosystems.find((e) => e.id === active);
 
-  // Loosely match videos to an ecosystem by tag/animal keywords.
+  useEffect(() => {
+    getVideos().then(setAllVideos);
+  }, []);
+
   const matchVideos = (name: string) => {
     const key = name.toLowerCase();
-    return getVideos().filter((v) =>
-      v.tags.some((t) => key.includes(t) || t.includes(key.split(" ")[0])) ||
-      v.title.toLowerCase().includes(key.split(" ")[0])
+    return allVideos.filter(
+      (v) =>
+        v.tags.some((t) => key.includes(t) || t.includes(key.split(" ")[0])) ||
+        v.title.toLowerCase().includes(key.split(" ")[0])
     );
   };
 
@@ -60,10 +66,10 @@ export default function Explore() {
               </div>
             ) : (
               <p className="rounded-2xl bg-cream/60 px-4 py-6 text-center text-sm text-charcoal-soft">
-                 New reels for this world are coming soon!
+                New reels for this world are coming soon!
               </p>
             )}
-            <Badge tone="gold"> Curiosity earns bonus explorer points</Badge>
+            <Badge tone="gold">Curiosity earns bonus explorer points</Badge>
           </div>
         )}
       </Modal>

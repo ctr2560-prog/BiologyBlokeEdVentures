@@ -28,6 +28,7 @@ import type {
   StudentProgress,
   School,
   AdaptiveTask,
+  AnalyticsEvent,
 } from "@/types";
 
 // ---- ID generation ----
@@ -218,6 +219,7 @@ function mapProgress(r: Row): StudentProgress {
     adaptiveFocusArea: r.adaptive_focus_area ?? "",
     engagementLevel: r.engagement_level ?? "medium",
     recommendedTaskType: r.recommended_task_type ?? undefined,
+    videoReaction: r.video_reaction ?? undefined,
     lastActive: r.last_active ?? "",
   };
 }
@@ -330,6 +332,15 @@ export async function getVideo(id: string): Promise<Video | null> {
     .eq("id", id)
     .single();
   return data ? mapVideo(data) : null;
+}
+
+export async function getVideosByIds(ids: string[]): Promise<Video[]> {
+  if (!ids.length) return [];
+  const { data } = await getSupabaseClient()
+    .from("videos")
+    .select("*")
+    .in("id", ids);
+  return (data ?? []).map(mapVideo);
 }
 
 export async function getVideosByTopic(topicId: string): Promise<Video[]> {
@@ -532,6 +543,16 @@ export async function getProgressByStudent(studentId: string): Promise<StudentPr
     .eq("student_id", studentId)
     .order("last_active", { ascending: false });
   return (data ?? []).map(mapProgress);
+}
+
+export async function getProgressForStudentVideo(studentId: string, videoId: string): Promise<StudentProgress | null> {
+  const { data } = await getSupabaseClient()
+    .from("student_progress")
+    .select("*")
+    .eq("student_id", studentId)
+    .eq("video_id", videoId)
+    .maybeSingle();
+  return data ? mapProgress(data) : null;
 }
 
 export async function getProgressForVideo(videoId: string): Promise<StudentProgress[]> {
@@ -917,6 +938,7 @@ export async function upsertProgress(
       adaptive_focus_area: progress.adaptiveFocusArea,
       engagement_level: progress.engagementLevel,
       recommended_task_type: progress.recommendedTaskType ?? null,
+      video_reaction: progress.videoReaction ?? null,
       last_active: new Date().toISOString(),
     })
     .select()
@@ -933,6 +955,7 @@ import type {
   LessonItemWithContent,
   Activity,
   ActivityBlock,
+  TaggedActivityBlock,
   StudentActivityResponse,
   BlockResponse,
 } from "@/types";
@@ -950,10 +973,12 @@ function mapLessonItem(r: Row): LessonItem {
 function mapActivity(r: Row): Activity {
   return {
     id: r.id,
-    lessonId: r.lesson_id,
+    lessonId: r.lesson_id ?? undefined,
+    setId: r.set_id ?? undefined,
+    topicTags: r.topic_tags ?? undefined,
     title: r.title,
     difficulty: r.difficulty,
-    blocks: (r.blocks ?? []) as ActivityBlock[],
+    blocks: (r.blocks ?? []) as TaggedActivityBlock[],
     createdAt: r.created_at ?? "",
   };
 }
@@ -1009,6 +1034,36 @@ export async function getLessonItems(lessonId: string): Promise<LessonItemWithCo
   }, []);
 }
 
+export async function getLessonOrTopicItems(id: string): Promise<LessonItemWithContent[]> {
+  const items = await getLessonItems(id);
+  if (items.length > 0) return items;
+
+  // Fall back: treat id as a topicId and synthesise a sequence
+  const [topic, quiz] = await Promise.all([getTopic(id), getQuizByTopic(id)]);
+  if (!topic) return [];
+
+  const videos = await getVideosByTopic(id);
+  const synth: LessonItemWithContent[] = videos.map((video, i) => ({
+    id: `synth-v-${video.id}`,
+    lessonId: id,
+    itemType: "video" as const,
+    itemId: video.id,
+    orderIndex: i,
+    video,
+  }));
+  if (quiz) {
+    synth.push({
+      id: `synth-q-${quiz.id}`,
+      lessonId: id,
+      itemType: "quiz" as const,
+      itemId: quiz.id,
+      orderIndex: videos.length,
+      quiz,
+    });
+  }
+  return synth;
+}
+
 export async function addItemToLesson(
   lessonId: string,
   itemType: "video" | "quiz",
@@ -1042,12 +1097,30 @@ export async function reorderLessonItems(
 
 // ---- Activities ----
 
+export async function getActivity(id: string): Promise<Activity | null> {
+  const { data } = await getSupabaseClient()
+    .from("activities")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return data ? mapActivity(data) : null;
+}
+
 export async function getActivities(): Promise<Activity[]> {
   const { data } = await getSupabaseClient()
     .from("activities")
     .select("*")
     .order("created_at", { ascending: false });
   return (data ?? []).map(mapActivity);
+}
+
+/** Find the activity whose blocks are tagged with any of the given video tags. */
+export async function getActivityForVideoTags(videoTags: string[]): Promise<Activity | null> {
+  if (!videoTags.length) return null;
+  const all = await getActivities();
+  return all.find((a) =>
+    a.blocks.some((b) => b.topicTag && videoTags.includes(b.topicTag))
+  ) ?? null;
 }
 
 export async function getActivitiesForLesson(lessonId: string): Promise<Activity[]> {
@@ -1059,6 +1132,96 @@ export async function getActivitiesForLesson(lessonId: string): Promise<Activity
   return (data ?? []).map(mapActivity);
 }
 
+export type PointEventType =
+  | "video_completed"
+  | "quiz_ace"
+  | "worksheet_completed"
+  | "curious_click"
+  | "activity_completed";
+
+export const POINT_VALUES: Record<PointEventType, number> = {
+  video_completed: 20,
+  quiz_ace: 20,
+  worksheet_completed: 15,
+  curious_click: 5,
+  activity_completed: 15,
+};
+
+/**
+ * Awards points to a student for a qualifying action. Idempotent — a unique
+ * (student_id, event_type, reference_id) constraint prevents double-awarding
+ * for the same action. Failures are swallowed so points never break the flow.
+ */
+export async function awardPoints(
+  studentId: string,
+  classId: string | null,
+  eventType: PointEventType,
+  referenceId: string
+): Promise<void> {
+  try {
+    await getSupabaseClient().from("points_events").insert({
+      id: newId("pe"),
+      student_id: studentId,
+      class_id: classId,
+      event_type: eventType,
+      points: POINT_VALUES[eventType],
+      reference_id: referenceId,
+    });
+  } catch {
+    // Unique constraint violation = already awarded. Any other error is silent.
+  }
+}
+
+export async function getPointsTotal(studentId: string): Promise<number> {
+  const { data } = await getSupabaseClient()
+    .from("points_events")
+    .select("points")
+    .eq("student_id", studentId);
+  return (data ?? []).reduce((sum: number, row: { points: number }) => sum + row.points, 0);
+}
+
+export async function getPointsHistory(studentId: string): Promise<
+  { eventType: string; points: number; referenceId: string | null; createdAt: string }[]
+> {
+  const { data } = await getSupabaseClient()
+    .from("points_events")
+    .select("event_type, points, reference_id, created_at")
+    .eq("student_id", studentId)
+    .order("created_at", { ascending: false });
+  return (data ?? []).map((r: { event_type: string; points: number; reference_id: string | null; created_at: string }) => ({
+    eventType: r.event_type,
+    points: r.points,
+    referenceId: r.reference_id,
+    createdAt: r.created_at,
+  }));
+}
+
+export async function saveClassSession(session: {
+  classId: string;
+  topicId: string;
+  videoId: string | null;
+  teacherId: string | null;
+  classReaction: "loved" | "meh" | "skip" | null;
+  classScore: number;
+  classDifficulty: "foundation" | "core" | "advanced";
+  recommendedQs: number[];
+  challengeQs: number[];
+}): Promise<void> {
+  await getSupabaseClient().from("class_sessions").insert({
+    id: newId("cs"),
+    class_id: session.classId,
+    topic_id: session.topicId,
+    video_id: session.videoId,
+    teacher_id: session.teacherId,
+    class_reaction: session.classReaction,
+    class_score: session.classScore,
+    class_difficulty: session.classDifficulty,
+    recommended_qs: session.recommendedQs,
+    challenge_qs: session.challengeQs,
+    session_date: new Date().toISOString().slice(0, 10),
+  });
+}
+
 export async function upsertActivity(
   activity: { id?: string } & Omit<Activity, "id" | "createdAt">
 ): Promise<Activity> {
@@ -1068,6 +1231,8 @@ export async function upsertActivity(
     .upsert({
       id,
       lesson_id: activity.lessonId ?? null,
+      set_id: activity.setId ?? null,
+      topic_tags: activity.topicTags ?? null,
       title: activity.title,
       difficulty: activity.difficulty,
       blocks: activity.blocks,
@@ -1076,6 +1241,15 @@ export async function upsertActivity(
     .single();
   if (error) throw new Error(error.message);
   return mapActivity(data);
+}
+
+export async function getActivitiesBySetId(setId: string): Promise<Activity[]> {
+  const { data } = await getSupabaseClient()
+    .from("activities")
+    .select("*")
+    .eq("set_id", setId)
+    .order("difficulty");
+  return (data ?? []).map(mapActivity);
 }
 
 export async function deleteActivity(id: string): Promise<void> {
@@ -1138,4 +1312,40 @@ export async function getResponsesForActivity(
     .eq("activity_id", activityId)
     .order("last_edited_at", { ascending: false });
   return (data ?? []).map(mapStudentActivityResponse);
+}
+
+export async function getResponsesByClass(
+  classId: string
+): Promise<StudentActivityResponse[]> {
+  const { data } = await getSupabaseClient()
+    .from("student_activity_responses")
+    .select("*")
+    .eq("class_id", classId)
+    .order("last_edited_at", { ascending: false });
+  return (data ?? []).map(mapStudentActivityResponse);
+}
+
+// ---- Analytics Events ----
+
+export async function logAnalyticsEvent(
+  event: Omit<AnalyticsEvent, "id" | "timestamp">
+): Promise<void> {
+  try {
+    await getSupabaseClient()
+      .from("analytics_events")
+      .insert({
+        id: newId("ae"),
+        user_id: event.userId,
+        role: event.role,
+        event_type: event.eventType,
+        video_id: event.videoId ?? null,
+        topic_id: event.topicId ?? null,
+        unit_id: event.unitId ?? null,
+        class_id: event.classId ?? null,
+        timestamp: new Date().toISOString(),
+        metadata: event.metadata ?? null,
+      });
+  } catch {
+    // Analytics failures must never break the student flow
+  }
 }

@@ -1,17 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SectionHeader, Badge, EmptyState, Button } from "@/components/ui/primitives";
+import { SectionHeader, EmptyState, Button } from "@/components/ui/primitives";
 import { getActivities, deleteActivity } from "@/lib/supabaseService";
-import { Loader, PenLine, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader, PenLine, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import type { Activity } from "@/types";
 import { BLOCK_CATALOGUE } from "./[activityId]/blocks";
 
-const DIFF_TONE = {
-  foundation: "clay",
-  core: "forest",
-  advanced: "mist",
-} as const;
 
 const BLOCK_META = Object.fromEntries(BLOCK_CATALOGUE.map((b) => [b.type, b])) as Record<string, (typeof BLOCK_CATALOGUE)[number]>;
 
@@ -39,10 +34,17 @@ function ActivityCard({
             {activity.lessonId ? " · linked to lesson" : ""}
           </p>
         </div>
-        <Badge tone={DIFF_TONE[activity.difficulty]}>
-          {activity.difficulty.charAt(0).toUpperCase() + activity.difficulty.slice(1)}
-        </Badge>
       </div>
+
+      {/* Topic tags */}
+      {activity.topicTags && activity.topicTags.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-charcoal-soft">Topics:</span>
+          {activity.topicTags.map((tag) => (
+            <span key={tag} className="rounded-full bg-forest-100 px-2 py-0.5 text-[10px] font-semibold text-forest-700 capitalize">{tag}</span>
+          ))}
+        </div>
+      )}
 
       {/* Block type chips */}
       {activity.blocks.length > 0 && (
@@ -66,6 +68,15 @@ function ActivityCard({
         <Button size="sm" onClick={onEdit} className="flex-1">
           <Pencil className="h-3.5 w-3.5" /> Edit
         </Button>
+        <a
+          href={`/teacher/print/activity/${activity.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-xl p-2 text-charcoal-soft transition hover:bg-forest-50 hover:text-forest-700"
+          aria-label="Print worksheet"
+        >
+          <Printer className="h-4 w-4" />
+        </a>
         <button
           onClick={onDelete}
           className="rounded-xl p-2 text-charcoal-soft transition hover:bg-clay-50 hover:text-clay-600"

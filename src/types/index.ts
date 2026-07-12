@@ -184,6 +184,7 @@ export interface StudentProgress {
   engagementLevel: EngagementLevel;
   recommendedTaskId?: string;
   recommendedTaskType?: TaskType;
+  videoReaction?: "like" | "dislike";
   lastActive: string;
 }
 
@@ -415,12 +416,23 @@ export type ActivityBlock =
 
 export type ActivityBlockType = ActivityBlock["type"];
 
+/** A block enriched with adaptive targeting metadata. */
+export type TaggedActivityBlock = ActivityBlock & {
+  /** Which difficulty tier this block targets. Undefined = shown to all tiers. */
+  blockDifficulty?: Difficulty;
+  /** Topic interest tag this block targets. Undefined = shown to all interests. */
+  topicTag?: string;
+};
+
 export interface Activity {
   id: string;
   lessonId?: string;
+  setId?: string;
+  /** Topic interest tags defined for this activity (e.g. ["adaptations", "relationships"]) */
+  topicTags?: string[];
   title: string;
   difficulty: Difficulty;
-  blocks: ActivityBlock[];
+  blocks: TaggedActivityBlock[];
   createdAt: string;
 }
 

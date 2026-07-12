@@ -10,7 +10,8 @@ import {
   FormField,
   inputClass,
 } from "@/components/ui/primitives";
-import { Film, Tablet, MonitorPlay } from "lucide-react";
+import Link from "next/link";
+import { Film, Tablet, MonitorPlay, Printer } from "lucide-react";
 import type { DeliveryMode, Unit, ClassGroup, Topic, Video } from "@/types";
 import { UnitCard } from "@/components/cards/ContentCards";
 import {
@@ -208,6 +209,22 @@ function AssignInner() {
               {assignedUnitTitle} is now available to {selectedClasses.length}{" "}
               {selectedClasses.length === 1 ? "class" : "classes"}.
             </p>
+            {mode === "teacher-led" && (
+              <div className="mt-4 rounded-2xl border border-forest-200 bg-forest-50 px-4 py-3 text-left">
+                <div className="flex items-start gap-3">
+                  <Printer className="mt-0.5 h-5 w-5 shrink-0 text-forest-700" aria-hidden />
+                  <div>
+                    <p className="text-sm font-semibold text-forest-900">Print worksheets before class</p>
+                    <p className="mt-0.5 text-xs text-charcoal-soft">
+                      Teacher-led mode works best with printed worksheets students complete during the session.
+                    </p>
+                    <Link href="/admin/resources" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-forest-700 hover:underline" onClick={() => setAssignUnit(null)}>
+                      Go to Resources to print worksheets →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
             <Button className="mt-4" onClick={() => setAssignUnit(null)}>Done</Button>
           </div>
         ) : (

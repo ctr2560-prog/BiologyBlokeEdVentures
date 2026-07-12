@@ -3,15 +3,18 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormField, inputClass } from "@/components/ui/primitives";
 import { getActivities, upsertActivity } from "@/lib/supabaseService";
-import { ArrowLeft, Loader, Plus } from "lucide-react";
-import type { ActivityBlock, ActivityBlockType, Difficulty } from "@/types";
+import { ArrowLeft, Eye, Loader, Plus } from "lucide-react";
+import type { TaggedActivityBlock, ActivityBlockType } from "@/types";
 import { BlockEditor, BlockPicker, newBlock } from "./blocks";
+import { PreviewModal } from "./preview";
 
-const DIFFICULTIES: { value: Difficulty; label: string; style: string; active: string }[] = [
-  { value: "foundation", label: "Foundation", style: "bg-cream text-charcoal-soft ring-1 ring-sand hover:bg-sand", active: "bg-clay-100 text-clay-700 ring-2 ring-clay-300" },
-  { value: "core",       label: "Core",       style: "bg-cream text-charcoal-soft ring-1 ring-sand hover:bg-sand", active: "bg-forest-100 text-forest-700 ring-2 ring-forest-400" },
-  { value: "advanced",   label: "Advanced",   style: "bg-cream text-charcoal-soft ring-1 ring-sand hover:bg-sand", active: "bg-mist-100 text-mist-700 ring-2 ring-mist-400" },
-];
+function Count({ n }: { n: number }) {
+  return (
+    <span className={`inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full text-[10px] font-bold ${n > 0 ? "bg-forest-100 text-forest-700" : "bg-charcoal/8 text-charcoal-soft/40"}`}>
+      {n || "·"}
+    </span>
+  );
+}
 
 export default function ActivityBuilderPage() {
   const params = useParams<{ activityId: string }>();
@@ -20,12 +23,12 @@ export default function ActivityBuilderPage() {
 
   const [loading, setLoading] = useState(!isNew);
   const [title, setTitle] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("core");
-  const [blocks, setBlocks] = useState<ActivityBlock[]>([]);
+  const [blocks, setBlocks] = useState<TaggedActivityBlock[]>([]);
   const [addingBlock, setAddingBlock] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [existingId, setExistingId] = useState<string | undefined>();
+  const [savedId, setSavedId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (isNew) return;
@@ -33,9 +36,8 @@ export default function ActivityBuilderPage() {
       const found = all.find((a) => a.id === params.activityId);
       if (found) {
         setTitle(found.title);
-        setDifficulty(found.difficulty);
         setBlocks(found.blocks);
-        setExistingId(found.id);
+        setSavedId(found.id);
       }
       setLoading(false);
     });
@@ -44,11 +46,10 @@ export default function ActivityBuilderPage() {
   const addBlock = (type: ActivityBlockType) => {
     setBlocks((prev) => [...prev, newBlock(type)]);
     setAddingBlock(false);
-    // Scroll to bottom after adding
     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 50);
   };
 
-  const updateBlock = (i: number, updated: ActivityBlock) =>
+  const updateBlock = (i: number, updated: TaggedActivityBlock) =>
     setBlocks((prev) => prev.map((b, idx) => (idx === i ? updated : b)));
 
   const removeBlock = (i: number) =>
@@ -70,10 +71,22 @@ export default function ActivityBuilderPage() {
     setError("");
     setSaving(true);
     try {
-      await upsertActivity({ id: existingId, title: title.trim(), difficulty, blocks });
-      router.push("/admin/resources");
+      // Derive topic tags from whatever blocks have been tagged
+      const topicTags = [...new Set(blocks.map((b) => b.topicTag).filter(Boolean))] as string[];
+      const saved = await upsertActivity({
+        id: savedId,
+        topicTags,
+        title: title.trim(),
+        difficulty: "core",
+        blocks,
+      });
+      setSavedId(saved.id);
+      if (isNew) {
+        window.history.replaceState(null, "", `/admin/resources/${saved.id}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save.");
+    } finally {
       setSaving(false);
     }
   };
@@ -85,6 +98,9 @@ export default function ActivityBuilderPage() {
       </div>
     );
   }
+
+  // Derive topic tags from blocks for the coverage matrix
+  const topicTags = [...new Set(blocks.map((b) => b.topicTag).filter(Boolean))] as string[];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-20">
@@ -104,47 +120,34 @@ export default function ActivityBuilderPage() {
           </span>
           <button
             type="button"
+            onClick={() => setPreviewing(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-forest-300 bg-white px-4 py-2 text-sm font-semibold text-forest-700 shadow-sm transition hover:bg-forest-50"
+          >
+            <Eye className="h-4 w-4" />
+            Preview
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="inline-flex items-center gap-2 rounded-xl bg-forest-700 px-5 py-2 text-sm font-semibold text-cream shadow-sm transition hover:bg-forest-600 disabled:opacity-60"
           >
-            {saving ? "Saving…" : isNew ? "Create activity" : "Save changes"}
+            {saving ? "Saving…" : !savedId ? "Create activity" : "Save changes"}
           </button>
         </div>
       </div>
 
-      {/* Title + difficulty */}
-      <div className="rounded-2xl bg-white p-6 shadow-soft ring-1 ring-black/5 space-y-5">
+      {/* Title */}
+      <div className="rounded-2xl bg-white p-6 shadow-soft ring-1 ring-black/5">
         <FormField label="Activity title" required>
           <input
             className={inputClass}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Australian animal adaptations — core task"
+            placeholder="e.g. Australian animal adaptations"
             autoFocus={isNew}
           />
         </FormField>
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-forest-900">
-            Difficulty tier
-            <span className="ml-2 text-xs font-normal text-charcoal-soft">
-              Platform serves this to students whose quiz result matches this level
-            </span>
-          </label>
-          <div className="flex gap-2">
-            {DIFFICULTIES.map(({ value, label, style, active }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setDifficulty(value)}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${difficulty === value ? active : style}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Blocks */}
@@ -162,6 +165,44 @@ export default function ActivityBuilderPage() {
               isLast={i === blocks.length - 1}
             />
           ))}
+        </div>
+      )}
+
+      {/* Coverage summary — appears once blocks have been tagged */}
+      {topicTags.length > 0 && blocks.length > 0 && (
+        <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+          <p className="mb-3 text-sm font-semibold text-forest-900">Coverage — blocks per level × topic</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr>
+                  <th className="pb-2 text-left font-semibold text-charcoal-soft"></th>
+                  <th className="pb-2 text-center font-semibold text-charcoal-soft">All topics</th>
+                  {topicTags.map((tag) => (
+                    <th key={tag} className="pb-2 text-center font-semibold text-charcoal-soft capitalize">{tag}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {([undefined, "foundation", "core", "advanced"] as const).map((diff) => {
+                  const rowBlocks = blocks.filter((b) => b.blockDifficulty === diff);
+                  return (
+                    <tr key={diff ?? "all"} className="border-t border-sand">
+                      <td className="py-2 pr-4 font-semibold text-charcoal-soft capitalize">{diff ?? "All levels"}</td>
+                      <td className="py-2 text-center">
+                        <Count n={rowBlocks.filter((b) => !b.topicTag).length} />
+                      </td>
+                      {topicTags.map((tag) => (
+                        <td key={tag} className="py-2 text-center">
+                          <Count n={rowBlocks.filter((b) => b.topicTag === tag).length} />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -193,6 +234,14 @@ export default function ActivityBuilderPage() {
           {error}
         </p>
       )}
+
+      <PreviewModal
+        open={previewing}
+        onClose={() => setPreviewing(false)}
+        title={title}
+        difficulty="core"
+        blocks={blocks}
+      />
     </div>
   );
 }

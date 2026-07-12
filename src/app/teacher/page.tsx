@@ -184,19 +184,33 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Suggested actions */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <InsightCard title="Suggested follow-up" tone="forest">
-          3 students in 5J are ready for the <b>Design a Wildlife Corridor</b> extension.
-          Assign it from Class Insights.
-        </InsightCard>
-        <InsightCard title="Class learning gap" tone="gold">
-          Food Webs quiz scores are trending low in 5J, consider re-teaching energy flow.
-        </InsightCard>
-        <InsightCard title="Curiosity spike" tone="mist">
-          Several students clicked "I'm curious" on the tiger reel, great time for an Explore task.
-        </InsightCard>
-      </div>
+      {/* Insights — derived from real data */}
+      {classes.length > 0 && (
+        <div>
+          <h2 className="display mb-3 text-xl font-bold text-forest-900">Insights</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <InsightCard title="Students needing support" tone="clay">
+              {needSupport.length === 0
+                ? "All students are on track — great work!"
+                : `${[...new Set(needSupport.map((p) => p.studentId))].length} student${[...new Set(needSupport.map((p) => p.studentId))].length === 1 ? "" : "s"} flagged for support. Check Class Insights for details.`}
+            </InsightCard>
+            <InsightCard title="Quiz engagement" tone="gold">
+              {scores.length === 0
+                ? "No quiz results yet. Assign a lesson to get started."
+                : avgQuiz >= 75
+                ? `Class average is ${avgQuiz}% — strong performance across your classes.`
+                : `Class average is ${avgQuiz}%. Consider revisiting topics with low scores.`}
+            </InsightCard>
+            <InsightCard title="Run a class session" tone="forest">
+              Use Present mode to lead the class through a topic together — watch, vote, quiz and
+              worksheet in one flow.{" "}
+              <a href="/teacher/present" className="font-semibold underline">
+                Start presenting →
+              </a>
+            </InsightCard>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
