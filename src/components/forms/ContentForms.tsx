@@ -248,7 +248,6 @@ export function UnitForm({ onSaved }: { onSaved: (unit: Unit) => void }) {
 export function LessonForm({ onSaved }: { onSaved: (lesson: Topic) => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("core");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -257,7 +256,7 @@ export function LessonForm({ onSaved }: { onSaved: (lesson: Topic) => void }) {
     setError("");
     setSaving(true);
     try {
-      const lesson = await createTopic({ title, description, difficulty });
+      const lesson = await createTopic({ title, description, difficulty: "core" });
       onSaved(lesson);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create lesson");
@@ -285,17 +284,6 @@ export function LessonForm({ onSaved }: { onSaved: (lesson: Topic) => void }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="What students will explore in this lesson"
         />
-      </FormField>
-      <FormField label="Difficulty">
-        <select
-          className={inputClass}
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-        >
-          {DIFFICULTIES.map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
       </FormField>
       {error && (
         <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm text-clay-600">{error}</p>
@@ -644,42 +632,29 @@ export function QuizForm({
             onChange={(e) => setDraft({ ...draft, questionText: e.target.value })}
           />
         </FormField>
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Type">
-            <select
-              className={inputClass}
-              value={draft.type}
-              onChange={(e) => {
-                const type = e.target.value as QuestionType;
-                setDraft({
-                  ...draft,
-                  type,
-                  options:
-                    type === "trueFalse"
-                      ? ["True", "False"]
-                      : type === "shortResponse"
-                      ? []
-                      : ["", ""],
-                });
-              }}
-            >
-              {Q_TYPES.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </FormField>
-          <FormField label="Difficulty">
-            <select
-              className={inputClass}
-              value={draft.difficulty}
-              onChange={(e) => setDraft({ ...draft, difficulty: e.target.value as Difficulty })}
-            >
-              {DIFFICULTIES.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-          </FormField>
-        </div>
+        <FormField label="Type">
+          <select
+            className={inputClass}
+            value={draft.type}
+            onChange={(e) => {
+              const type = e.target.value as QuestionType;
+              setDraft({
+                ...draft,
+                type,
+                options:
+                  type === "trueFalse"
+                    ? ["True", "False"]
+                    : type === "shortResponse"
+                    ? []
+                    : ["", ""],
+              });
+            }}
+          >
+            {Q_TYPES.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+        </FormField>
         {draft.type === "multipleChoice" && (
           <FormField label="Options" hint="Add answer choices">
             <div className="space-y-2">
