@@ -11,7 +11,7 @@ import {
   inputClass,
 } from "@/components/ui/primitives";
 import Link from "next/link";
-import { Film, Tablet, MonitorPlay, Printer } from "lucide-react";
+import { Film, Tablet, MonitorPlay, Printer, Check, ArrowRight } from "lucide-react";
 import type { DeliveryMode, Unit, ClassGroup, Topic, Video } from "@/types";
 import { UnitCard } from "@/components/cards/ContentCards";
 import {
@@ -23,6 +23,7 @@ import {
   getUnit,
 } from "@/lib/supabaseService";
 import { DEMO_TEACHER_ID } from "@/data/people";
+import { toSlidesEmbedUrl } from "@/lib/slides";
 
 type TopicWithVideos = Topic & { videos: Video[] };
 
@@ -140,6 +141,12 @@ function AssignInner() {
     previewUnitData?.title ??
     units.find((u) => u.id === assignUnit)?.title ??
     "Unit";
+  // First class the unit was assigned to — used to deep-link straight into Present.
+  const firstClassId = selectedClasses[0] ?? null;
+  // Assigned lessons that have a slide deck the teacher can project to the class.
+  const presentableLessons = assignTopics.filter(
+    (t) => selectedTopics.includes(t.id) && toSlidesEmbedUrl(t.slidesUrl)
+  );
 
   return (
     <div className="space-y-6">
@@ -224,29 +231,119 @@ function AssignInner() {
       >
         {confirmed ? (
           <div className="text-center">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-forest-50 text-3xl"></div>
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-forest-100 text-forest-700">
+              <Check className="h-7 w-7" strokeWidth={2.5} aria-hidden />
+            </div>
             <h3 className="display mt-3 text-lg font-bold text-forest-900">Lesson assigned!</h3>
             <p className="mt-1 text-sm text-charcoal-soft">
               {assignedUnitTitle} is now available to {selectedClasses.length}{" "}
               {selectedClasses.length === 1 ? "class" : "classes"}.
             </p>
-            {mode === "teacher-led" && (
-              <div className="mt-4 rounded-2xl border border-forest-200 bg-forest-50 px-4 py-3 text-left">
-                <div className="flex items-start gap-3">
-                  <Printer className="mt-0.5 h-5 w-5 shrink-0 text-forest-700" aria-hidden />
-                  <div>
-                    <p className="text-sm font-semibold text-forest-900">Print worksheets before class</p>
-                    <p className="mt-0.5 text-xs text-charcoal-soft">
-                      Teacher-led mode works best with printed worksheets students complete during the session.
-                    </p>
-                    <Link href="/teacher/resources" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-forest-700 hover:underline" onClick={() => setAssignUnit(null)}>
-                      Go to Resources to print worksheets →
-                    </Link>
+
+            {mode === "teacher-led" ? (
+              <div className="mt-5 text-left">
+                <p className="mb-2 text-center text-xs font-bold uppercase tracking-wide text-forest-600">
+                  Two steps to run it in class
+                </p>
+                <div className="space-y-2.5">
+                  {/* Step 1 — print worksheets */}
+                  <Link
+                    href="/teacher/resources"
+                    onClick={() => setAssignUnit(null)}
+                    className="card-lift flex items-center gap-3 rounded-2xl border border-sand bg-white p-4 ring-1 ring-transparent hover:ring-forest-300"
+                  >
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-300/40 text-clay-600">
+                      <Printer className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 text-sm font-bold text-forest-900">
+                        <span className="grid h-4 w-4 place-items-center rounded-full bg-forest-700 text-[9px] text-cream">1</span>
+                        Print the worksheets
+                      </p>
+                      <p className="mt-0.5 text-xs text-charcoal-soft">
+                        Head to Resources to print worksheets for students to complete.
+                      </p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-forest-600" aria-hidden />
+                  </Link>
+
+                  {/* Step 2 — launch presentation */}
+                  <Link
+                    href={firstClassId ? `/teacher/present/${firstClassId}` : "/teacher/present"}
+                    onClick={() => setAssignUnit(null)}
+                    className="card-lift flex items-center gap-3 rounded-2xl border border-sand bg-white p-4 ring-1 ring-transparent hover:ring-forest-300"
+                  >
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-100 text-forest-700">
+                      <MonitorPlay className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 text-sm font-bold text-forest-900">
+                        <span className="grid h-4 w-4 place-items-center rounded-full bg-forest-700 text-[9px] text-cream">2</span>
+                        Launch the presentation
+                      </p>
+                      <p className="mt-0.5 text-xs text-charcoal-soft">
+                        Run the lesson on one screen — videos, class votes and quizzes.
+                      </p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-forest-600" aria-hidden />
+                  </Link>
+                </div>
+                <button
+                  onClick={() => setAssignUnit(null)}
+                  className="mt-4 w-full text-center text-xs font-semibold text-charcoal-soft hover:text-forest-700"
+                >
+                  I&apos;ll do this later
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 text-left">
+                <div className="rounded-2xl border border-mist-400/40 bg-mist-100/50 px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <Tablet className="mt-0.5 h-5 w-5 shrink-0 text-mist-600" aria-hidden />
+                    <div>
+                      <p className="text-sm font-semibold text-forest-900">Students work at their own pace</p>
+                      <p className="mt-0.5 text-xs text-charcoal-soft">
+                        Students sign in on their devices with the class code and swipe through the
+                        lesson — each gets a personalised worksheet automatically.
+                      </p>
+                    </div>
                   </div>
                 </div>
+
+                {presentableLessons.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-forest-600">
+                      Project the slides while they work
+                    </p>
+                    <div className="space-y-2">
+                      {presentableLessons.map((lesson) => (
+                        <Link
+                          key={lesson.id}
+                          href={`/teacher/present/slides/${lesson.id}`}
+                          onClick={() => setAssignUnit(null)}
+                          className="card-lift flex items-center gap-3 rounded-2xl border border-sand bg-white p-4 ring-1 ring-transparent hover:ring-forest-300"
+                        >
+                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-100 text-forest-700">
+                            <MonitorPlay className="h-5 w-5" aria-hidden />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold text-forest-900">
+                              Present “{lesson.title}” slides
+                            </p>
+                            <p className="mt-0.5 text-xs text-charcoal-soft">
+                              Full-screen deck to introduce the lesson on the board.
+                            </p>
+                          </div>
+                          <ArrowRight className="h-4 w-4 shrink-0 text-forest-600" aria-hidden />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button className="mt-4 w-full" onClick={() => setAssignUnit(null)}>Done</Button>
               </div>
             )}
-            <Button className="mt-4" onClick={() => setAssignUnit(null)}>Done</Button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -336,6 +433,17 @@ function AssignInner() {
                   </button>
                 ))}
               </div>
+              {mode === "teacher-led" && (
+                <div className="mt-2 flex items-center gap-4 rounded-2xl bg-forest-50 px-4 py-2.5 text-xs font-medium text-forest-800">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Printer className="h-4 w-4 text-clay-600" aria-hidden /> Print worksheets
+                  </span>
+                  <span className="text-forest-300">then</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <MonitorPlay className="h-4 w-4 text-forest-700" aria-hidden /> Launch in Present
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

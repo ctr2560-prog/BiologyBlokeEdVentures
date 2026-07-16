@@ -81,7 +81,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as QABlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.question}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.question}</p>
           {b.hint && <p className="mt-1 text-xs italic text-gray-500">Hint: {b.hint}</p>}
           <RuledLines count={5} />
         </div>
@@ -91,7 +91,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as WritingBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           {b.wordGuide && <p className="mt-1 text-xs text-gray-500">Aim for about {b.wordGuide} words.</p>}
           <RuledLines count={8} />
         </div>
@@ -101,7 +101,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as ResearchBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           <div className="mt-2 space-y-3">
             {b.fields.map((field) => (
               <div key={field}>
@@ -117,7 +117,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as DrawingBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           <div className="relative mt-2 h-52 rounded border-2 border-gray-400">
             <span className="absolute left-2 top-1.5 text-xs text-gray-400">Sketch here</span>
             {b.backgroundImageUrl && (
@@ -132,7 +132,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as GraphBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           <div className="mt-2 flex gap-2">
             <div className="flex items-center">
               <span
@@ -161,7 +161,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as MultipleChoiceBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.question}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.question}</p>
           <div className="mt-2 space-y-1.5">
             {b.options.map((opt, i) => (
               <p key={i} className="flex items-start gap-2 text-sm">
@@ -178,7 +178,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as FillBlanksBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.instructions}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.instructions}</p>
           <p className="mt-2 text-sm leading-loose">{renderBlankText(b.text)}</p>
         </div>
       );
@@ -187,7 +187,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as WordBankBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.instructions}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.instructions}</p>
           <div className="mt-2 rounded border border-dashed border-gray-400 px-3 py-2 text-sm text-gray-700">
             <span className="font-semibold text-gray-600">Word bank: </span>
             {b.words.join(" · ")}
@@ -200,7 +200,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as LabelDiagramBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={b.imageUrl} alt="Diagram to label" className="mt-2 max-h-56 object-contain" />
           <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2">
@@ -218,7 +218,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as MatchingBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           <div className="mt-2 grid grid-cols-2 gap-4">
             <div className="space-y-2">
               {b.pairs.map((pair, i) => (
@@ -244,7 +244,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as TableBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           <table className="mt-2 w-full border-collapse border border-gray-400 text-sm">
             <thead>
               <tr>
@@ -272,7 +272,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as SortingBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           <div className="mt-2 rounded border border-dashed border-gray-400 px-3 py-2 text-sm text-gray-700">
             <span className="font-semibold text-gray-600">Items to sort: </span>
             {b.items.join(" · ")}
@@ -292,7 +292,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as StemChallengeBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.title}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.title}</p>
           <p className="mt-1 text-sm text-gray-700">{b.challenge}</p>
           {b.materials && b.materials.length > 0 && (
             <ul className="mt-2 space-y-0.5">
@@ -316,7 +316,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       return (
         <div>
           {b.context && <p className="mb-2 italic text-sm text-gray-600">{b.context}</p>}
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>Field Journal</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>Field Journal</p>
           <div className="mt-2 flex gap-4 text-sm">
             <span>Location: <span className="inline-block w-28 border-b border-gray-400" /></span>
             {b.includeWeather && <span>Weather: <span className="inline-block w-24 border-b border-gray-400" /></span>}
@@ -350,7 +350,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as StoryboardBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           <div className="mt-2 grid grid-cols-2 gap-3">
             {Array.from({ length: b.frameCount }).map((_, i) => (
               <div key={i}>
@@ -369,7 +369,7 @@ function PrintBlock({ block, num }: { block: TaggedActivityBlock; num: number })
       const b = block as ConceptMapBlock;
       return (
         <div>
-          <p className="font-semibold text-gray-900"><span className="mr-2 text-gray-400">{num}.</span>{b.prompt}</p>
+          <p className="font-semibold text-gray-900"><span className="mr-2.5 inline-grid h-6 w-6 place-items-center rounded-full bg-forest-100 align-[-3px] text-xs font-bold text-forest-700" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{num}</span>{b.prompt}</p>
           {b.starterNodes.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {b.starterNodes.map((node) => (
@@ -456,45 +456,80 @@ export default function PrintWorksheetPage({
         </button>
       </div>
 
-      {/* Worksheet — shown on screen and in print */}
-      <div className="mx-auto max-w-3xl space-y-8 px-8 py-10 print:px-0 print:py-0 print:max-w-none">
-        {/* Header */}
-        <div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-lg font-black tracking-tight text-forest-700">Edventra</span>
-            <span className="text-lg font-bold text-gray-900">{activity.title}</span>
+      {/* Worksheet — a white sheet, shown on screen and in print */}
+      <div className="mx-auto my-8 max-w-3xl overflow-hidden rounded-2xl bg-white shadow-lift print:my-0 print:max-w-none print:rounded-none print:shadow-none">
+        {/* Branded header band */}
+        <div
+          className="flex items-center gap-4 px-6 py-5"
+          style={{
+            background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 95%)",
+            WebkitPrintColorAdjust: "exact",
+            printColorAdjust: "exact",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/edventra-white.png" alt="Edventra" className="h-7 w-auto" />
+          <div className="ml-auto text-right">
+            <p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-forest-100/70">
+              Worksheet
+            </p>
+            <p className="display text-lg font-bold leading-tight text-cream">{activity.title}</p>
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-8 gap-y-1 text-sm">
-            <span>
-              Name: <span className="inline-block w-48 border-b border-gray-500" />
+        </div>
+
+        {/* Meta strip: subject / stage / difficulty + name-class-date */}
+        <div className="border-b border-gray-200 px-6 py-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <MetaChip>{activity.difficulty}</MetaChip>
+            {activity.topicTags?.slice(0, 3).map((t) => (
+              <MetaChip key={t} muted>{t}</MetaChip>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-gray-700">
+            <span className="flex items-baseline">
+              Name: <span className="ml-1 inline-block w-44 border-b border-gray-400" />
             </span>
-            <span>
-              Class: <span className="inline-block w-32 border-b border-gray-500">{cls?.name ?? ""}</span>
+            <span className="flex items-baseline">
+              Class: <span className="ml-1 inline-block w-28 border-b border-gray-400 font-medium text-gray-900">{cls?.name ?? ""}</span>
             </span>
-            <span>
-              Date: <span className="inline-block w-24 border-b border-gray-500" />
+            <span className="flex items-baseline">
+              Date: <span className="ml-1 inline-block w-24 border-b border-gray-400" />
             </span>
           </div>
-          <hr className="mt-3 border-gray-400" />
         </div>
 
         {/* Blocks */}
-        {activity.blocks.map((block) => {
-          if (needsNum(block.type)) qNum++;
-          const n = needsNum(block.type) ? qNum : 0;
-          return (
-            <div key={block.id} className="break-inside-avoid">
-              <PrintBlock block={block} num={n} />
-            </div>
-          );
-        })}
+        <div className="space-y-8 px-6 py-8">
+          {activity.blocks.map((block) => {
+            if (needsNum(block.type)) qNum++;
+            const n = needsNum(block.type) ? qNum : 0;
+            return (
+              <div key={block.id} className="break-inside-avoid">
+                <PrintBlock block={block} num={n} />
+              </div>
+            );
+          })}
+        </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-300 pt-4 text-center text-xs text-gray-400">
-          Edventra · {activity.title}
-          {cls ? ` · ${cls.name}` : ""}
+        <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 text-xs text-gray-400">
+          <span className="font-bold tracking-tight text-forest-600">Edventra</span>
+          <span>{cls ? `${cls.name} · ` : ""}by The Biology Bloke</span>
         </div>
       </div>
     </>
+  );
+}
+
+function MetaChip({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+        muted ? "bg-gray-100 text-gray-600" : "bg-forest-100 text-forest-700"
+      }`}
+      style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+    >
+      {children}
+    </span>
   );
 }

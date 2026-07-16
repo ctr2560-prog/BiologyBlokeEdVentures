@@ -27,6 +27,7 @@ import {
   X,
   Sparkles,
   Presentation,
+  MonitorPlay,
 } from "lucide-react";
 
 type SessionStage = "pick" | "slides" | "watch" | "react" | "quiz" | "worksheet";
@@ -334,24 +335,48 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {topics.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => startTopic(t.id)}
-                className="card-lift overflow-hidden rounded-3xl bg-white text-left shadow-soft ring-1 ring-black/5"
-              >
+            {topics.map((t) => {
+              const hasSlides = Boolean(t.slidesUrl && toSlidesEmbedUrl(t.slidesUrl));
+              return (
                 <div
-                  className="flex h-28 items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
+                  key={t.id}
+                  className="card-lift overflow-hidden rounded-3xl bg-white text-left shadow-soft ring-1 ring-black/5"
                 >
-                  <Film className="h-10 w-10 text-cream/90" aria-hidden strokeWidth={1.5} />
+                  <button
+                    onClick={() => startTopic(t.id)}
+                    className="block w-full text-left"
+                  >
+                    <div
+                      className="flex h-28 items-center justify-center"
+                      style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
+                    >
+                      <Film className="h-10 w-10 text-cream/90" aria-hidden strokeWidth={1.5} />
+                    </div>
+                    <div className="px-4 pt-4">
+                      <p className="font-semibold text-forest-900">{t.title}</p>
+                      <p className="mt-1 text-sm text-charcoal-soft line-clamp-2">{t.description}</p>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-2 p-4 pt-3">
+                    <button
+                      onClick={() => startTopic(t.id)}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-forest-700 px-3 py-2 text-xs font-bold text-cream transition-colors hover:bg-forest-800"
+                    >
+                      <MonitorPlay className="h-3.5 w-3.5" aria-hidden /> Present lesson
+                    </button>
+                    {hasSlides && (
+                      <Link
+                        href={`/teacher/present/slides/${t.id}`}
+                        className="flex items-center justify-center gap-1.5 rounded-full bg-cream px-3 py-2 text-xs font-bold text-forest-700 ring-1 ring-sand transition-colors hover:bg-forest-50"
+                        title="Project just the slide deck"
+                      >
+                        <Presentation className="h-3.5 w-3.5" aria-hidden /> Slides only
+                      </Link>
+                    )}
+                  </div>
                 </div>
-                <div className="p-4">
-                  <p className="font-semibold text-forest-900">{t.title}</p>
-                  <p className="mt-1 text-sm text-charcoal-soft line-clamp-2">{t.description}</p>
-                </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
