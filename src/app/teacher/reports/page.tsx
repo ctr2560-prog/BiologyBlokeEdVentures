@@ -6,7 +6,9 @@ import {
   getClassesByTeacher,
   getStudentsByClass,
   getProgressByClass,
+  getQuizResultsByClass,
   getTopics,
+  type ClassQuizResult,
 } from "@/lib/supabaseService";
 import { formatWatchTime } from "@/lib/analytics";
 import { DEMO_TEACHER_ID } from "@/data/people";
@@ -15,14 +17,18 @@ import type { ClassGroup, User, StudentProgress, Topic } from "@/types";
 const avg = (nums: number[]) =>
   nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
 
-function computeReport(progress: StudentProgress[], topicNames: Map<string, string>) {
-  const quizScores = progress.map((p) => p.quizScore).filter((s): s is number => s !== null);
+function computeReport(
+  progress: StudentProgress[],
+  quizResults: ClassQuizResult[],
+  topicNames: Map<string, string>
+) {
+  // Quiz performance comes from server-graded quiz_results, grouped by lesson.
   const topicMap = new Map<string, number[]>();
-  progress.forEach((p) => {
-    if (p.quizScore === null) return;
-    const arr = topicMap.get(p.topicId) ?? [];
-    arr.push(p.quizScore);
-    topicMap.set(p.topicId, arr);
+  quizResults.forEach((q) => {
+    if (!q.topicId) return;
+    const arr = topicMap.get(q.topicId) ?? [];
+    arr.push(q.score);
+    topicMap.set(q.topicId, arr);
   });
   const topicPerformance = [...topicMap.entries()].map(([tid, scores]) => ({
     topic: topicNames.get(tid) ?? tid,
@@ -30,7 +36,7 @@ function computeReport(progress: StudentProgress[], topicNames: Map<string, stri
   }));
   return {
     avgCompletion: avg(progress.map((p) => p.videoCompletionPercentage)),
-    avgQuiz: avg(quizScores),
+    avgQuiz: avg(quizResults.map((q) => q.score)),
     avgWatchTime: avg(progress.map((p) => p.watchTimeSeconds)),
     gaps: topicPerformance.filter((t) => t.avg < 60),
     strengths: topicPerformance.filter((t) => t.avg >= 75),
@@ -45,6 +51,7 @@ function ReportsInner() {
   const [classId, setClassId] = useState("");
   const [students, setStudents] = useState<User[]>([]);
   const [progress, setProgress] = useState<StudentProgress[]>([]);
+  const [quizResults, setQuizResults] = useState<ClassQuizResult[]>([]);
   const [topicNames, setTopicNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -59,20 +66,25 @@ function ReportsInner() {
   const loadClass = useCallback(async () => {
     if (!classId) return;
     setLoading(true);
-    const [studentsData, progressData, topicsData] = await Promise.all([
+    const [studentsData, progressData, quizData, topicsData] = await Promise.all([
       getStudentsByClass(classId),
       getProgressByClass(classId),
+      getQuizResultsByClass(classId),
       getTopics(),
     ]);
     setStudents(studentsData);
     setProgress(progressData);
+    setQuizResults(quizData);
     setTopicNames(new Map((topicsData as Topic[]).map((t) => [t.id, t.title])));
     setLoading(false);
   }, [classId]);
 
   useEffect(() => { loadClass(); }, [loadClass]);
 
-  const report = useMemo(() => computeReport(progress, topicNames), [progress, topicNames]);
+  const report = useMemo(
+    () => computeReport(progress, quizResults, topicNames),
+    [progress, quizResults, topicNames]
+  );
 
   const needSupport = useMemo(
     () => students.filter((s) => progress.some((p) => p.studentId === s.id && p.recommendedTaskType === "support")),

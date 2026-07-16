@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { Button, Badge, ProgressBar } from "@/components/ui/primitives";
-import { VideoCard } from "@/components/cards/ContentCards";
-import { mapVideo, getEcosystems } from "@/lib/supabaseService";
+import Image from "next/image";
+import { getEcosystems } from "@/lib/supabaseService";
 import { conservationFacts } from "@/data/content";
 import { getEcoIconByKey } from "@/lib/icons";
 import { Play, Star, Film, Award, Globe, type LucideIcon } from "lucide-react";
-import type { Video, Ecosystem } from "@/types";
+import type { Ecosystem } from "@/types";
 
 type RawProgress = {
   video_id: string;
@@ -16,9 +16,18 @@ type RawProgress = {
   [k: string]: unknown;
 };
 
+// A whole assigned lesson (the unit of work students engage with).
+type AssignedLesson = {
+  id: string;
+  title: string;
+  description: string;
+  coverImage: string;
+  videoIds: string[];
+};
+
 export default function StudentHome() {
   const { currentUser } = useApp();
-  const [assignedVideos, setAssignedVideos] = useState<Video[]>([]);
+  const [lessons, setLessons] = useState<AssignedLesson[]>([]);
   const [progress, setProgress] = useState<RawProgress[]>([]);
   const [ecosystems, setEcosystems] = useState<Ecosystem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,9 +39,30 @@ export default function StudentHome() {
         .then((data) => {
           if (data.error) return;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const assignments: any[] = data.assignments ?? [];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const topics: Record<string, any> = data.topics ?? {};
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const videosByTopic: Record<string, any[]> = data.videosByTopic ?? {};
-          const allVideos = Object.values(videosByTopic).flat().map(mapVideo);
-          setAssignedVideos(allVideos);
+
+          // Unique lessons across all assignments, in order.
+          const seen = new Set<string>();
+          const assigned: AssignedLesson[] = [];
+          for (const a of assignments) {
+            for (const at of a.assignment_topics ?? []) {
+              const t = topics[at.topic_id];
+              if (!t || seen.has(t.id)) continue;
+              seen.add(t.id);
+              assigned.push({
+                id: t.id,
+                title: t.title,
+                description: t.description ?? "",
+                coverImage: t.cover_image ?? "",
+                videoIds: (videosByTopic[t.id] ?? []).map((v) => v.id as string),
+              });
+            }
+          }
+          setLessons(assigned);
           setProgress(data.progress ?? []);
         })
         .catch(() => {}),
@@ -45,7 +75,12 @@ export default function StudentHome() {
   const watchedIds = new Set(
     progress.filter((p) => p.video_completion_percentage >= 90).map((p) => p.video_id)
   );
-  const continueVideo = assignedVideos.find((v) => !watchedIds.has(v.id)) ?? assignedVideos[0];
+  const lessonProgress = (l: AssignedLesson) =>
+    l.videoIds.length
+      ? Math.round((l.videoIds.filter((id) => watchedIds.has(id)).length / l.videoIds.length) * 100)
+      : 0;
+  // The lesson to resume: first not fully done, else the first.
+  const continueLesson = lessons.find((l) => lessonProgress(l) < 100) ?? lessons[0];
   const points = progress.length * 20;
 
   const fact = conservationFacts[new Date().getDate() % conservationFacts.length];
@@ -88,10 +123,10 @@ export default function StudentHome() {
             <p className="mt-2 max-w-md text-forest-100/90">
               Continue your Edventure and unlock your next conservation challenge.
             </p>
-            {continueVideo && (
-              <Link href={`/student/watch/${continueVideo.id}`}>
+            {continueLesson && (
+              <Link href={`/student/lesson/${continueLesson.id}`}>
                 <Button size="lg" variant="secondary" className="mt-4">
-                  <Play className="h-4 w-4" aria-hidden /> Continue learning: {continueVideo.title}
+                  <Play className="h-4 w-4" aria-hidden /> Continue learning: {continueLesson.title}
                 </Button>
               </Link>
             )}
@@ -113,18 +148,45 @@ export default function StudentHome() {
             See all
           </Link>
         </div>
-        {assignedVideos.length ? (
+        {lessons.length ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {assignedVideos.slice(0, 3).map((v) => {
-              const prog = progress.find((p) => p.video_id === v.id);
+            {lessons.slice(0, 3).map((l) => {
+              const pct = lessonProgress(l);
+              const done = pct >= 100;
               return (
-                <VideoCard
-                  key={v.id}
-                  video={v}
-                  href={`/student/watch/${v.id}`}
-                  progress={prog?.video_completion_percentage ?? 0}
-                  points={20}
-                />
+                <Link
+                  key={l.id}
+                  href={`/student/lesson/${l.id}`}
+                  className="card-lift group flex flex-col overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5"
+                >
+                  <div
+                    className="relative flex h-32 items-center justify-center overflow-hidden"
+                    style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
+                  >
+                    {l.coverImage?.startsWith("http") ? (
+                      <Image src={l.coverImage} alt="" fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="400px" />
+                    ) : (
+                      <Film className="h-10 w-10 text-cream/80" aria-hidden strokeWidth={1.5} />
+                    )}
+                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-950/60 to-transparent" aria-hidden />
+                    <span className="absolute bottom-3 left-3 flex items-center gap-2 text-xs font-semibold text-cream drop-shadow">
+                      <span className="inline-flex items-center gap-1"><Film className="h-3.5 w-3.5" aria-hidden /> {l.videoIds.length}</span>
+                    </span>
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
+                    <h3 className="display font-bold leading-snug text-forest-900">{l.title}</h3>
+                    {l.description && (
+                      <p className="mt-1 line-clamp-2 text-sm text-charcoal-soft">{l.description}</p>
+                    )}
+                    <div className="mt-3">
+                      <ProgressBar value={pct} tone={done ? "forest" : "gold"} showLabel />
+                    </div>
+                    <span className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-forest-700 py-2.5 text-sm font-bold text-cream transition-colors group-hover:bg-forest-800">
+                      <Play className="h-4 w-4" aria-hidden />
+                      {done ? "Review lesson" : pct > 0 ? "Continue lesson" : "Start lesson"}
+                    </span>
+                  </div>
+                </Link>
               );
             })}
           </div>

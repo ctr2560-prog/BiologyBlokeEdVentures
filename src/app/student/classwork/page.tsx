@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
-import { SectionHeader, Badge, ProgressBar, EmptyState } from "@/components/ui/primitives";
-import { Leaf, Film, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { SectionHeader, EmptyState } from "@/components/ui/primitives";
+import { Leaf, PlayCircle } from "lucide-react";
 import { mapVideo } from "@/lib/supabaseService";
 import type { Video } from "@/types";
 
@@ -33,11 +33,10 @@ type EnrichedAssignment = RawAssignment & {
 };
 
 export default function ClassWork() {
-  const { currentUser } = useApp();
+  useApp();
   const [enriched, setEnriched] = useState<EnrichedAssignment[]>([]);
   const [progress, setProgress] = useState<RawProgress[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -141,7 +140,6 @@ export default function ClassWork() {
               const overallPct = videos.length
                 ? Math.round((watchedCount / videos.length) * 100)
                 : 0;
-              const isExpanded = expanded[topic.id] ?? false;
 
               return (
                 <div
@@ -189,72 +187,6 @@ export default function ClassWork() {
                       style={{ width: `${overallPct}%` }}
                     />
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpanded((e) => ({ ...e, [topic.id]: !isExpanded }))
-                    }
-                    className="flex w-full items-center justify-between px-5 py-3 text-sm font-semibold text-charcoal-soft hover:text-forest-700 transition-colors"
-                  >
-                    <span>Individual reels</span>
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" aria-hidden />
-                    )}
-                  </button>
-
-                  {isExpanded && (
-                    <div className="grid grid-cols-1 gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {videos.map((v) => {
-                        const prog = progress.find((p) => p.video_id === v.id);
-                        const pct = prog?.video_completion_percentage ?? 0;
-                        const done = pct >= 90;
-                        return (
-                          <Link
-                            key={v.id}
-                            href={`/student/watch/${v.id}`}
-                            className="card-lift group overflow-hidden rounded-2xl bg-cream ring-1 ring-black/5"
-                          >
-                            <div
-                              className="relative flex h-24 items-center justify-center"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg, #1b4332 0%, #40916c 100%)",
-                              }}
-                            >
-                              <Film
-                                className="h-8 w-8 text-cream/80 transition-transform group-hover:scale-110"
-                                aria-hidden
-                                strokeWidth={1.5}
-                              />
-                              {done && (
-                                <span className="absolute right-2 top-2">
-                                  <Badge tone="forest">Done</Badge>
-                                </span>
-                              )}
-                              <span className="glass-dark absolute bottom-1.5 right-2 rounded-full px-2 py-0.5 text-xs font-semibold text-cream">
-                                {Math.round(v.durationSeconds / 60)}m
-                              </span>
-                            </div>
-                            <div className="p-3">
-                              <p className="text-xs font-bold leading-snug text-forest-900">
-                                {v.title}
-                              </p>
-                              <div className="mt-2">
-                                <ProgressBar
-                                  value={pct}
-                                  tone={done ? "forest" : "gold"}
-                                  showLabel
-                                />
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               );
             })}

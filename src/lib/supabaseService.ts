@@ -38,6 +38,15 @@ function newId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
+/** Stable id derived from natural-key parts — same inputs always yield the same
+ *  id, so concurrent upserts collapse onto one row instead of racing. */
+function deterministicId(prefix: string, ...parts: string[]): string {
+  const key = parts.join("|");
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (Math.imul(31, h) + key.charCodeAt(i)) | 0;
+  return `${prefix}-${(h >>> 0).toString(16).padStart(8, "0")}`;
+}
+
 // ---- Row mappers (snake_case DB → camelCase TypeScript) ----
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -874,6 +883,32 @@ export async function getStudentsByClass(classId: string): Promise<User[]> {
     .eq("class_students.class_id", classId)
     .eq("role", "student");
   return (data ?? []).map((r: Row) => mapUser(r, [classId]));
+}
+
+// ---- Quiz results (server-graded quiz scores from the lesson feed) ----
+
+export interface ClassQuizResult {
+  quizId: string;
+  studentId: string;
+  topicId: string | null;
+  score: number;
+  attempts: number;
+  submittedAt: string;
+}
+
+export async function getQuizResultsByClass(classId: string): Promise<ClassQuizResult[]> {
+  const { data } = await getSupabaseClient()
+    .from("quiz_results")
+    .select("quiz_id, student_id, lesson_id, score, attempts, submitted_at")
+    .eq("class_id", classId);
+  return (data ?? []).map((r: Row) => ({
+    quizId: r.quiz_id as string,
+    studentId: r.student_id as string,
+    topicId: (r.lesson_id as string) ?? null,
+    score: Number(r.score),
+    attempts: (r.attempts as number) ?? 1,
+    submittedAt: (r.submitted_at as string) ?? "",
+  }));
 }
 
 // ---- Assignments ----
@@ -1803,26 +1838,25 @@ export async function upsertStudentActivityResponse(
   response: Omit<StudentActivityResponse, "id" | "lastEditedAt">
 ): Promise<StudentActivityResponse> {
   const supabase = getSupabaseClient();
-  const { data: existing } = await supabase
-    .from("student_activity_responses")
-    .select("id")
-    .eq("activity_id", response.activityId)
-    .eq("student_id", response.studentId)
-    .eq("class_id", response.classId)
-    .maybeSingle();
 
-  const id = existing?.id ?? newId("sar");
+  // Deterministic id from the natural key so rapid autosaves collapse onto one
+  // row. Upserting on the unique (activity, student, class) constraint avoids
+  // the SELECT-then-insert race that caused duplicate-key errors.
+  const id = deterministicId("sar", response.activityId, response.studentId, response.classId);
   const { data, error } = await supabase
     .from("student_activity_responses")
-    .upsert({
-      id,
-      activity_id: response.activityId,
-      student_id: response.studentId,
-      class_id: response.classId,
-      responses: response.responses,
-      submitted_at: response.submittedAt ?? null,
-      last_edited_at: new Date().toISOString(),
-    })
+    .upsert(
+      {
+        id,
+        activity_id: response.activityId,
+        student_id: response.studentId,
+        class_id: response.classId,
+        responses: response.responses,
+        submitted_at: response.submittedAt ?? null,
+        last_edited_at: new Date().toISOString(),
+      },
+      { onConflict: "activity_id,student_id,class_id" }
+    )
     .select()
     .single();
   if (error) throw new Error(error.message);

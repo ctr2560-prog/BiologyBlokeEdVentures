@@ -241,8 +241,10 @@ export default function LessonPlayerPage({
       await upsertProgress({
         studentId,
         classId,
-        unitId: video.unitId,
-        topicId: video.topicId,
+        // Attribute to the lesson being played — videos are topic-free now and
+        // link to lessons via the sequence, so video.topicId is empty.
+        unitId: video.unitId || lesson?.unitId || "",
+        topicId: lessonId,
         videoId: video.id,
         watchTimeSeconds: sig.watchTimeSeconds,
         videoCompletionPercentage: sig.completion,

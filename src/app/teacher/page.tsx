@@ -10,11 +10,13 @@ import {
   getClassesByTeacher,
   getStudentsByClass,
   getProgressByClass,
+  getQuizResultsByClass,
   getTopics,
   getPublishedUnits,
   getUnitLessonLinks,
   getBanners,
   getPLSessions,
+  type ClassQuizResult,
 } from "@/lib/supabaseService";
 import { LibraryUnitCard, LibraryLessonCard } from "@/components/cards/LibraryCards";
 import { PromoBannerCarousel } from "@/components/ui/PromoBanner";
@@ -30,6 +32,7 @@ export default function TeacherDashboard() {
 
   const [classes, setClasses] = useState<ClassGroup[]>([]);
   const [allProgress, setAllProgress] = useState<StudentProgress[]>([]);
+  const [allQuizResults, setAllQuizResults] = useState<ClassQuizResult[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [topicMap, setTopicMap] = useState<Map<string, Topic>>(new Map());
   const [featuredUnits, setFeaturedUnits] = useState<Unit[]>([]);
@@ -48,8 +51,9 @@ export default function TeacherDashboard() {
       const cls = await getClassesByTeacher(teacherId);
       setClasses(cls);
 
-      const [progressArrays, studentArrays, topics, units, links, bannerData, plSessions] = await Promise.all([
+      const [progressArrays, quizArrays, studentArrays, topics, units, links, bannerData, plSessions] = await Promise.all([
         Promise.all(cls.map((c) => getProgressByClass(c.id))),
+        Promise.all(cls.map((c) => getQuizResultsByClass(c.id))),
         Promise.all(cls.map((c) => getStudentsByClass(c.id))),
         getTopics(),
         getPublishedUnits(),
@@ -59,6 +63,7 @@ export default function TeacherDashboard() {
       ]);
 
       setAllProgress(progressArrays.flat());
+      setAllQuizResults(quizArrays.flat());
       setStudents(studentArrays.flat());
       setTopicMap(new Map(topics.map((t) => [t.id, t])));
       setFeaturedUnits(units.filter((u) => u.featured));
@@ -93,8 +98,22 @@ export default function TeacherDashboard() {
   const avgWatch = allProgress.length
     ? Math.round(allProgress.reduce((a, p) => a + p.watchTimeSeconds, 0) / allProgress.length)
     : 0;
-  const scores = allProgress.map((p) => p.quizScore).filter((s): s is number => s !== null);
+  // Quiz scores come from server-graded quiz_results, not the legacy progress column.
+  const scores = allQuizResults.map((q) => q.score);
   const avgQuiz = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  // Average quiz score per student+lesson, for the recent-activity feed.
+  const quizByStudentTopic = new Map<string, number[]>();
+  allQuizResults.forEach((q) => {
+    if (!q.topicId) return;
+    const key = `${q.studentId}|${q.topicId}`;
+    const arr = quizByStudentTopic.get(key) ?? [];
+    arr.push(q.score);
+    quizByStudentTopic.set(key, arr);
+  });
+  const studentTopicQuiz = (studentId: string, topicId: string): number | null => {
+    const arr = quizByStudentTopic.get(`${studentId}|${topicId}`);
+    return arr ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+  };
 
   const recentActivity = [...allProgress]
     .sort((a, b) => b.lastActive.localeCompare(a.lastActive))
@@ -278,7 +297,10 @@ export default function TeacherDashboard() {
                       </p>
                       <p className="text-xs text-charcoal-soft">
                         {p.videoCompletionPercentage}% watched
-                        {p.quizScore !== null ? ` · ${p.quizScore}% quiz` : " · no quiz yet"}
+                        {(() => {
+                          const q = studentTopicQuiz(p.studentId, p.topicId);
+                          return q !== null ? ` · ${q}% quiz` : " · no quiz yet";
+                        })()}
                       </p>
                     </div>
                     <span className="text-xs text-charcoal-soft">{p.lastActive.slice(5, 10)}</span>
