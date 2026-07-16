@@ -2,7 +2,7 @@
 import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
-import { SectionHeader, StatCard, Badge } from "@/components/ui/primitives";
+import { SectionHeader, StatCard, Badge, Modal } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { AliasChip } from "@/components/ui/AliasChip";
 import { AnalyticsChartCard, BarChart } from "@/components/analytics/Charts";
@@ -17,6 +17,7 @@ import {
   type ClassQuizResult,
 } from "@/lib/supabaseService";
 import { WorksheetReview } from "@/components/insights/WorksheetReview";
+import { FileText } from "lucide-react";
 import { formatWatchTime } from "@/lib/analytics";
 import { DEMO_TEACHER_ID } from "@/data/people";
 import type { ClassGroup, User, StudentProgress, Topic, StudentActivityResponse, Activity } from "@/types";
@@ -204,12 +205,27 @@ function InsightsInner() {
       align: "center",
       render: (r) => {
         const resp = responsesByStudent.get(r.student.id) ?? [];
-        if (resp.length === 0) return <span className="text-charcoal-soft/60">Not started</span>;
+        if (resp.length === 0) {
+          return <span className="text-xs text-charcoal-soft/60">Not started yet</span>;
+        }
+        const isOpen = selectedStudent === r.student.id;
         const submitted = resp.filter((x) => x.submittedAt).length;
-        return submitted > 0 ? (
-          <Badge tone="forest">{submitted} submitted</Badge>
-        ) : (
-          <Badge tone="gold">In progress</Badge>
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedStudent(isOpen ? null : r.student.id);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+              isOpen
+                ? "bg-forest-800 text-cream"
+                : "bg-forest-700 text-cream hover:bg-forest-800"
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" aria-hidden />
+            {isOpen ? "Hide worksheet" : "View worksheet"}
+            {submitted === 0 && <span className="rounded-full bg-gold-400 px-1.5 text-[10px] text-forest-950">draft</span>}
+          </button>
         );
       },
     },
@@ -316,16 +332,22 @@ function InsightsInner() {
               }
             />
             <p className="mt-2 text-xs text-charcoal-soft">
-              Click a student to see their adaptive worksheet.
+              Click a student&apos;s <span className="font-semibold text-forest-700">View worksheet</span> button to see their answers.
             </p>
           </div>
 
-          {selectedUser && (
-            <div className="rise-in space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <AliasChip user={selectedUser} size={40} />
-                  {detailProg && (
+          {/* Worksheet review modal */}
+          <Modal
+            open={!!selectedUser}
+            onClose={() => setSelectedStudent(null)}
+            title={selectedUser ? `${selectedUser.name}'s adaptive worksheet` : "Adaptive worksheet"}
+            maxWidth="max-w-2xl"
+          >
+            {selectedUser && (
+              <div className="space-y-4">
+                {detailProg && (
+                  <div className="flex items-center gap-3 rounded-2xl bg-forest-50 px-4 py-3">
+                    <AliasChip user={selectedUser} size={36} />
                     <span className="text-sm text-charcoal-soft">
                       {detailProg.videoCompletionPercentage}% watched
                       {selectedStudent && quizByStudent.get(selectedStudent) != null
@@ -333,26 +355,15 @@ function InsightsInner() {
                         : ""}
                       {detailTopicName ? ` · ${detailTopicName}` : ""}
                     </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => setSelectedStudent(null)}
-                  className="text-xs font-semibold text-charcoal-soft hover:text-forest-700"
-                >
-                  Close
-                </button>
-              </div>
-              <div>
-                <h3 className="display mb-2 text-lg font-bold text-forest-900">
-                  Adaptive worksheet
-                </h3>
+                  </div>
+                )}
                 <WorksheetReview
                   responses={selectedStudent ? responsesByStudent.get(selectedStudent) ?? [] : []}
                   activityById={activityById}
                 />
               </div>
-            </div>
-          )}
+            )}
+          </Modal>
         </>
       )}
     </div>

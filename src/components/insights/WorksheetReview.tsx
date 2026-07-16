@@ -186,9 +186,15 @@ export function WorksheetReview({
       {responses.map((resp) => {
         const activity = activityById.get(resp.activityId);
         if (!activity) return null;
+        // The worksheet is personalised: each student is only shown a filtered
+        // subset of an activity's blocks. Show just the blocks this student
+        // actually engaged with (those with a saved response), not the whole
+        // potential pool.
+        const answeredIds = new Set(resp.responses.map((r) => r.blockId));
         const answerableBlocks = activity.blocks.filter(
-          (b) => b.type !== "instruction" && b.type !== "image"
+          (b) => b.type !== "instruction" && b.type !== "image" && answeredIds.has(b.id)
         );
+        if (answerableBlocks.length === 0) return null;
         return (
           <div key={resp.id} className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
             <div className="flex items-center justify-between gap-3">
