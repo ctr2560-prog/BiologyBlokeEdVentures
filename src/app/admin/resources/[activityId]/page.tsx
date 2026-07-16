@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormField, inputClass } from "@/components/ui/primitives";
 import { getActivities, upsertActivity } from "@/lib/supabaseService";
+import { getBlockTags } from "@/lib/activityRouting";
 import { ArrowLeft, Eye, Loader, Plus } from "lucide-react";
 import type { TaggedActivityBlock, ActivityBlockType } from "@/types";
 import { BlockEditor, BlockPicker, newBlock } from "./blocks";
@@ -72,7 +73,7 @@ export default function ActivityBuilderPage() {
     setSaving(true);
     try {
       // Derive topic tags from whatever blocks have been tagged
-      const topicTags = [...new Set(blocks.map((b) => b.topicTag).filter(Boolean))] as string[];
+      const topicTags = [...new Set(blocks.flatMap((b) => getBlockTags(b)))];
       const saved = await upsertActivity({
         id: savedId,
         topicTags,
@@ -100,7 +101,7 @@ export default function ActivityBuilderPage() {
   }
 
   // Derive topic tags from blocks for the coverage matrix
-  const topicTags = [...new Set(blocks.map((b) => b.topicTag).filter(Boolean))] as string[];
+  const topicTags = [...new Set(blocks.flatMap((b) => getBlockTags(b)))];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-20">
@@ -190,11 +191,11 @@ export default function ActivityBuilderPage() {
                     <tr key={diff ?? "all"} className="border-t border-sand">
                       <td className="py-2 pr-4 font-semibold text-charcoal-soft capitalize">{diff ?? "All levels"}</td>
                       <td className="py-2 text-center">
-                        <Count n={rowBlocks.filter((b) => !b.topicTag).length} />
+                        <Count n={rowBlocks.filter((b) => getBlockTags(b).length === 0).length} />
                       </td>
                       {topicTags.map((tag) => (
                         <td key={tag} className="py-2 text-center">
-                          <Count n={rowBlocks.filter((b) => b.topicTag === tag).length} />
+                          <Count n={rowBlocks.filter((b) => getBlockTags(b).includes(tag)).length} />
                         </td>
                       ))}
                     </tr>

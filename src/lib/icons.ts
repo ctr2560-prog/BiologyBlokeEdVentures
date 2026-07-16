@@ -37,6 +37,26 @@ export const ecoIcon: Record<string, LucideIcon> = {
 
 export const getEcoIcon = (id: string): LucideIcon => ecoIcon[id] ?? Leaf;
 
+/* Icon choices for admin-built ecosystems, keyed by lucide name. */
+export const ECO_ICON_CHOICES: Record<string, LucideIcon> = {
+  TreePalm,
+  Trees,
+  Bird,
+  Fish,
+  Turtle,
+  Sun,
+  Moon,
+  PawPrint,
+  Cat,
+  Rabbit,
+  Leaf,
+  Bug,
+};
+
+/** Resolve an ecosystem icon: explicit key first, then legacy id map, then Leaf. */
+export const getEcoIconByKey = (key: string, id: string): LucideIcon =>
+  ECO_ICON_CHOICES[key] ?? ecoIcon[id] ?? Leaf;
+
 export const badgeIcon: Record<string, LucideIcon> = {
   "badge-koala": PawPrint,
   "badge-foodweb": Bug,

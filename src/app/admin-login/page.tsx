@@ -56,11 +56,11 @@ export default function AdminLoginPage() {
         {/* Logo + heading */}
         <div className="mb-8 text-center">
           <Image
-            src="/logo-home.png"
-            alt="Biology Bloke Edventures"
-            width={80}
-            height={80}
-            className="mx-auto h-14 w-auto opacity-90 drop-shadow-2xl"
+            src="/edventra-white.png"
+            alt="Edventra"
+            width={472}
+            height={119}
+            className="mx-auto h-auto w-56 opacity-90 drop-shadow-2xl"
           />
           <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-forest-700/40 bg-forest-900/60 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-widest text-forest-400">
             <Lock className="h-3 w-3" aria-hidden />
@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.04] p-8 backdrop-blur">
           <h2 className="display mb-1 text-xl font-bold text-cream">Sign in</h2>
           <p className="mb-6 text-sm text-forest-300/60">
-            Restricted to Biology Bloke team members.
+            Restricted to Edventra team members.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">

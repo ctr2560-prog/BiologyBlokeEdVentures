@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { SectionHeader, Button, Modal, Badge, EmptyState } from "@/components/ui/primitives";
 import { LessonForm } from "@/components/forms/ContentForms";
-import { getTopics } from "@/lib/supabaseService";
-import { BookOpen, Plus, Film, CircleHelp, Loader, Pencil } from "lucide-react";
+import { getTopics, deleteTopic } from "@/lib/supabaseService";
+import { BookOpen, Plus, Film, CircleHelp, Loader, Pencil, Trash2 } from "lucide-react";
 import type { Topic } from "@/types";
 
 export default function LessonsPage() {
@@ -17,6 +17,16 @@ export default function LessonsPage() {
     setLessons(data);
     setLoading(false);
   }, []);
+
+  const handleDelete = async (lesson: Topic) => {
+    if (!confirm(`Delete lesson "${lesson.title}"? This cannot be undone.`)) return;
+    try {
+      await deleteTopic(lesson.id);
+      setLessons((prev) => prev.filter((l) => l.id !== lesson.id));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Delete failed — this lesson may still be linked to a unit or student progress.");
+    }
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -67,15 +77,24 @@ export default function LessonsPage() {
                     </p>
                   )}
                 </div>
-                <Badge
-                  tone={
-                    lesson.difficulty === "foundation" ? "clay"
-                    : lesson.difficulty === "advanced" ? "mist"
-                    : "forest"
-                  }
-                >
-                  {lesson.difficulty}
-                </Badge>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Badge
+                    tone={
+                      lesson.difficulty === "foundation" ? "clay"
+                      : lesson.difficulty === "advanced" ? "mist"
+                      : "forest"
+                    }
+                  >
+                    {lesson.difficulty}
+                  </Badge>
+                  <button
+                    onClick={() => handleDelete(lesson)}
+                    className="rounded-xl p-1.5 text-charcoal-soft hover:bg-clay-400/10 hover:text-clay-600 transition-colors"
+                    aria-label="Delete lesson"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-3 text-xs text-charcoal-soft">

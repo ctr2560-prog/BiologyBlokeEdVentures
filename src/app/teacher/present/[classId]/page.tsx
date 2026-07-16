@@ -6,12 +6,14 @@ import {
   getClass,
   getTopic,
   getTopicsByUnit,
-  getVideosByTopic,
-  getQuizByTopic,
+  getLessonOrTopicItems,
   getAssignmentsByClass,
+  getActivitiesForLesson,
   getActivityForVideoTags,
   saveClassSession,
 } from "@/lib/supabaseService";
+import { getBlockTags } from "@/lib/activityRouting";
+import { toSlidesEmbedUrl } from "@/lib/slides";
 import type { ClassGroup, Topic, Video, Quiz, Activity, Difficulty } from "@/types";
 import {
   Film,
@@ -24,9 +26,10 @@ import {
   Minus,
   X,
   Sparkles,
+  Presentation,
 } from "lucide-react";
 
-type SessionStage = "pick" | "watch" | "react" | "quiz" | "worksheet";
+type SessionStage = "pick" | "slides" | "watch" | "react" | "quiz" | "worksheet";
 type Reaction = "loved" | "meh" | "skip";
 
 interface QuizResult {
@@ -61,7 +64,7 @@ function buildRecommendations(
     // instruction and image blocks are not numbered on the printed worksheet — skip them
     if (b.type === "instruction" || b.type === "image") return;
     qNum++;
-    if (reaction === "meh" && b.topicTag) return;
+    if (reaction === "meh" && getBlockTags(b).length > 0) return;
     if (!b.blockDifficulty || b.blockDifficulty === difficulty) {
       recommended.push(qNum);
     } else if (challengeDiff && b.blockDifficulty === challengeDiff) {
@@ -89,11 +92,14 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
       if (classData) {
         const unitIds = [...new Set(assignments.map((a) => a.unitId))];
         const topicArrays = await Promise.all(unitIds.map((u) => getTopicsByUnit(u)));
-        const allTopics = topicArrays.flat();
+        // Units can share lessons — dedupe by id
+        const allTopics = [...new Map(topicArrays.flat().map((t) => [t.id, t])).values()];
+        // Keep lessons that have at least one video in their sequence
+        // (covers both lesson_items lessons and legacy topic-linked videos)
         const withVideos = await Promise.all(
           allTopics.map(async (t) => {
-            const vids = await getVideosByTopic(t.id);
-            return vids.length > 0 ? t : null;
+            const items = await getLessonOrTopicItems(t.id);
+            return items.some((i) => i.itemType === "video") ? t : null;
           })
         );
         setTopics(withVideos.filter(Boolean) as Topic[]);
@@ -106,11 +112,12 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
   const [stage, setStage] = useState<SessionStage>("pick");
   const [topicData, setTopicData] = useState<{
     topic: Topic;
-    video: Video | null;
+    videos: Video[];
     quiz: Quiz | null;
     activity: Activity | null;
   } | null>(null);
   const [topicLoading, setTopicLoading] = useState(false);
+  const [videoIndex, setVideoIndex] = useState(0);
 
   // Stage 2 reaction
   const [reaction, setReaction] = useState<Reaction | null>(null);
@@ -135,23 +142,35 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
     setStage("watch");
     setReaction(null);
     setQuizIndex(0);
+    setVideoIndex(0);
     setLockedAnswer(null);
     setRevealed(false);
     setQuizResults([]);
     setRecommendations(null);
     setSessionSaved(false);
 
-    const [topic, videos, quiz] = await Promise.all([
+    const [topic, items, linkedActivities] = await Promise.all([
       getTopic(topicId),
-      getVideosByTopic(topicId),
-      getQuizByTopic(topicId),
+      getLessonOrTopicItems(topicId),
+      getActivitiesForLesson(topicId),
     ]);
-    const video = videos[0] ?? null;
-    const activity = video?.tags?.length
-      ? await getActivityForVideoTags(video.tags)
-      : null;
+    const videos = items
+      .filter((i): i is Extract<typeof items[number], { itemType: "video" }> => i.itemType === "video")
+      .map((i) => i.video);
+    const quiz =
+      items.find((i): i is Extract<typeof items[number], { itemType: "quiz" }> => i.itemType === "quiz")
+        ?.quiz ?? null;
+    // Prefer an activity linked to this lesson; fall back to a tag match.
+    const allTags = [...new Set(videos.flatMap((v) => v.tags))];
+    const activity =
+      linkedActivities[0] ??
+      (allTags.length ? await getActivityForVideoTags(allTags) : null);
 
-    setTopicData({ topic: topic!, video, quiz, activity });
+    setTopicData({ topic: topic!, videos, quiz, activity });
+    // Lessons with a slide deck open on the slides stage
+    if (topic?.slidesUrl && toSlidesEmbedUrl(topic.slidesUrl)) {
+      setStage("slides");
+    }
     setTopicLoading(false);
   };
 
@@ -192,7 +211,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
       await saveClassSession({
         classId,
         topicId: topicData.topic.id,
-        videoId: topicData.video?.id ?? null,
+        videoId: topicData.videos[0]?.id ?? null,
         teacherId: null,
         classReaction: reaction,
         classScore: pct ?? 0,
@@ -278,8 +297,12 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
     );
   }
 
-  const { topic, video, quiz, activity } = topicData!;
-  const STAGE_ORDER: SessionStage[] = ["watch", "react", "quiz", "worksheet"];
+  const { topic, videos, quiz, activity } = topicData!;
+  const video = videos[videoIndex] ?? null;
+  const slidesEmbed = topic.slidesUrl ? toSlidesEmbedUrl(topic.slidesUrl) : null;
+  const STAGE_ORDER: SessionStage[] = slidesEmbed
+    ? ["slides", "watch", "react", "quiz", "worksheet"]
+    : ["watch", "react", "quiz", "worksheet"];
 
   function StageBar() {
     return (
@@ -309,6 +332,40 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
     );
   }
 
+  // STAGE: SLIDES
+  if (stage === "slides") {
+    return (
+      <div className="space-y-5">
+        <StageBar />
+        <div className="mx-auto max-w-4xl space-y-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
+              <Presentation className="mr-1 inline h-3.5 w-3.5 align-[-2px]" aria-hidden />
+              Lesson slides
+            </p>
+            <h1 className="display mt-0.5 text-2xl font-bold text-forest-900 md:text-3xl">
+              {topic.title}
+            </h1>
+          </div>
+
+          <div className="overflow-hidden rounded-3xl shadow-hero ring-1 ring-black/10">
+            <iframe
+              src={slidesEmbed!}
+              className="aspect-video w-full bg-forest-950"
+              allow="fullscreen"
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button size="lg" onClick={() => setStage("watch")}>
+              Start videos <ArrowRight className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // STAGE: WATCH
   if (stage === "watch") {
     return (
@@ -316,7 +373,9 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
         <StageBar />
         <div className="mx-auto max-w-4xl space-y-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-forest-600">Now watching</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
+              Now watching{videos.length > 1 ? ` · video ${videoIndex + 1} of ${videos.length}` : ""}
+            </p>
             <h1 className="display mt-0.5 text-2xl font-bold text-forest-900 md:text-3xl">
               {video?.title ?? topic.title}
             </h1>
@@ -342,10 +401,21 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
             )}
           </div>
 
-          <div className="flex justify-end">
-            <Button size="lg" onClick={() => setStage("react")}>
-              Done watching <ArrowRight className="h-4 w-4" aria-hidden />
-            </Button>
+          <div className="flex justify-end gap-2">
+            {videoIndex < videos.length - 1 ? (
+              <>
+                <Button variant="secondary" size="lg" onClick={() => setStage("react")}>
+                  Skip to reactions
+                </Button>
+                <Button size="lg" onClick={() => setVideoIndex((i) => i + 1)}>
+                  Next video <ArrowRight className="h-4 w-4" aria-hidden />
+                </Button>
+              </>
+            ) : (
+              <Button size="lg" onClick={() => setStage("react")}>
+                Done watching <ArrowRight className="h-4 w-4" aria-hidden />
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -721,7 +791,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
               <div className="flex items-center justify-between rounded-2xl bg-forest-50 px-4 py-3 ring-1 ring-forest-200">
                 <p className="text-sm text-forest-800">Need to print worksheets?</p>
                 <Link
-                  href="/admin/resources"
+                  href="/teacher/resources"
                   className="text-sm font-semibold text-forest-700 hover:underline"
                 >
                   Go to Resources →
@@ -734,7 +804,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
                 No worksheet activity linked to this topic yet.
               </p>
               <Link
-                href="/admin/resources"
+                href="/teacher/resources"
                 className="mt-3 inline-block text-sm font-semibold text-forest-700 hover:underline"
               >
                 Go to Resources to add one →

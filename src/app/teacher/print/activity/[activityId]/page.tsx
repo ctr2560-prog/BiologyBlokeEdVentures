@@ -441,7 +441,7 @@ export default function PrintWorksheetPage({
       {/* Screen-only top bar */}
       <div className="print:hidden sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-sand bg-white px-6 py-3 shadow-soft">
         <div className="flex items-center gap-3">
-          <Link href="/admin/resources" className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline">
+          <Link href="/teacher/resources" className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline">
             <ArrowLeft className="h-4 w-4" aria-hidden /> Resources
           </Link>
           <span className="text-charcoal-soft/40">·</span>
@@ -461,7 +461,7 @@ export default function PrintWorksheetPage({
         {/* Header */}
         <div>
           <div className="flex items-baseline justify-between">
-            <span className="text-lg font-black tracking-tight text-forest-700">Biology Bloke</span>
+            <span className="text-lg font-black tracking-tight text-forest-700">Edventra</span>
             <span className="text-lg font-bold text-gray-900">{activity.title}</span>
           </div>
           <div className="mt-3 flex flex-wrap gap-x-8 gap-y-1 text-sm">
@@ -491,7 +491,7 @@ export default function PrintWorksheetPage({
 
         {/* Footer */}
         <div className="border-t border-gray-300 pt-4 text-center text-xs text-gray-400">
-          Biology Bloke Edventures · {activity.title}
+          Edventra · {activity.title}
           {cls ? ` · ${cls.name}` : ""}
         </div>
       </div>

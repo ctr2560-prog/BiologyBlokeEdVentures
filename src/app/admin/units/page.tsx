@@ -5,11 +5,11 @@ import { SectionHeader, Button, Modal, Badge, EmptyState } from "@/components/ui
 import { UnitForm } from "@/components/forms/ContentForms";
 import {
   getUnits, getTopicsByUnit, getTopics,
-  addLessonToUnit, removeLessonFromUnit, updateUnit,
+  addLessonToUnit, removeLessonFromUnit, updateUnit, deleteUnit,
 } from "@/lib/supabaseService";
 import {
   Leaf, ChevronUp, ChevronDown, Plus, Film, CircleHelp,
-  Loader, BookOpen, X, Save, Check,
+  Loader, BookOpen, X, Save, Check, Trash2,
 } from "lucide-react";
 import type { Unit, Topic } from "@/types";
 
@@ -86,6 +86,17 @@ export default function UnitsPage() {
     }));
   };
 
+  const handleDeleteUnit = async (unit: Unit) => {
+    if (!confirm(`Delete unit "${unit.title}"? This cannot be undone.`)) return;
+    try {
+      await deleteUnit(unit.id);
+      setUnits((prev) => prev.filter((u) => u.id !== unit.id));
+      if (expandedUnit === unit.id) setExpanded(null);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Delete failed — this unit may still have content linked to it.");
+    }
+  };
+
   const handleSaveContent = async (unitId: string) => {
     setSavingUnit(unitId);
     setSavedSection((p) => ({ ...p, [unitId]: "" }));
@@ -148,32 +159,41 @@ export default function UnitsPage() {
                 className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5"
               >
                 {/* Unit header */}
-                <button
-                  onClick={() => toggleUnit(unit)}
-                  className="flex w-full items-center gap-4 p-5 text-left"
-                >
-                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-forest-50 text-forest-700">
-                    <Leaf className="h-6 w-6" aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="display text-lg font-bold text-forest-900">{unit.title}</h3>
-                      <Badge tone="gold">{unit.stage}</Badge>
-                      {!unit.published && <Badge tone="neutral">Draft</Badge>}
+                <div className="flex items-center gap-2 pr-4">
+                  <button
+                    onClick={() => toggleUnit(unit)}
+                    className="flex flex-1 items-center gap-4 p-5 text-left"
+                  >
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-forest-50 text-forest-700">
+                      <Leaf className="h-6 w-6" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="display text-lg font-bold text-forest-900">{unit.title}</h3>
+                        <Badge tone="gold">{unit.stage}</Badge>
+                        {!unit.published && <Badge tone="neutral">Draft</Badge>}
+                      </div>
+                      <p className="mt-0.5 line-clamp-1 text-sm text-charcoal-soft">{unit.description}</p>
                     </div>
-                    <p className="mt-0.5 line-clamp-1 text-sm text-charcoal-soft">{unit.description}</p>
-                  </div>
-                  <div className="hidden shrink-0 items-center gap-3 text-sm text-charcoal-soft sm:flex">
-                    {unit.yearGroups.length > 0 && (
-                      <span>{unit.yearGroups.join(", ")}</span>
-                    )}
-                    {open ? (
-                      <ChevronUp className="h-5 w-5" aria-hidden />
-                    ) : (
-                      <ChevronDown className="h-5 w-5" aria-hidden />
-                    )}
-                  </div>
-                </button>
+                    <div className="hidden shrink-0 items-center gap-3 text-sm text-charcoal-soft sm:flex">
+                      {unit.yearGroups.length > 0 && (
+                        <span>{unit.yearGroups.join(", ")}</span>
+                      )}
+                      {open ? (
+                        <ChevronUp className="h-5 w-5" aria-hidden />
+                      ) : (
+                        <ChevronDown className="h-5 w-5" aria-hidden />
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUnit(unit)}
+                    className="shrink-0 rounded-xl p-2 text-charcoal-soft hover:bg-clay-400/10 hover:text-clay-600 transition-colors"
+                    aria-label="Delete unit"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
 
                 {/* Expanded body */}
                 {open && (

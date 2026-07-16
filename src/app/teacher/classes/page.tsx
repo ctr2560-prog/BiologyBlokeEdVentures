@@ -11,7 +11,7 @@ import {
   EmptyState,
 } from "@/components/ui/primitives";
 import { ClassCard } from "@/components/cards/ContentCards";
-import { getClassesByTeacher, createClass } from "@/lib/supabaseService";
+import { getClassesByTeacher } from "@/lib/supabaseService";
 import { DEMO_TEACHER_ID } from "@/data/people";
 import { Printer } from "lucide-react";
 import type { ClassGroup } from "@/types";
@@ -28,6 +28,7 @@ export default function ClassesPage() {
   const [size, setSize] = useState(24);
   const [created, setCreated] = useState<ClassGroup | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const load = useCallback(async () => {
     const cls = await getClassesByTeacher(teacherId);
@@ -40,19 +41,44 @@ export default function ClassesPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const cls = await createClass(
-      {
-        name,
-        yearGroup,
-        teacherId,
-        schoolId: currentUser?.schoolId ?? "school-srhs",
-      },
-      Math.max(1, Math.min(42, size))
-    );
-    setCreated(cls);
-    setClasses((prev) => [...prev, cls]);
-    setName("");
-    setSubmitting(false);
+    setCreateError("");
+    try {
+      const res = await fetch("/api/teacher/class", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          yearGroup,
+          teacherId,
+          schoolId: currentUser?.schoolId ?? null,
+          size: Math.max(1, Math.min(42, size)),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      // Map the raw DB row to ClassGroup shape
+      const raw = data.cls;
+      const cls: ClassGroup = {
+        id: raw.id,
+        name: raw.name,
+        yearGroup: raw.year_group,
+        teacherId: raw.teacher_id,
+        schoolId: raw.school_id ?? "",
+        classCode: raw.class_code,
+        studentIds: (raw.class_students ?? []).map((r: { student_id: string }) => r.student_id),
+        assignedUnitIds: (raw.assignment_topics ?? []).map((r: { topic_id: string }) => r.topic_id),
+      };
+      setCreated(cls);
+      setClasses((prev) => [...prev, cls]);
+      setName("");
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -153,6 +179,11 @@ export default function ClassesPage() {
               Each student gets a unique animal alias and a join code. No names or personal
               data, ever - the animal-to-child list stays with you.
             </p>
+            {createError && (
+              <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm font-medium text-clay-600">
+                {createError}
+              </p>
+            )}
             <div className="flex justify-end">
               <Button type="submit" disabled={submitting}>
                 {submitting ? "Creating..." : "Create class"}

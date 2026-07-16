@@ -87,17 +87,27 @@ export default function ExplorerCardsPage({ params }: { params: Promise<{ classI
                 <h3 className="display mt-3 text-xl font-bold text-forest-900">{animal.name}</h3>
                 <p className="mt-0.5 text-xs text-charcoal-soft">{cls.name}</p>
 
-                <div className="mt-3 rounded-xl border border-sand bg-forest-50 py-2 print:bg-white">
-                  <p className="text-[0.6rem] font-semibold uppercase tracking-wide text-charcoal-soft">
-                    Class code
-                  </p>
-                  <p className="display text-lg font-bold tracking-widest text-forest-800">
-                    {cls.classCode}
-                  </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-sand bg-forest-50 py-2 print:bg-white">
+                    <p className="text-[0.6rem] font-semibold uppercase tracking-wide text-charcoal-soft">
+                      Class code
+                    </p>
+                    <p className="display text-lg font-bold tracking-widest text-forest-800">
+                      {cls.classCode}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-sand bg-gold-300/20 py-2 print:bg-white">
+                    <p className="text-[0.6rem] font-semibold uppercase tracking-wide text-charcoal-soft">
+                      Secret PIN
+                    </p>
+                    <p className="display text-lg font-bold tracking-widest text-forest-800">
+                      {s.pin ?? "—"}
+                    </p>
+                  </div>
                 </div>
 
                 <p className="mt-2 text-[0.65rem] text-charcoal-soft">
-                  Enter the code, then tap the {animal.name}.
+                  Enter the code, tap the {animal.name}, then type your PIN.
                 </p>
               </div>
             </div>

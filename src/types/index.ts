@@ -1,5 +1,5 @@
 /*
- * BioBloke Edventures data model.
+ * Edventra data model.
  *
  * Structured to map 1:1 onto Firestore collections later:
  * users, schools, classes, units, topics, videos, resources, quizzes,
@@ -23,6 +23,8 @@ export interface User {
   createdAt: string;
   /** For students: their animal alias id (no real name/PII is stored). */
   animalId?: string;
+  /** For students: 4-digit sign-in PIN, printed on their explorer card. */
+  pin?: string;
 }
 
 export interface School {
@@ -75,6 +77,7 @@ export interface Unit {
   coverImage: string;
   coverEmoji: string;
   published: boolean;
+  featured: boolean;
   program?: string;
   assessmentTask?: string;
   createdAt: string;
@@ -88,6 +91,11 @@ export interface Topic {
   animalFocus: string[];
   ecosystemFocus: string[];
   difficulty: Difficulty;
+  featured: boolean;
+  /** Canva / Google Slides link shown as the first step of the lesson. */
+  slidesUrl: string;
+  /** Cover image URL shown on teacher library/dashboard cards. */
+  coverImage: string;
   videoIds: string[];
   quizIds: string[];
   resourceIds: string[];
@@ -148,7 +156,8 @@ export interface Question {
   questionText: string;
   type: QuestionType;
   options: string[];
-  correctAnswer: string;
+  /** Undefined in student-facing quiz fetches — grading is server-side only. */
+  correctAnswer?: string;
   explanation: string;
   difficulty: Difficulty;
   linkedConcept: string;
@@ -233,7 +242,7 @@ export interface AdaptiveRecommendation {
 
 // ---- Lesson content sequencing ----
 
-export type LessonItemType = "video" | "quiz";
+export type LessonItemType = "video" | "quiz" | "activity";
 
 export interface LessonItem {
   id: string;
@@ -243,9 +252,16 @@ export interface LessonItem {
   orderIndex: number;
 }
 
+/*
+ * An "activity" item is an adaptive slot, not a fixed piece of content: the
+ * activity actually served is chosen per student at play time from the
+ * lesson's linked activity pool (quiz scores → difficulty, watch signals ×
+ * video tags → interest).
+ */
 export type LessonItemWithContent =
   | (LessonItem & { itemType: "video"; video: Video })
-  | (LessonItem & { itemType: "quiz"; quiz: Quiz });
+  | (LessonItem & { itemType: "quiz"; quiz: Quiz })
+  | (LessonItem & { itemType: "activity" });
 
 // ---- Adaptive activities (post-lesson, differentiated) ----
 
@@ -420,9 +436,74 @@ export type ActivityBlockType = ActivityBlock["type"];
 export type TaggedActivityBlock = ActivityBlock & {
   /** Which difficulty tier this block targets. Undefined = shown to all tiers. */
   blockDifficulty?: Difficulty;
-  /** Topic interest tag this block targets. Undefined = shown to all interests. */
+  /** Topic interest tags this block targets. Empty/undefined = shown to all interests. */
+  topicTags?: string[];
+  /** @deprecated Legacy single tag — superseded by topicTags. Read via getBlockTags(). */
   topicTag?: string;
 };
+
+/** Explore-section ecosystem tile (managed by admin, shown to students). */
+export interface Ecosystem {
+  id: string;
+  name: string;
+  blurb: string;
+  color: string;
+  /** Lucide icon key (see ECO_ICON_CHOICES); falls back to the legacy id map. */
+  icon: string;
+  /** Video tags that belong to this world — used to match reels. */
+  tags: string[];
+  featured: boolean;
+  published: boolean;
+  sortOrder: number;
+}
+
+/** Professional learning session posted by admin, browsed/booked by teachers. */
+export type PLMode = "in-person" | "online" | "hybrid";
+
+export interface PLSession {
+  id: string;
+  title: string;
+  description: string;
+  /** ISO date (yyyy-mm-dd) or empty when not yet scheduled. */
+  sessionDate: string;
+  /** Free-text time, e.g. "4:00–5:30pm AEST". */
+  timeLabel: string;
+  /** Free-text cost, e.g. "Free" or "$45 per teacher". */
+  cost: string;
+  mode: PLMode;
+  location: string;
+  linkUrl: string;
+  imageUrl: string;
+  published: boolean;
+}
+
+/** A teacher's booking for a PL session (name/email recorded for the organiser). */
+export interface PLBooking {
+  id: string;
+  sessionId: string;
+  teacherId: string;
+  name: string;
+  email: string;
+  bookedAt: string;
+}
+
+/** Editable promo banner shown on a portal dashboard (managed by admin). */
+export interface SiteBanner {
+  id: string;
+  /** Which portal surface this banner belongs to (e.g. "teacher"). */
+  placement: string;
+  eyebrow: string;
+  title: string;
+  message: string;
+  imageUrl: string;
+  /** Focal point of the background image, as CSS object-position percentages. */
+  imagePosX: number;
+  imagePosY: number;
+  linkUrl: string;
+  linkLabel: string;
+  active: boolean;
+  sortOrder: number;
+}
 
 export interface Activity {
   id: string;

@@ -11,10 +11,17 @@ import {
   getStudentsByClass,
   getProgressByClass,
   getTopics,
+  getPublishedUnits,
+  getUnitLessonLinks,
+  getBanners,
+  getPLSessions,
 } from "@/lib/supabaseService";
+import { LibraryUnitCard, LibraryLessonCard } from "@/components/cards/LibraryCards";
+import { PromoBannerCarousel } from "@/components/ui/PromoBanner";
 import { formatWatchTime } from "@/lib/analytics";
 import { DEMO_TEACHER_ID } from "@/data/people";
-import type { ClassGroup, StudentProgress, User, Topic } from "@/types";
+import { GraduationCap, ArrowRight } from "lucide-react";
+import type { ClassGroup, StudentProgress, User, Topic, Unit, SiteBanner, PLSession } from "@/types";
 
 export default function TeacherDashboard() {
   const { currentUser } = useApp();
@@ -25,6 +32,12 @@ export default function TeacherDashboard() {
   const [allProgress, setAllProgress] = useState<StudentProgress[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [topicMap, setTopicMap] = useState<Map<string, Topic>>(new Map());
+  const [featuredUnits, setFeaturedUnits] = useState<Unit[]>([]);
+  const [featuredLessons, setFeaturedLessons] = useState<Topic[]>([]);
+  const [unitLinks, setUnitLinks] = useState<Array<{ unitId: string; lessonId: string }>>([]);
+  const [unitTitles, setUnitTitles] = useState<Map<string, string>>(new Map());
+  const [bannersList, setBannersList] = useState<SiteBanner[]>([]);
+  const [nextPL, setNextPL] = useState<PLSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,20 +48,44 @@ export default function TeacherDashboard() {
       const cls = await getClassesByTeacher(teacherId);
       setClasses(cls);
 
-      const [progressArrays, studentArrays, topics] = await Promise.all([
+      const [progressArrays, studentArrays, topics, units, links, bannerData, plSessions] = await Promise.all([
         Promise.all(cls.map((c) => getProgressByClass(c.id))),
         Promise.all(cls.map((c) => getStudentsByClass(c.id))),
         getTopics(),
+        getPublishedUnits(),
+        getUnitLessonLinks(),
+        getBanners("teacher"),
+        getPLSessions(),
       ]);
 
       setAllProgress(progressArrays.flat());
       setStudents(studentArrays.flat());
       setTopicMap(new Map(topics.map((t) => [t.id, t])));
+      setFeaturedUnits(units.filter((u) => u.featured));
+      setFeaturedLessons(topics.filter((t) => t.featured));
+      setUnitLinks(links);
+      setUnitTitles(new Map(units.map((u) => [u.id, u.title])));
+      setBannersList(
+        bannerData.filter((b) => b.active && (b.title || b.message || b.imageUrl))
+      );
+      const today = new Date().toISOString().slice(0, 10);
+      setNextPL(
+        plSessions.find((s) => s.published && s.sessionDate && s.sessionDate >= today) ?? null
+      );
       setLoading(false);
     }
 
     load();
   }, [teacherId]);
+
+  const unitByLesson = new Map<string, string>();
+  unitLinks.forEach(({ unitId, lessonId }) => {
+    if (!unitByLesson.has(lessonId)) unitByLesson.set(lessonId, unitId);
+  });
+  const lessonCountByUnit = new Map<string, number>();
+  unitLinks.forEach(({ unitId }) =>
+    lessonCountByUnit.set(unitId, (lessonCountByUnit.get(unitId) ?? 0) + 1)
+  );
 
   const studentById = new Map(students.map((s) => [s.id, s]));
 
@@ -93,6 +130,9 @@ export default function TeacherDashboard() {
         }
       />
 
+      {/* Admin-managed promo banners */}
+      {bannersList.length > 0 && <PromoBannerCarousel banners={bannersList} />}
+
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="My classes" value={classes.length} />
         <StatCard label="Avg watch time" value={formatWatchTime(avgWatch)} tone="mist" />
@@ -103,6 +143,43 @@ export default function TeacherDashboard() {
           tone="clay"
         />
       </div>
+
+      {/* Featured Edventures */}
+      {(featuredUnits.length > 0 || featuredLessons.length > 0) && (
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="display text-xl font-bold text-forest-900">Featured Edventures</h2>
+            <Link href="/teacher/library" className="text-sm font-semibold text-forest-700 hover:underline">
+              Browse library →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {featuredUnits.slice(0, 4).map((u) => (
+              <LibraryUnitCard
+                key={u.id}
+                unit={u}
+                lessonCount={lessonCountByUnit.get(u.id) ?? 0}
+              />
+            ))}
+            {featuredLessons
+              .slice(0, Math.max(0, 4 - featuredUnits.length))
+              .map((l) => (
+                <LibraryLessonCard
+                  key={l.id}
+                  lesson={l}
+                  unitTitle={
+                    unitByLesson.has(l.id) ? unitTitles.get(unitByLesson.get(l.id)!) : undefined
+                  }
+                  assignHref={
+                    unitByLesson.has(l.id)
+                      ? `/teacher/assign?unit=${unitByLesson.get(l.id)}&lesson=${l.id}`
+                      : undefined
+                  }
+                />
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Classes */}
       <div>
@@ -121,6 +198,35 @@ export default function TeacherDashboard() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Professional learning CTA */}
+      <div
+        className="relative overflow-hidden rounded-3xl p-6 text-cream shadow-hero md:p-8"
+        style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 70%, #40916c 100%)" }}
+      >
+        <GraduationCap className="absolute -bottom-6 right-6 h-32 w-32 text-white/[0.07]" aria-hidden />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="max-w-xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold-300">
+              Professional learning
+            </p>
+            <h2 className="display mt-1 text-xl font-bold md:text-2xl">
+              Level up your teaching with Edventra
+            </h2>
+            <p className="mt-1.5 text-sm text-forest-100/80">
+              {nextPL
+                ? `Next session: ${nextPL.title} — ${new Date(`${nextPL.sessionDate}T00:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "long" })}${nextPL.cost ? ` · ${nextPL.cost}` : ""}`
+                : "Hands-on PL sessions on adaptive, nature-based teaching — in person and online."}
+            </p>
+          </div>
+          <Link
+            href="/teacher/pl"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-sm font-bold text-forest-950 transition-colors hover:bg-gold-300"
+          >
+            Explore PL sessions <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

@@ -47,6 +47,9 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
   const [reflection, setReflection] = useState("");
   const [pointsEarned, setPointsEarned] = useState(0);
   const [saving, setSaving] = useState(false);
+  // Score is set by the server-side grading API after quiz submission
+  const [quizScoreState, setQuizScoreState] = useState<number | null>(null);
+  const [submittingQuiz, setSubmittingQuiz] = useState(false);
 
   // Load video, topic, quiz, and adaptive tasks in parallel on mount.
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
         getTopic(video.topicId),
         getAdaptiveTasks(),
       ]);
-      const quiz = topic ? await getQuizByTopic(topic.id) : null;
+      const quiz = topic ? await getQuizByTopic(topic.id, true) : null;
       setPageData({ video, topic, quiz, adaptiveTasks: tasks });
       // Find the activity whose blocks are tagged with the same tags as this video
       if (video.tags.length > 0) {
@@ -69,14 +72,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
     });
   }, [videoId]);
 
-  const quizScore = useMemo(() => {
-    const quiz = pageData?.quiz;
-    if (!quiz) return null;
-    const graded = quiz.questions.filter((q) => q.type !== "shortResponse");
-    if (graded.length === 0) return 100;
-    const correct = graded.filter((q) => answers[q.id] === q.correctAnswer).length;
-    return Math.round((correct / graded.length) * 100);
-  }, [pageData?.quiz, answers]);
+  const quizScore = quizScoreState;
 
   const rec: AdaptiveRecommendation | null = useMemo(() => {
     const video = pageData?.video;
@@ -343,10 +339,34 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
           <Button
             className="w-full"
             size="lg"
-            onClick={() => setStage("reflect")}
-            disabled={Object.keys(answers).length < quiz.questions.length}
+            disabled={submittingQuiz || Object.keys(answers).length < quiz.questions.length}
+            onClick={async () => {
+              setSubmittingQuiz(true);
+              try {
+                const { video, topic: t } = pageData ?? {};
+                const res = await fetch("/api/student/quiz-submit", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    quizId: quiz.id,
+                    answers,
+                    studentId,
+                    classId: currentUser?.classIds[0] ?? "",
+                    lessonId: t?.id,
+                  }),
+                });
+                const { score } = await res.json();
+                setQuizScoreState(score ?? null);
+                if (video && score != null) {
+                  logAnalyticsEvent({ userId: studentId, role: "student", eventType: "quiz_submitted", metadata: { quizId: quiz.id, score } });
+                }
+              } finally {
+                setSubmittingQuiz(false);
+                setStage("reflect");
+              }
+            }}
           >
-            Submit answers
+            {submittingQuiz ? "Marking…" : "Submit answers"}
           </Button>
         </div>
       )}

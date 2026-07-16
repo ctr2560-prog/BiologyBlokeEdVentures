@@ -21,7 +21,6 @@ import {
   ContentShowcase,
   FounderStory,
 } from "@/components/layout/LandingSections";
-import { getClassByCode, getStudentsByClass } from "@/lib/supabaseService";
 import { getAnimal } from "@/data/animals";
 import { getAnimalIcon, getAnimalColor } from "@/lib/icons";
 import {
@@ -48,13 +47,16 @@ export default function LandingPage() {
   const { signInStudent } = useApp();
   const router = useRouter();
 
-  // Student login: step 1 = class code, step 2 = pick your animal.
+  // Student login: step 1 = class code, step 2 = pick your animal, step 3 = PIN.
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
   const [codeLoading, setCodeLoading] = useState(false);
   const [pickClass, setPickClass] = useState<ClassGroup | null>(null);
   const [pickStudents, setPickStudents] = useState<User[]>([]);
+  const [pickStudent, setPickStudent] = useState<User | null>(null);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
   const [pickLoading, setPickLoading] = useState(false);
 
   const openCodeModal = () => {
@@ -62,6 +64,9 @@ export default function LandingPage() {
     setCodeError("");
     setPickClass(null);
     setPickStudents([]);
+    setPickStudent(null);
+    setPin("");
+    setPinError("");
     setCodeOpen(true);
   };
 
@@ -69,30 +74,80 @@ export default function LandingPage() {
     e.preventDefault();
     setCodeError("");
     setCodeLoading(true);
-    const cls = await getClassByCode(code.trim());
-    if (!cls) {
-      setCodeError("We couldn't find that class code. Check with your teacher.");
+    try {
+      const res = await fetch(`/api/class/${encodeURIComponent(code.trim().toUpperCase())}`);
+      const data = await res.json();
+      if (!data) {
+        setCodeError("We couldn't find that class code. Check with your teacher.");
+        return;
+      }
+      // Map the API response to the shapes the UI expects
+      const cls: ClassGroup = {
+        id: data.cls.id,
+        name: data.cls.name,
+        classCode: data.cls.class_code,
+        yearGroup: data.cls.year_group,
+        teacherId: "",
+        schoolId: "",
+        studentIds: data.students.map((s: { id: string }) => s.id),
+        assignedUnitIds: [],
+      };
+      const students: User[] = data.students.map((s: { id: string; name: string; animal_id: string }) => ({
+        id: s.id,
+        name: s.name,
+        email: "",
+        role: "student" as const,
+        classIds: [data.cls.id],
+        avatarUrl: "",
+        createdAt: "",
+        animalId: s.animal_id,
+      }));
+      setPickClass(cls);
+      setPickStudents(students);
+    } finally {
       setCodeLoading(false);
-      return;
     }
-    const students = await getStudentsByClass(cls.id);
-    setPickClass(cls);
-    setPickStudents(students);
-    setCodeLoading(false);
   };
 
-  const pickAnimal = async (studentId: string) => {
-    if (!pickClass) return;
+  const pickAnimal = (studentId: string) => {
+    const student = pickStudents.find((s) => s.id === studentId) ?? null;
+    setPickStudent(student);
+    setPin("");
+    setPinError("");
+  };
+
+  const submitPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pickClass || !pickStudent || pin.trim().length < 4) return;
     setPickLoading(true);
-    const { error } = await signInStudent(code.trim(), studentId);
-    if (error) {
-      setCodeError(error);
-      setPickClass(null);
-      setPickStudents([]);
+    setPinError("");
+    try {
+      const res = await fetch("/api/student/verify-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          classCode: code.trim(),
+          studentId: pickStudent.id,
+          pin: pin.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setPinError("That PIN doesn't match — check your explorer card or ask your teacher.");
+        setPickLoading(false);
+        return;
+      }
+      const { error } = await signInStudent(code.trim(), pickStudent.id);
+      if (error) {
+        setPinError(error);
+        setPickLoading(false);
+        return;
+      }
+      router.push(roleHome.student);
+    } catch {
+      setPinError("Something went wrong — try again.");
       setPickLoading(false);
-      return;
     }
-    router.push(roleHome.student);
   };
 
   return (
@@ -100,8 +155,8 @@ export default function LandingPage() {
       <ScrollProgress />
       {/* ============ Top nav ============ */}
       <header className="absolute inset-x-0 top-0 z-30">
-        <div className="mx-auto flex max-w-7xl items-center justify-end px-8 py-5">
-          <nav className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-5">
+          <nav className="ml-auto flex items-center gap-3">
             <a
               href="/login"
               className="text-sm font-medium text-cream/55 hover:text-cream/80"
@@ -110,13 +165,13 @@ export default function LandingPage() {
             </a>
             <a
               href="/register"
-              className="rounded-full bg-cream px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-cream/90"
+              className="rounded-full bg-cream px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft transition-all hover:bg-cream/90 hover:shadow-lift"
             >
               Sign up your school
             </a>
             <button
               onClick={openCodeModal}
-              className="rounded-full bg-gold-400 px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft hover:bg-gold-300"
+              className="btn-pop rounded-full bg-gold-400 px-5 py-2 text-sm font-semibold text-forest-900 shadow-soft"
             >
               Student code
             </button>
@@ -148,16 +203,16 @@ export default function LandingPage() {
 
         {/* Centered copy */}
         <div className="rise-in relative z-10 mx-auto max-w-4xl px-6">
-          {/* Logo - reduced ~18% from previous size */}
+          {/* Edventra wordmark — tight-cropped transparent PNG */}
           <Image
-            src="/logo-home.png"
-            alt="The Biology Bloke Edventures"
-            width={420}
-            height={420}
+            src="/edventra-white.png"
+            alt="Edventra"
+            width={472}
+            height={119}
             priority
-            className="float-y-slow mx-auto h-36 w-auto drop-shadow-2xl md:h-52"
+            className="mx-auto h-auto w-72 drop-shadow-2xl sm:w-96 md:w-[28rem]"
           />
-          <p className="mx-auto mt-2 inline-flex items-center gap-2 rounded-full border border-cream/20 bg-forest-950/40 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-cream/90 backdrop-blur">
+          <p className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-cream/20 bg-forest-950/40 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-cream/90 backdrop-blur">
             <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Adaptive short-form learning, built for the real world
           </p>
@@ -233,7 +288,7 @@ export default function LandingPage() {
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-cream">
                   <Film className="h-4 w-4 text-forest-700" aria-hidden />
                 </span>
-                <span className="text-xs font-semibold drop-shadow">A BioBloke reel · Great Apes</span>
+                <span className="text-xs font-semibold drop-shadow">An Edventra reel · Great Apes</span>
               </div>
             </div>
 
@@ -285,7 +340,7 @@ export default function LandingPage() {
                 See what students experience
               </h2>
               <p className="mt-3 text-base text-charcoal-soft">
-                A taste of a real BioBloke Edventure, from reel to reflection.
+                A taste of a real Edventra lesson — from reel to reflection.
               </p>
             </div>
           </Reveal>
@@ -377,7 +432,7 @@ export default function LandingPage() {
       {/* ============ Footer with discrete admin link ============ */}
       <footer className="border-t border-black/6 bg-cream px-6 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-xs text-charcoal-soft/60 sm:flex-row">
-          <span>The Biology Bloke Edventures · Conservation education for Australian schools</span>
+          <span>Edventra · Conservation education for Australian schools by The Biology Bloke</span>
           <div className="flex items-center gap-4">
             <a href="/register" className="hover:text-charcoal-soft hover:underline">Sign up your school</a>
             <span>·</span>
@@ -390,8 +445,10 @@ export default function LandingPage() {
       <Modal
         open={codeOpen}
         onClose={() => setCodeOpen(false)}
-        title={pickClass ? "Which animal are you?" : "Enter your class code"}
-        maxWidth={pickClass ? "max-w-lg" : "max-w-md"}
+        title={
+          pickStudent ? "Enter your PIN" : pickClass ? "Which animal are you?" : "Enter your class code"
+        }
+        maxWidth={pickClass && !pickStudent ? "max-w-lg" : "max-w-md"}
       >
         {!pickClass ? (
           <form onSubmit={submitCode} className="space-y-4">
@@ -412,6 +469,52 @@ export default function LandingPage() {
             <Button type="submit" size="lg" className="w-full" disabled={codeLoading}>
               {codeLoading ? "Looking up..." : "Next"}
             </Button>
+          </form>
+        ) : pickStudent ? (
+          <form onSubmit={submitPin} className="space-y-4">
+            {(() => {
+              const animal = getAnimal(pickStudent.animalId ?? "");
+              const Icon = animal ? getAnimalIcon(animal.kind) : Compass;
+              return (
+                <div
+                  className="mx-auto flex w-fit flex-col items-center gap-2 rounded-3xl px-8 py-5 text-cream shadow-soft"
+                  style={{
+                    background: `linear-gradient(150deg, ${
+                      animal ? getAnimalColor(animal.id) : "#2d6a4f"
+                    }, #0d2419)`,
+                  }}
+                >
+                  <Icon className="h-10 w-10" aria-hidden strokeWidth={1.5} />
+                  <span className="text-sm font-bold">{animal?.name ?? "Explorer"}</span>
+                </div>
+              );
+            })()}
+            <p className="text-center text-sm text-charcoal-soft">
+              Type the 4-digit PIN from your explorer card.
+            </p>
+            <input
+              value={pin}
+              onChange={(e) => {
+                setPin(e.target.value.replace(/\D/g, "").slice(0, 4));
+                setPinError("");
+              }}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="• • • •"
+              autoFocus
+              className={`${inputClass} text-center text-2xl font-bold tracking-[0.5em]`}
+            />
+            {pinError && <p className="text-center text-sm font-medium text-clay-600">{pinError}</p>}
+            <Button type="submit" size="lg" className="w-full" disabled={pickLoading || pin.length < 4}>
+              {pickLoading ? "Signing you in..." : "Let's go!"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => { setPickStudent(null); setPin(""); setPinError(""); }}
+              className="w-full text-center text-xs font-semibold text-forest-700 hover:underline"
+            >
+              Not your animal? Go back
+            </button>
           </form>
         ) : (
           <div className="space-y-4">

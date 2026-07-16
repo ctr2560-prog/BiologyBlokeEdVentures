@@ -5,7 +5,7 @@
  * (where topic/unit are already known) without showing the dropdowns.
  */
 import { useEffect, useState } from "react";
-import { UploadCloud, X, Check, Plus, BookOpen } from "lucide-react";
+import { UploadCloud, X, Check, Plus, BookOpen, Pencil } from "lucide-react";
 import {
   FormField,
   inputClass,
@@ -17,6 +17,7 @@ import {
   createTopic,
   createResource,
   createQuiz,
+  updateQuiz,
   getTopics,
   addLessonToUnit,
 } from "@/lib/supabaseService";
@@ -26,34 +27,13 @@ import type {
   Difficulty,
   QuestionType,
   Question,
+  Quiz,
   Topic,
   Unit,
 } from "@/types";
 
 const STAGES: Stage[] = ["Stage 3", "Stage 4", "Stage 5"];
 const DIFFICULTIES: Difficulty[] = ["foundation", "core", "advanced"];
-
-// Synchronous topic select — populated by caller via prop to avoid async in older pages.
-function TopicSelect({
-  value,
-  onChange,
-  topics,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  topics: Topic[];
-}) {
-  return (
-    <select className={inputClass} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">Select a topic…</option>
-      {topics.map((t) => (
-        <option key={t.id} value={t.id}>
-          {t.title}
-        </option>
-      ))}
-    </select>
-  );
-}
 
 // ---- Unit form ----
 export function UnitForm({ onSaved }: { onSaved: (unit: Unit) => void }) {
@@ -100,6 +80,7 @@ export function UnitForm({ onSaved }: { onSaved: (unit: Unit) => void }) {
         coverImage: "/trees.png",
         coverEmoji: "",
         published,
+        featured: false,
         program: "",
         assessmentTask: "",
       });
@@ -491,28 +472,23 @@ export function VideoForm({ onSaved }: { onSaved: () => void }) {
 const Q_TYPES: QuestionType[] = ["multipleChoice", "trueFalse", "shortResponse"];
 
 export function QuizForm({
+  quiz,
   lockedTopicId,
   lockedTopicTitle,
   onSaved,
 }: {
+  /** Pass an existing quiz to edit it (title + full question set). */
+  quiz?: Quiz;
   lockedTopicId?: string;
   lockedTopicTitle?: string;
   onSaved: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [topicId, setTopicId] = useState(lockedTopicId ?? "");
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [title, setTitle] = useState(quiz?.title ?? "");
+  const [questions, setQuestions] = useState<Question[]>(quiz?.questions ?? []);
   const [draft, setDraft] = useState<Question>(blankQuestion());
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [availableTopics, setAvailableTopics] = useState<Topic[]>([]);
-  const [topicsLoading, setTopicsLoading] = useState(!lockedTopicId);
-
-  // Load topics on mount so the dropdown is immediately usable
-  useEffect(() => {
-    if (lockedTopicId) return;
-    getTopics().then((t) => { setAvailableTopics(t); setTopicsLoading(false); });
-  }, [lockedTopicId]);
 
   function blankQuestion(): Question {
     return {
@@ -529,24 +505,33 @@ export function QuizForm({
 
   const addQuestion = () => {
     if (!draft.questionText.trim()) return;
-    setQuestions((q) => [...q, { ...draft, id: `q-${Date.now()}` }]);
+    if (editingId) {
+      setQuestions((qs) => qs.map((q) => (q.id === editingId ? { ...draft, id: editingId } : q)));
+      setEditingId(null);
+    } else {
+      setQuestions((q) => [...q, { ...draft, id: `q-${Date.now()}` }]);
+    }
     setDraft(blankQuestion());
   };
 
-  const resolvedTopicId = lockedTopicId ?? topicId;
+  const startEditQuestion = (q: Question) => {
+    setDraft({ ...q });
+    setEditingId(q.id);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resolvedTopicId) {
-      setError("Please select a topic.");
-      return;
-    }
     // Auto-commit the in-progress draft if the user filled in a question text
     let finalQuestions = questions;
     if (draft.questionText.trim()) {
-      finalQuestions = [...questions, { ...draft, id: `q-${Date.now()}` }];
+      if (editingId) {
+        finalQuestions = questions.map((q) => (q.id === editingId ? { ...draft, id: editingId } : q));
+      } else {
+        finalQuestions = [...questions, { ...draft, id: `q-${Date.now()}` }];
+      }
       setQuestions(finalQuestions);
       setDraft(blankQuestion());
+      setEditingId(null);
     }
     if (finalQuestions.length === 0) {
       setError("Add at least one question before saving.");
@@ -555,7 +540,11 @@ export function QuizForm({
     setError("");
     setSaving(true);
     try {
-      await createQuiz({ title, topicId: resolvedTopicId, questions: finalQuestions });
+      if (quiz) {
+        await updateQuiz(quiz.id, { title, questions: finalQuestions });
+      } else {
+        await createQuiz({ title, topicId: lockedTopicId ?? "", questions: finalQuestions });
+      }
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save quiz");
@@ -566,40 +555,20 @@ export function QuizForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label="Quiz title" required>
-          <input
-            className={inputClass}
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </FormField>
-        {lockedTopicId ? (
-          <div className="flex items-end pb-0.5">
-            <div className="w-full rounded-2xl bg-forest-50 px-4 py-2.5 text-sm text-forest-800">
-              <span className="font-semibold">Topic: </span>
-              {lockedTopicTitle ?? lockedTopicId}
-            </div>
-          </div>
-        ) : (
-          <FormField label="Topic" required>
-            <select
-              className={inputClass}
-              value={topicId}
-              onChange={(e) => setTopicId(e.target.value)}
-              disabled={topicsLoading}
-            >
-              <option value="">{topicsLoading ? "Loading topics…" : "Select a topic…"}</option>
-              {availableTopics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
-          </FormField>
-        )}
-      </div>
+      <FormField label="Quiz title" required>
+        <input
+          className={inputClass}
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </FormField>
+      {lockedTopicId && (
+        <div className="rounded-2xl bg-forest-50 px-4 py-2.5 text-sm text-forest-800">
+          <span className="font-semibold">Lesson: </span>
+          {lockedTopicTitle ?? lockedTopicId}
+        </div>
+      )}
 
       {/* Existing questions */}
       {questions.length > 0 && (
@@ -607,11 +576,24 @@ export function QuizForm({
           {questions.map((q, i) => (
             <div key={q.id} className="flex items-center gap-2 text-sm">
               <Badge tone="forest">{i + 1}</Badge>
-              <span className="flex-1 truncate text-charcoal">{q.questionText}</span>
+              <span className={`flex-1 truncate ${editingId === q.id ? "font-semibold text-forest-700" : "text-charcoal"}`}>
+                {q.questionText}
+              </span>
               <Badge tone="sand">{q.type}</Badge>
               <button
                 type="button"
-                onClick={() => setQuestions((qs) => qs.filter((x) => x.id !== q.id))}
+                onClick={() => startEditQuestion(q)}
+                className="text-forest-600 hover:text-forest-800"
+                aria-label="Edit question"
+              >
+                <Pencil className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuestions((qs) => qs.filter((x) => x.id !== q.id));
+                  if (editingId === q.id) { setEditingId(null); setDraft(blankQuestion()); }
+                }}
                 className="text-clay-500 hover:text-clay-600"
                 aria-label="Remove question"
               >
@@ -624,7 +606,9 @@ export function QuizForm({
 
       {/* Question builder */}
       <div className="space-y-3 rounded-2xl border border-sand-dark bg-white p-4">
-        <p className="text-sm font-semibold text-forest-900">Add a question</p>
+        <p className="text-sm font-semibold text-forest-900">
+          {editingId ? "Edit question" : "Add a question"}
+        </p>
         <FormField label="Question text">
           <input
             className={inputClass}
@@ -729,9 +713,22 @@ export function QuizForm({
             onChange={(e) => setDraft({ ...draft, linkedConcept: e.target.value })}
           />
         </FormField>
-        <Button type="button" variant="secondary" size="sm" onClick={addQuestion}>
-          <Plus className="h-4 w-4" aria-hidden /> Add question
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={addQuestion}>
+            {editingId
+              ? <><Check className="h-4 w-4" aria-hidden /> Update question</>
+              : <><Plus className="h-4 w-4" aria-hidden /> Add question</>}
+          </Button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => { setEditingId(null); setDraft(blankQuestion()); }}
+              className="text-xs font-semibold text-charcoal-soft hover:underline"
+            >
+              Cancel edit
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -743,7 +740,13 @@ export function QuizForm({
         )}
         <div className="ml-auto">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : questions.length > 0 ? `Save quiz (${questions.length})` : "Save quiz"}
+            {saving
+              ? "Saving..."
+              : quiz
+              ? `Save changes${questions.length > 0 ? ` (${questions.length})` : ""}`
+              : questions.length > 0
+              ? `Save quiz (${questions.length})`
+              : "Save quiz"}
           </Button>
         </div>
       </div>

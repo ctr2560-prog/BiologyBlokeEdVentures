@@ -177,15 +177,29 @@ export function ActivityBuilderModal({ open, onClose, lessonId, difficulty, exis
     setError("");
     setSaving(true);
     try {
-      const { upsertActivity } = await import("@/lib/supabaseService");
-      const saved = await upsertActivity({
-        id: existing?.id,
-        lessonId,
-        title: title.trim(),
-        difficulty,
-        blocks,
+      const res = await fetch("/api/admin/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: existing?.id,
+          lessonId,
+          title: title.trim(),
+          difficulty,
+          blocks,
+        }),
       });
-      onSaved(saved);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to save activity");
+      const r = data.activity;
+      onSaved({
+        id: r.id,
+        lessonId: r.lesson_id ?? undefined,
+        topicTags: r.topic_tags ?? undefined,
+        title: r.title,
+        difficulty: r.difficulty,
+        blocks: r.blocks ?? [],
+        createdAt: r.created_at ?? "",
+      });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save activity");

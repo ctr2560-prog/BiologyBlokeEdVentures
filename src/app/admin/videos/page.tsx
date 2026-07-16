@@ -2,23 +2,21 @@
 import { useEffect, useState } from "react";
 import { SectionHeader, Button, Modal } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
-import { getVideos, getTopics } from "@/lib/supabaseService";
+import { getVideos, deleteVideo } from "@/lib/supabaseService";
 import { VideoUploadForm } from "@/components/forms/VideoUploadForm";
 import { VideoDetailModal } from "./VideoDetailModal";
-import { Upload, Loader } from "lucide-react";
-import type { Video, Topic } from "@/types";
+import { Upload, Loader, Trash2 } from "lucide-react";
+import type { Video } from "@/types";
 
 export default function VideosPage() {
   const [videos, setVideos]   = useState<Video[]>([]);
-  const [topics, setTopics]   = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen]     = useState(false);
   const [selected, setSelected]         = useState<Video | null>(null);
 
   useEffect(() => {
-    Promise.all([getVideos(), getTopics()]).then(([v, t]) => {
+    getVideos().then((v) => {
       setVideos(v);
-      setTopics(t);
       setLoading(false);
     });
   }, []);
@@ -26,6 +24,18 @@ export default function VideosPage() {
   const handleUpdated = (updated: Video) => {
     setVideos((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
     setSelected(updated);
+  };
+
+  const handleDelete = async (v: Video, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Delete video "${v.title}"? This cannot be undone.`)) return;
+    try {
+      await deleteVideo(v.id);
+      setVideos((prev) => prev.filter((vid) => vid.id !== v.id));
+      if (selected?.id === v.id) setSelected(null);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Delete failed — this video may still have student progress linked to it.");
+    }
   };
 
   return (
@@ -63,6 +73,13 @@ export default function VideosPage() {
                   </div>
                 </div>
               )}
+              <button
+                onClick={(e) => handleDelete(v, e)}
+                className="absolute right-3 top-3 rounded-xl bg-white/90 p-1.5 text-charcoal-soft shadow hover:bg-clay-400/20 hover:text-clay-600 transition-colors"
+                aria-label="Delete video"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           ))}
         </div>
@@ -71,7 +88,6 @@ export default function VideosPage() {
       {/* Upload modal */}
       <Modal open={uploadOpen} onClose={() => setUploadOpen(false)} title="Upload video" maxWidth="max-w-lg">
         <VideoUploadForm
-          availableTopics={topics}
           onDone={(video) => {
             setVideos((prev) => [{ ...video, muxUploadId: "pending" }, ...prev]);
             setUploadOpen(false);

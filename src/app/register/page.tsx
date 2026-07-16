@@ -14,7 +14,8 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [school, setSchool] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+  const [schoolLocation, setSchoolLocation] = useState("");
   const [schoolQuery, setSchoolQuery] = useState("");
   const [schoolResults, setSchoolResults] = useState<SchoolResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -62,14 +63,16 @@ export default function RegisterPage() {
   }, []);
 
   const selectSchool = (s: SchoolResult) => {
-    setSchool(s.suburb ? `${s.name}, ${s.suburb}` : s.name);
+    setSchoolName(s.name);
+    setSchoolLocation([s.suburb, s.state].filter(Boolean).join(", "));
     setSchoolQuery("");
     setShowDropdown(false);
   };
 
   const addCustomSchool = () => {
     if (schoolQuery.trim()) {
-      setSchool(schoolQuery.trim());
+      setSchoolName(schoolQuery.trim());
+      setSchoolLocation("");
       setSchoolQuery("");
       setShowDropdown(false);
     }
@@ -79,7 +82,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (!school.trim()) {
+    if (!schoolName.trim()) {
       setError("Please select or add your school.");
       return;
     }
@@ -97,7 +100,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, school }),
+        body: JSON.stringify({ name, email, password, schoolName, schoolLocation }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -128,11 +131,11 @@ export default function RegisterPage() {
         <div />
         <div className="text-center">
           <Image
-            src="/logo-home.png"
-            alt="The Biology Bloke Edventures"
-            width={200}
-            height={200}
-            className="mx-auto h-36 w-auto drop-shadow-2xl"
+            src="/edventra-white.png"
+            alt="Edventra"
+            width={472}
+            height={119}
+            className="mx-auto h-auto w-4/5 max-w-xs drop-shadow-2xl"
           />
           <h1 className="display mt-6 text-3xl font-bold leading-tight text-cream">
             Your class is waiting<br />for an Edventure.
@@ -154,7 +157,7 @@ export default function RegisterPage() {
           </div>
         </div>
         <p className="text-xs text-forest-100/40">
-          The Biology Bloke - Conservation education for schools
+          Edventra · Conservation education for Australian schools
         </p>
       </div>
 
@@ -173,15 +176,9 @@ export default function RegisterPage() {
 
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-sm">
-            {/* Mobile logo */}
+            {/* Mobile wordmark */}
             <div className="mb-8 flex justify-center lg:hidden">
-              <Image
-                src="/logo-home.png"
-                alt="The Biology Bloke Edventures"
-                width={100}
-                height={100}
-                className="h-16 w-auto"
-              />
+              <span className="display text-2xl font-bold tracking-tight text-forest-900">Edventra</span>
             </div>
 
             <h2 className="display mb-1 text-2xl font-bold text-forest-900">
@@ -214,13 +211,18 @@ export default function RegisterPage() {
                   School
                 </label>
                 <div ref={schoolRef} className="relative">
-                  {school ? (
+                  {schoolName ? (
                     <div className="flex items-center gap-2 rounded-xl border border-forest-300 bg-forest-50 px-3 py-2.5">
                       <School className="h-4 w-4 shrink-0 text-forest-600" aria-hidden />
-                      <span className="flex-1 truncate text-sm font-medium text-forest-900">{school}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-forest-900">{schoolName}</p>
+                        {schoolLocation && (
+                          <p className="truncate text-xs text-charcoal-soft">{schoolLocation}</p>
+                        )}
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setSchool("")}
+                        onClick={() => { setSchoolName(""); setSchoolLocation(""); }}
                         className="shrink-0 text-charcoal-soft hover:text-forest-900"
                         aria-label="Clear school"
                       >

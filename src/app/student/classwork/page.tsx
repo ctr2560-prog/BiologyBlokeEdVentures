@@ -4,59 +4,71 @@ import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { SectionHeader, Badge, ProgressBar, EmptyState } from "@/components/ui/primitives";
 import { Leaf, Film, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
-import {
-  getAssignmentsByClass,
-  getUnit,
-  getTopic,
-  getVideosByTopic,
-  getProgressByStudent,
-} from "@/lib/supabaseService";
-import { DEMO_STUDENT_ID } from "@/data/people";
-import type { Assignment, Unit, Topic, Video, StudentProgress } from "@/types";
+import { mapVideo } from "@/lib/supabaseService";
+import type { Video } from "@/types";
 
-type EnrichedAssignment = Assignment & {
-  unit: Unit | null;
-  topicsWithVideos: { topic: Topic | null; videos: Video[] }[];
+type RawAssignment = {
+  id: string;
+  class_id: string;
+  unit_id: string;
+  due_date: string | null;
+  adaptive_tasks_enabled: boolean;
+  explorer_points_enabled: boolean;
+  delivery_mode: string;
+  assignment_topics: { topic_id: string }[];
+};
+
+type RawTopic = { id: string; title: string; [k: string]: unknown };
+type RawUnit = { id: string; title: string; [k: string]: unknown };
+type RawProgress = {
+  student_id: string;
+  video_id: string;
+  video_completion_percentage: number;
+  [k: string]: unknown;
+};
+
+type EnrichedAssignment = RawAssignment & {
+  unit: RawUnit | null;
+  topicsWithVideos: { topic: RawTopic | null; videos: Video[] }[];
 };
 
 export default function ClassWork() {
   const { currentUser } = useApp();
-  const studentId = currentUser?.id ?? DEMO_STUDENT_ID;
-  const classId = currentUser?.classIds[0];
-
   const [enriched, setEnriched] = useState<EnrichedAssignment[]>([]);
-  const [progress, setProgress] = useState<StudentProgress[]>([]);
+  const [progress, setProgress] = useState<RawProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!classId) {
-      setLoading(false);
-      return;
-    }
-    Promise.all([
-      getAssignmentsByClass(classId),
-      getProgressByStudent(studentId),
-    ]).then(async ([assignments, prog]) => {
-      setProgress(prog);
-      const enrichedList = await Promise.all(
-        assignments.map(async (a) => {
-          const [unit, topicsWithVideos] = await Promise.all([
-            getUnit(a.unitId),
-            Promise.all(
-              a.topicIds.map(async (tid) => ({
-                topic: await getTopic(tid),
-                videos: await getVideosByTopic(tid),
-              }))
-            ),
-          ]);
-          return { ...a, unit, topicsWithVideos };
-        })
-      );
-      setEnriched(enrichedList);
-      setLoading(false);
-    });
-  }, [classId, studentId]);
+    fetch("/api/student/classwork")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          setError(data.error);
+          return;
+        }
+        const assignments: RawAssignment[] = data.assignments ?? [];
+        const units: Record<string, RawUnit> = data.units ?? {};
+        const topics: Record<string, RawTopic> = data.topics ?? {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const videosByTopic: Record<string, any[]> = data.videosByTopic ?? {};
+
+        const enrichedList = assignments.map((a) => ({
+          ...a,
+          unit: units[a.unit_id] ?? null,
+          topicsWithVideos: a.assignment_topics.map((at) => ({
+            topic: topics[at.topic_id] ?? null,
+            videos: (videosByTopic[at.topic_id] ?? []).map(mapVideo),
+          })),
+        }));
+
+        setEnriched(enrichedList);
+        setProgress(data.progress ?? []);
+      })
+      .catch(() => setError("Failed to load class work."))
+      .finally(() => setLoading(false));
+  }, []);
 
   if (loading) {
     return (
@@ -73,6 +85,15 @@ export default function ClassWork() {
           </div>
         ))}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <EmptyState
+        title="Couldn't load class work"
+        message={error}
+      />
     );
   }
 
@@ -98,9 +119,9 @@ export default function ClassWork() {
             <div>
               <h2 className="display text-lg font-bold text-forest-900">{a.unit?.title}</h2>
               <p className="text-xs text-charcoal-soft">
-                Due {a.dueDate}
-                {a.explorerPointsEnabled && " · points enabled"}
-                {a.adaptiveTasksEnabled && " · adaptive"}
+                Due {a.due_date}
+                {a.explorer_points_enabled && " · points enabled"}
+                {a.adaptive_tasks_enabled && " · adaptive"}
               </p>
             </div>
           </div>
@@ -108,15 +129,25 @@ export default function ClassWork() {
           <div className="space-y-4">
             {a.topicsWithVideos.map(({ topic, videos }) => {
               if (!topic) return null;
-              const topicProgress = videos.map((v) => progress.find((p) => p.videoId === v.id));
-              const watchedCount = topicProgress.filter((p) => (p?.videoCompletionPercentage ?? 0) >= 90).length;
-              const totalMins = Math.round(videos.reduce((s, v) => s + v.durationSeconds, 0) / 60);
-              const overallPct = videos.length ? Math.round((watchedCount / videos.length) * 100) : 0;
+              const topicProgress = videos.map((v) =>
+                progress.find((p) => p.video_id === v.id)
+              );
+              const watchedCount = topicProgress.filter(
+                (p) => (p?.video_completion_percentage ?? 0) >= 90
+              ).length;
+              const totalMins = Math.round(
+                videos.reduce((s, v) => s + v.durationSeconds, 0) / 60
+              );
+              const overallPct = videos.length
+                ? Math.round((watchedCount / videos.length) * 100)
+                : 0;
               const isExpanded = expanded[topic.id] ?? false;
 
               return (
-                <div key={topic.id} className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5">
-                  {/* Lesson header card */}
+                <div
+                  key={topic.id}
+                  className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5"
+                >
                   <div
                     className="relative flex items-center gap-4 p-5"
                     style={{ background: "linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%)" }}
@@ -125,10 +156,15 @@ export default function ClassWork() {
                       <PlayCircle className="h-6 w-6 text-cream" aria-hidden />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-forest-100/70">Lesson</p>
-                      <h3 className="display text-base font-bold text-cream leading-snug">{topic.title}</h3>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-forest-100/70">
+                        Lesson
+                      </p>
+                      <h3 className="display text-base font-bold text-cream leading-snug">
+                        {topic.title}
+                      </h3>
                       <p className="mt-0.5 text-xs text-forest-100/70">
-                        {videos.length} reel{videos.length !== 1 ? "s" : ""} · {totalMins}m · {watchedCount}/{videos.length} done
+                        {videos.length} reel{videos.length !== 1 ? "s" : ""} · {totalMins}m ·{" "}
+                        {watchedCount}/{videos.length} done
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
@@ -137,13 +173,16 @@ export default function ClassWork() {
                           type="button"
                           className="rounded-full bg-cream px-5 py-2 text-sm font-bold text-forest-900 shadow-soft transition hover:bg-white"
                         >
-                          {watchedCount === videos.length && videos.length > 0 ? "Review" : watchedCount > 0 ? "Continue" : "Start lesson"}
+                          {watchedCount === videos.length && videos.length > 0
+                            ? "Review"
+                            : watchedCount > 0
+                            ? "Continue"
+                            : "Start lesson"}
                         </button>
                       </Link>
                     </div>
                   </div>
 
-                  {/* Progress bar */}
                   <div className="h-1.5 bg-sand">
                     <div
                       className="h-full bg-forest-500 transition-all duration-500"
@@ -151,21 +190,26 @@ export default function ClassWork() {
                     />
                   </div>
 
-                  {/* Toggle individual reels */}
                   <button
                     type="button"
-                    onClick={() => setExpanded((e) => ({ ...e, [topic.id]: !isExpanded }))}
+                    onClick={() =>
+                      setExpanded((e) => ({ ...e, [topic.id]: !isExpanded }))
+                    }
                     className="flex w-full items-center justify-between px-5 py-3 text-sm font-semibold text-charcoal-soft hover:text-forest-700 transition-colors"
                   >
                     <span>Individual reels</span>
-                    {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" aria-hidden />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" aria-hidden />
+                    )}
                   </button>
 
                   {isExpanded && (
                     <div className="grid grid-cols-1 gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
                       {videos.map((v) => {
-                        const prog = progress.find((p) => p.videoId === v.id);
-                        const pct = prog?.videoCompletionPercentage ?? 0;
+                        const prog = progress.find((p) => p.video_id === v.id);
+                        const pct = prog?.video_completion_percentage ?? 0;
                         const done = pct >= 90;
                         return (
                           <Link
@@ -175,9 +219,16 @@ export default function ClassWork() {
                           >
                             <div
                               className="relative flex h-24 items-center justify-center"
-                              style={{ background: "linear-gradient(135deg, #1b4332 0%, #40916c 100%)" }}
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #1b4332 0%, #40916c 100%)",
+                              }}
                             >
-                              <Film className="h-8 w-8 text-cream/80 transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
+                              <Film
+                                className="h-8 w-8 text-cream/80 transition-transform group-hover:scale-110"
+                                aria-hidden
+                                strokeWidth={1.5}
+                              />
                               {done && (
                                 <span className="absolute right-2 top-2">
                                   <Badge tone="forest">Done</Badge>
@@ -188,9 +239,15 @@ export default function ClassWork() {
                               </span>
                             </div>
                             <div className="p-3">
-                              <p className="text-xs font-bold leading-snug text-forest-900">{v.title}</p>
+                              <p className="text-xs font-bold leading-snug text-forest-900">
+                                {v.title}
+                              </p>
                               <div className="mt-2">
-                                <ProgressBar value={pct} tone={done ? "forest" : "gold"} showLabel />
+                                <ProgressBar
+                                  value={pct}
+                                  tone={done ? "forest" : "gold"}
+                                  showLabel
+                                />
                               </div>
                             </div>
                           </Link>

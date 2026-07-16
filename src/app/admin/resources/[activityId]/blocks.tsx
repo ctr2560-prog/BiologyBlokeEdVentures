@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { FormField, inputClass, Badge } from "@/components/ui/primitives";
+import { getBlockTags } from "@/lib/activityRouting";
 import {
   AlignLeft,
   BarChart2,
@@ -1181,7 +1182,19 @@ export function BlockEditor({
 
   // Preserve adaptive meta fields when individual editors call onChange with plain ActivityBlock
   const patchChange = (b: ActivityBlock): void =>
-    onChange({ ...b, blockDifficulty: block.blockDifficulty, topicTag: block.topicTag });
+    onChange({ ...b, blockDifficulty: block.blockDifficulty, topicTags: getBlockTags(block) });
+
+  const blockTags = getBlockTags(block);
+
+  const addTag = (raw: string) => {
+    const tag = raw.trim().toLowerCase();
+    if (!tag || blockTags.includes(tag)) return;
+    onChange({ ...block, topicTag: undefined, topicTags: [...blockTags, tag] });
+  };
+
+  const removeTag = (tag: string) => {
+    onChange({ ...block, topicTag: undefined, topicTags: blockTags.filter((t) => t !== tag) });
+  };
 
   return (
     <div className="rounded-2xl border border-sand-dark bg-white p-5 space-y-4">
@@ -1228,39 +1241,45 @@ export function BlockEditor({
           ))}
         </div>
 
-        {/* Topic tag */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-charcoal-soft">Topic:</span>
-          {block.topicTag ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-forest-700 px-2.5 py-0.5 text-[11px] font-semibold text-cream">
-              {block.topicTag}
+        {/* Topic tags */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-charcoal-soft">
+            Topics{blockTags.length === 0 ? " (all)" : ""}:
+          </span>
+          {blockTags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 rounded-full bg-forest-700 px-2.5 py-0.5 text-[11px] font-semibold text-cream"
+            >
+              {tag}
               <button
                 type="button"
-                onClick={() => onChange({ ...block, topicTag: undefined })}
+                onClick={() => removeTag(tag)}
                 className="ml-0.5 leading-none hover:opacity-70"
-                aria-label="Clear topic tag"
+                aria-label={`Remove topic tag ${tag}`}
               >
                 ×
               </button>
             </span>
-          ) : (
-            <input
-              type="text"
-              placeholder="e.g. adaptations"
-              className="h-6 w-32 rounded-full border border-sand-dark bg-cream px-2.5 text-[11px] text-charcoal placeholder:text-charcoal-soft/50 focus:border-forest-400 focus:outline-none"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                  e.preventDefault();
-                  onChange({ ...block, topicTag: e.currentTarget.value.trim().toLowerCase() });
-                }
-              }}
-              onBlur={(e) => {
-                if (e.currentTarget.value.trim()) {
-                  onChange({ ...block, topicTag: e.currentTarget.value.trim().toLowerCase() });
-                }
-              }}
-            />
-          )}
+          ))}
+          <input
+            type="text"
+            placeholder={blockTags.length === 0 ? "e.g. adaptations" : "Add another…"}
+            className="h-6 w-28 rounded-full border border-sand-dark bg-cream px-2.5 text-[11px] text-charcoal placeholder:text-charcoal-soft/50 focus:border-forest-400 focus:outline-none"
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === ",") && e.currentTarget.value.trim()) {
+                e.preventDefault();
+                addTag(e.currentTarget.value);
+                e.currentTarget.value = "";
+              }
+            }}
+            onBlur={(e) => {
+              if (e.currentTarget.value.trim()) {
+                addTag(e.currentTarget.value);
+                e.currentTarget.value = "";
+              }
+            }}
+          />
         </div>
       </div>
 

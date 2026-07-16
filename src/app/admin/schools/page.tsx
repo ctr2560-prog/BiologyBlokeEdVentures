@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SectionHeader, Badge, EmptyState } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { getSchools } from "@/lib/supabaseService";
@@ -9,6 +10,7 @@ import type { School } from "@/types";
 const subTone = { active: "forest", trial: "gold", lapsed: "clay" } as const;
 
 export default function SchoolsPage() {
+  const router = useRouter();
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +75,12 @@ export default function SchoolsPage() {
             <Stat label="On trial" value={schools.filter((s) => s.subscriptionStatus === "trial").length} />
             <Stat label="Lapsed" value={schools.filter((s) => s.subscriptionStatus === "lapsed").length} />
           </div>
-          <DataTable columns={columns} rows={schools} keyOf={(s) => s.id} />
+          <DataTable
+            columns={columns}
+            rows={schools}
+            keyOf={(s) => s.id}
+            onRowClick={(s) => router.push(`/admin/schools/${s.id}`)}
+          />
         </>
       )}
     </div>

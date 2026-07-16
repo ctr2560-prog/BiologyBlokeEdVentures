@@ -133,7 +133,7 @@ function ReportsInner() {
                 {cls?.yearGroup} · Class report · {new Date().toLocaleDateString()}
               </p>
             </div>
-            <Badge tone="forest">BioBloke Edventures</Badge>
+            <Badge tone="forest">Edventra</Badge>
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">

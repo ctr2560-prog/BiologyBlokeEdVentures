@@ -17,7 +17,7 @@ import { UnitCard } from "@/components/cards/ContentCards";
 import {
   getPublishedUnits,
   getTopicsByUnit,
-  getVideosByTopic,
+  getLessonOrTopicItems,
   getClassesByTeacher,
   assignLessonToClass,
   getUnit,
@@ -73,21 +73,42 @@ function AssignInner() {
     setPreviewLoading(true);
     Promise.all([getUnit(previewUnit), getTopicsByUnit(previewUnit)]).then(async ([unit, topics]) => {
       setPreviewUnitData(unit);
-      const videoArrays = await Promise.all(topics.map((t) => getVideosByTopic(t.id)));
+      const videoArrays = await Promise.all(
+        topics.map(async (t) => {
+          const items = await getLessonOrTopicItems(t.id);
+          return items
+            .filter((i): i is Extract<typeof items[number], { itemType: "video" }> => i.itemType === "video")
+            .map((i) => i.video);
+        })
+      );
       setPreviewTopics(topics.map((t, i) => ({ ...t, videos: videoArrays[i] })));
       setPreviewLoading(false);
     });
   }, [previewUnit]);
 
-  const openAssign = useCallback(async (unitId: string) => {
+  const openAssign = useCallback(async (unitId: string, onlyLessonId?: string) => {
     setAssignUnit(unitId);
     setPreviewUnit(null);
     setConfirmed(false);
     if (preselectedClass) setSelectedClasses([preselectedClass]);
     const topics = await getTopicsByUnit(unitId);
     setAssignTopics(topics);
-    setSelectedTopics(topics.map((t) => t.id));
+    setSelectedTopics(
+      onlyLessonId && topics.some((t) => t.id === onlyLessonId)
+        ? [onlyLessonId]
+        : topics.map((t) => t.id)
+    );
   }, [preselectedClass]);
+
+  // Deep link from the library: ?unit=<id>[&lesson=<id>] opens the assign
+  // modal for that unit, with just the one lesson ticked when given.
+  const preselectedUnit = searchParams.get("unit");
+  const preselectedLesson = searchParams.get("lesson");
+  useEffect(() => {
+    if (loading || !preselectedUnit) return;
+    openAssign(preselectedUnit, preselectedLesson ?? undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const toggle = (arr: string[], id: string, set: (v: string[]) => void) =>
     set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
@@ -218,7 +239,7 @@ function AssignInner() {
                     <p className="mt-0.5 text-xs text-charcoal-soft">
                       Teacher-led mode works best with printed worksheets students complete during the session.
                     </p>
-                    <Link href="/admin/resources" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-forest-700 hover:underline" onClick={() => setAssignUnit(null)}>
+                    <Link href="/teacher/resources" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-forest-700 hover:underline" onClick={() => setAssignUnit(null)}>
                       Go to Resources to print worksheets →
                     </Link>
                   </div>

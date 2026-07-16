@@ -7,9 +7,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
 export const metadata: Metadata = {
-  title: "BioBloke Edventures",
+  title: "Edventra — by The Biology Bloke",
   description:
-    "Adaptive conservation education platform, short-form wildlife media, adaptive learning pathways, and class insights by The Biology Bloke.",
+    "Edventra is an adaptive nature-based learning platform by The Biology Bloke. Short-form wildlife media, personalised learning pathways, and real-time class insights for Australian schools.",
 };
 
 export default function RootLayout({

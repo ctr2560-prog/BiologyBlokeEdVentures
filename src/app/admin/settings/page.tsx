@@ -11,7 +11,7 @@ export default function AdminSettings() {
         <div className="space-y-4 rounded-3xl bg-white p-6 shadow-soft ring-1 ring-black/5">
           <h3 className="display text-lg font-bold text-forest-900">Platform</h3>
           <FormField label="Platform name">
-            <input className={inputClass} defaultValue="BioBloke Edventures" />
+            <input className={inputClass} defaultValue="Edventra" />
           </FormField>
           <FormField label="Support email">
             <input className={inputClass} defaultValue="thebiologybloke@gmail.com" />

@@ -1,20 +1,33 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { Button, inputClass } from "@/components/ui/primitives";
 import { roleHome } from "@/components/layout/navConfig";
 import { LogIn, ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const { signIn } = useApp();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    searchParams.get("error") === "admin_only"
+      ? "Admin access is restricted. Please sign in with an authorised account."
+      : ""
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,11 +53,11 @@ export default function LoginPage() {
         <div />
         <div className="text-center">
           <Image
-            src="/logo-home.png"
-            alt="The Biology Bloke Edventures"
-            width={200}
-            height={200}
-            className="mx-auto h-36 w-auto drop-shadow-2xl"
+            src="/edventra-white.png"
+            alt="Edventra"
+            width={472}
+            height={119}
+            className="mx-auto h-auto w-4/5 max-w-xs drop-shadow-2xl"
           />
           <h1 className="display mt-6 text-3xl font-bold leading-tight text-cream">
             Bringing the wild<br />to every classroom.
@@ -66,7 +79,7 @@ export default function LoginPage() {
           </div>
         </div>
         <p className="text-xs text-forest-100/40">
-          The Biology Bloke - Conservation education for schools
+          Edventra · Conservation education for Australian schools
         </p>
       </div>
 
@@ -85,15 +98,9 @@ export default function LoginPage() {
 
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-sm">
-            {/* Mobile logo */}
+            {/* Mobile wordmark */}
             <div className="mb-8 flex justify-center lg:hidden">
-              <Image
-                src="/logo-home.png"
-                alt="The Biology Bloke Edventures"
-                width={100}
-                height={100}
-                className="h-16 w-auto"
-              />
+              <span className="display text-2xl font-bold tracking-tight text-forest-900">Edventra</span>
             </div>
 
             <h2 className="display mb-1 text-2xl font-bold text-forest-900">Teacher sign in</h2>
@@ -148,7 +155,7 @@ export default function LoginPage() {
 
             {/* Create account - more prominent */}
             <div className="mt-5 rounded-2xl border border-sand bg-white px-5 py-4 text-center">
-              <p className="text-sm font-semibold text-forest-900">New to BioBloke Edventures?</p>
+              <p className="text-sm font-semibold text-forest-900">New to Edventra?</p>
               <p className="mt-0.5 text-xs text-charcoal-soft">Set up your school account and start running Edventures in minutes.</p>
               <Link
                 href="/register"

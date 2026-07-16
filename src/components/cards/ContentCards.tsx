@@ -6,6 +6,7 @@
  * (lucide-react), no emojis.
  */
 import Link from "next/link";
+import Image from "next/image";
 import type { Unit, Video, Resource, Topic, ClassGroup } from "@/types";
 import { Badge, ProgressBar } from "@/components/ui/primitives";
 import { formatWatchTime } from "@/lib/analytics";
@@ -116,13 +117,27 @@ export function VideoCard({
   progress?: number;
   points?: number;
 }) {
+  const thumbnailSrc = video.muxPlaybackId
+    ? `https://image.mux.com/${video.muxPlaybackId}/thumbnail.jpg?width=640&time=2`
+    : video.thumbnailUrl || null;
+
   const inner = (
     <div className="card-lift group h-full overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5">
       <div
-        className="relative flex h-40 items-center justify-center"
-        style={{ background: heroGradient(video.id) }}
+        className="relative flex h-40 items-center justify-center overflow-hidden"
+        style={thumbnailSrc ? undefined : { background: heroGradient(video.id) }}
       >
-        <Film className="h-14 w-14 text-cream/90 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
+        {thumbnailSrc ? (
+          <Image
+            src={thumbnailSrc}
+            alt={video.title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+        ) : (
+          <Film className="h-14 w-14 text-cream/90 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
+        )}
         <span className="glass-dark absolute bottom-2 right-2 rounded-full px-2 py-0.5 text-xs font-semibold text-cream">
           {formatWatchTime(video.durationSeconds)}
         </span>

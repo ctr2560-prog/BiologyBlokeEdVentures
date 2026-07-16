@@ -71,55 +71,40 @@ export async function signInStudent(
 ): Promise<{ user: User | null; error: string | null }> {
   const supabase = getSupabaseClient();
 
-  // 1. Look up class by code.
-  const { data: cls } = await supabase
-    .from("classes")
-    .select("id")
-    .eq("class_code", classCode.toUpperCase())
-    .single();
+  // 1. Look up class + verify enrollment via service-role API (bypasses RLS).
+  const res = await fetch(`/api/class/${encodeURIComponent(classCode.toUpperCase())}`);
+  const data = await res.json();
+  if (!data) return { user: null, error: "Class not found." };
 
-  if (!cls) return { user: null, error: "Class not found." };
+  const classId = String(data.cls.id);
+  const student = (data.students as { id: string; name: string; animal_id: string }[]).find(
+    (s) => s.id === studentId
+  );
+  if (!student) return { user: null, error: "Explorer not found in this class." };
 
-  // 2. Verify the student is enrolled in this class.
-  const { data: enrollment } = await supabase
-    .from("class_students")
-    .select("student_id")
-    .eq("class_id", String(cls.id))
-    .eq("student_id", studentId)
-    .single();
-
-  if (!enrollment) return { user: null, error: "Explorer not found in this class." };
-
-  // 3. Create an anonymous Supabase auth session.
+  // 2. Create an anonymous Supabase auth session.
   const { error: anonError } = await supabase.auth.signInAnonymously();
   if (anonError) return { user: null, error: anonError.message };
 
-  // 4. Attach student + class to the JWT metadata so RLS can scope access.
+  // 3. Attach student + class to the JWT so RLS policies can scope access.
   await supabase.auth.updateUser({
-    data: { student_id: studentId, class_id: String(cls.id) },
+    data: { student_id: studentId, class_id: classId },
   });
 
-  // 5. Fetch and return the student's public user record.
-  const { data: row } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", studentId)
-    .single();
+  // 4. Refresh the session so the new user_metadata is in the JWT immediately.
+  //    Without this, bb_my_class_id() returns null and RLS blocks all student reads.
+  await supabase.auth.refreshSession();
 
-  if (!row) return { user: null, error: "Student record not found." };
-
-  const r = row as Record<string, unknown>;
   return {
     user: {
-      id: String(r.id),
-      name: String(r.name),
+      id: student.id,
+      name: student.name,
       email: "",
       role: "student",
-      schoolId: r.school_id ? String(r.school_id) : undefined,
-      classIds: [String(cls.id)],
-      avatarUrl: String(r.avatar_url ?? ""),
-      createdAt: String(r.created_at),
-      animalId: r.animal_id ? String(r.animal_id) : undefined,
+      classIds: [classId],
+      avatarUrl: "",
+      createdAt: "",
+      animalId: student.animal_id,
     },
     error: null,
   };
@@ -171,10 +156,24 @@ export async function getCurrentDbUser(): Promise<User | null> {
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   if (!meta.bb_id) return null;
 
+  const publicId = String(meta.bb_id);
+
   const classIds =
     meta.bb_role === "teacher"
-      ? await teacherClassIds(String(meta.bb_id))
+      ? await teacherClassIds(publicId)
       : [];
 
-  return userFromMeta(meta, user.email ?? "", user.created_at, classIds);
+  // Always read school_id from the DB so it stays accurate even if JWT metadata is stale.
+  const { data: dbRow } = await supabase
+    .from("users")
+    .select("school_id")
+    .eq("id", publicId)
+    .single();
+
+  const schoolId = dbRow?.school_id ? String(dbRow.school_id) : undefined;
+
+  return {
+    ...userFromMeta(meta, user.email ?? "", user.created_at, classIds),
+    schoolId,
+  };
 }

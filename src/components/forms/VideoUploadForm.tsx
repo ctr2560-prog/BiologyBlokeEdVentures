@@ -2,37 +2,39 @@
 import { useRef, useState } from "react";
 import { FormField, Button, inputClass } from "@/components/ui/primitives";
 import { createVideo } from "@/lib/supabaseService";
-import { Loader } from "lucide-react";
+import { Loader, X } from "lucide-react";
 import type { Topic, Video } from "@/types";
 
 type UploadState = "idle" | "creating" | "uploading" | "processing" | "error";
 
 interface Props {
-  /** Pre-selected and locked topic - hides the topic dropdown */
+  /** Pre-selected and locked topic (when uploading from within a lesson). */
   lockedTopic?: Topic;
-  /** Topics list for the dropdown (used when no lockedTopic) */
-  availableTopics?: Topic[];
   onDone: (video: Video) => void;
 }
 
-export function VideoUploadForm({ lockedTopic, availableTopics = [], onDone }: Props) {
+export function VideoUploadForm({ lockedTopic, onDone }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [topicId, setTopicId] = useState(lockedTopic?.id ?? "");
-  const [learningIntent, setLearningIntent] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const selectedTopic = lockedTopic ?? availableTopics.find((t) => t.id === topicId);
+  const addTag = () => {
+    const t = tagDraft.trim().toLowerCase();
+    if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
+    setTagDraft("");
+  };
 
   const reset = () => {
     setTitle("");
     setDescription("");
-    if (!lockedTopic) setTopicId("");
-    setLearningIntent("");
+    setTags([]);
+    setTagDraft("");
     setFile(null);
     setUploadState("idle");
     setUploadProgress(0);
@@ -42,26 +44,30 @@ export function VideoUploadForm({ lockedTopic, availableTopics = [], onDone }: P
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    const resolvedTopicId = lockedTopic?.id ?? topicId;
-    if (!file || !resolvedTopicId || !title) return;
+    if (!file || !title) return;
     setErrorMsg("");
+
+    // Pick up a tag still sitting in the input that was never committed
+    const finalTags = [...tags];
+    const pending = tagDraft.trim().toLowerCase();
+    if (pending && !finalTags.includes(pending)) finalTags.push(pending);
 
     try {
       setUploadState("creating");
       const video = await createVideo({
         title,
         description,
-        topicId: resolvedTopicId,
-        unitId: selectedTopic?.unitId ?? "",
+        topicId: lockedTopic?.id ?? "",
+        unitId: lockedTopic?.unitId ?? "",
         videoUrl: "",
         thumbnailUrl: "",
         thumbEmoji: "",
         durationSeconds: 0,
-        tags: [],
+        tags: finalTags,
         stage: "Stage 3" as const,
         yearGroups: [],
         transcript: "",
-        learningIntent,
+        learningIntent: "",
         successCriteria: [],
         published: false,
       });
@@ -119,24 +125,10 @@ export function VideoUploadForm({ lockedTopic, availableTopics = [], onDone }: P
         />
       </FormField>
 
-      {lockedTopic ? (
+      {lockedTopic && (
         <div className="rounded-2xl bg-forest-50 px-4 py-2.5 text-sm text-forest-800">
-          <span className="font-semibold">Topic: </span>{lockedTopic.title}
+          <span className="font-semibold">Lesson: </span>{lockedTopic.title}
         </div>
-      ) : (
-        <FormField label="Topic" required>
-          <select
-            className={inputClass}
-            required
-            value={topicId}
-            onChange={(e) => setTopicId(e.target.value)}
-          >
-            <option value="">Select a topic</option>
-            {availableTopics.map((t) => (
-              <option key={t.id} value={t.id}>{t.title}</option>
-            ))}
-          </select>
-        </FormField>
       )}
 
       <FormField label="Description">
@@ -149,13 +141,42 @@ export function VideoUploadForm({ lockedTopic, availableTopics = [], onDone }: P
         />
       </FormField>
 
-      <FormField label="Learning intent">
-        <input
-          className={inputClass}
-          value={learningIntent}
-          onChange={(e) => setLearningIntent(e.target.value)}
-          placeholder="e.g. Students will understand predator-prey dynamics"
-        />
+      <FormField label="Tags" hint="Power the adaptive engine — students who watch longer on a tag get activities matched to it">
+        <div>
+          {tags.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {tags.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-1 rounded-full bg-forest-100 px-2.5 py-1 text-xs font-semibold text-forest-800"
+                >
+                  {t}
+                  <button
+                    type="button"
+                    onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
+                    className="text-forest-600 hover:text-clay-600"
+                    aria-label={`Remove tag ${t}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <input
+            className={inputClass}
+            value={tagDraft}
+            onChange={(e) => setTagDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                addTag();
+              }
+            }}
+            onBlur={addTag}
+            placeholder="e.g. chimpanzees — press Enter to add"
+          />
+        </div>
       </FormField>
 
       <FormField label="Video file" required>
@@ -196,7 +217,6 @@ export function VideoUploadForm({ lockedTopic, availableTopics = [], onDone }: P
         disabled={
           !file ||
           !title ||
-          (!lockedTopic && !topicId) ||
           uploadState === "creating" ||
           uploadState === "uploading"
         }

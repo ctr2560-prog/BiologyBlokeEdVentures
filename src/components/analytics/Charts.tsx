@@ -78,7 +78,7 @@ export function LineChart({ data }: { data: Datum[] }) {
   const w = 100;
   const h = 40;
   const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * w;
+    const x = data.length > 1 ? (i / (data.length - 1)) * w : w / 2;
     const y = h - ((d.value - min) / range) * h;
     return { x, y, ...d };
   });

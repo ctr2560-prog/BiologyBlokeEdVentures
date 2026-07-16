@@ -3,6 +3,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { AliasChip } from "@/components/ui/AliasChip";
+import { getBlockTags } from "@/lib/activityRouting";
 import {
   getActivity,
   getClass,
@@ -426,11 +427,11 @@ function BlockResponseCard({
     <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="sand">{BLOCK_TYPE_LABELS[block.type] ?? block.type}</Badge>
-        {block.topicTag && (
-          <span className="rounded-full bg-forest-100 px-2.5 py-0.5 text-xs font-semibold text-forest-700">
-            {block.topicTag}
+        {getBlockTags(block).map((tag) => (
+          <span key={tag} className="rounded-full bg-forest-100 px-2.5 py-0.5 text-xs font-semibold text-forest-700">
+            {tag}
           </span>
-        )}
+        ))}
         {block.blockDifficulty && (
           <span className="rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-semibold text-gold-700 capitalize">
             {block.blockDifficulty}

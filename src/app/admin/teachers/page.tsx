@@ -5,8 +5,8 @@ export default function TeachersPage() {
   return (
     <UserManagement
       role="teacher"
-      title="Teachers"
-      subtitle="Staff across all schools, filter by school or search by name"
+      title="Users"
+      subtitle="All teachers on the platform — name, email, school and assigned classes"
     />
   );
 }

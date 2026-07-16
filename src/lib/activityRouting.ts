@@ -1,5 +1,12 @@
 import type { TaggedActivityBlock, ActivityBlock, Difficulty } from "@/types";
 
+/** All topic tags on a block, folding in the legacy single-tag field. */
+export function getBlockTags(block: TaggedActivityBlock): string[] {
+  const tags = block.topicTags ?? [];
+  if (block.topicTag && !tags.includes(block.topicTag)) return [...tags, block.topicTag];
+  return tags;
+}
+
 export function getStudentDifficulty(quizScore: number): Difficulty {
   if (quizScore < 50) return "foundation";
   if (quizScore >= 80) return "advanced";
@@ -58,9 +65,10 @@ export function filterBlocksForStudent(
 
   return blocks.filter((block) => {
     if (block.blockDifficulty && block.blockDifficulty !== difficulty) return false;
+    const blockTags = getBlockTags(block);
     // If no qualifying tag (spammer/equal watcher with no reactions), show only untagged blocks
-    if (!topTag) return !block.topicTag;
-    if (block.topicTag && block.topicTag !== topTag) return false;
+    if (!topTag) return blockTags.length === 0;
+    if (blockTags.length > 0 && !blockTags.includes(topTag)) return false;
     return true;
   });
 }

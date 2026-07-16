@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /*
-  BioBloke Edventures design system.
-  Earthy, cinematic, nature-based palette inspired by WWF Together:
+  Edventra design system — by The Biology Bloke.
+  Earthy, cinematic, nature-based palette:
   deep forest greens, warm cream/sand, clay brown, soft gold, misty blue.
 */
 @theme {
@@ -60,13 +60,25 @@ h1, h2, h3, h4, .display {
   letter-spacing: -0.02em;
 }
 
-/* Card lift used across the app */
+/* Card lift — translate + subtle scale for a modern feel */
 .card-lift {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
 }
 .card-lift:hover {
-  transform: translateY(-4px);
+  transform: translateY(-5px) scale(1.012);
   box-shadow: var(--shadow-lift);
+}
+
+/* Button micro-interaction — used on primary CTA buttons */
+.btn-pop {
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.btn-pop:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.18);
+}
+.btn-pop:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
 }
 
 /* Gentle entrance for page content */

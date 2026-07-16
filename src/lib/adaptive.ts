@@ -1,7 +1,7 @@
 /*
  * Adaptive learning engine.
  *
- * generateAdaptiveRecommendation() is the heart of BioBloke's personalisation.
+ * generateAdaptiveRecommendation() is the heart of Edventra's personalisation.
  * It takes a student's engagement signals from a video + quiz and returns a
  * recommendation that both teachers and students see. Pure function, no side
  * effects, so it is trivial to unit-test and to run inside a Cloud Function.

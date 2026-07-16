@@ -4,54 +4,55 @@ import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { Button, Badge, ProgressBar } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
-import {
-  getAssignmentsByClass,
-  getVideosByTopic,
-  getProgressByStudent,
-} from "@/lib/supabaseService";
-import { conservationFacts, exploreEcosystems } from "@/data/content";
-import { DEMO_STUDENT_ID } from "@/data/people";
-import { getEcoIcon } from "@/lib/icons";
+import { mapVideo, getEcosystems } from "@/lib/supabaseService";
+import { conservationFacts } from "@/data/content";
+import { getEcoIconByKey } from "@/lib/icons";
 import { Play, Star, Film, Award, Globe, type LucideIcon } from "lucide-react";
-import type { Assignment, Video, StudentProgress } from "@/types";
+import type { Video, Ecosystem } from "@/types";
+
+type RawProgress = {
+  video_id: string;
+  video_completion_percentage: number;
+  [k: string]: unknown;
+};
 
 export default function StudentHome() {
   const { currentUser } = useApp();
-  const studentId = currentUser?.id ?? DEMO_STUDENT_ID;
-  const classId = currentUser?.classIds[0];
-
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignedVideos, setAssignedVideos] = useState<Video[]>([]);
-  const [progress, setProgress] = useState<StudentProgress[]>([]);
+  const [progress, setProgress] = useState<RawProgress[]>([]);
+  const [ecosystems, setEcosystems] = useState<Ecosystem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!classId) {
-      setLoading(false);
-      return;
-    }
     Promise.all([
-      getAssignmentsByClass(classId),
-      getProgressByStudent(studentId),
-    ]).then(async ([asgn, prog]) => {
-      setAssignments(asgn);
-      setProgress(prog);
-      // Flatten all topic IDs across all assignments, then load videos
-      const allTopicIds = [...new Set(asgn.flatMap((a) => a.topicIds))];
-      const videoArrays = await Promise.all(allTopicIds.map(getVideosByTopic));
-      setAssignedVideos(videoArrays.flat());
-      setLoading(false);
-    });
-  }, [classId, studentId]);
+      fetch("/api/student/classwork")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) return;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const videosByTopic: Record<string, any[]> = data.videosByTopic ?? {};
+          const allVideos = Object.values(videosByTopic).flat().map(mapVideo);
+          setAssignedVideos(allVideos);
+          setProgress(data.progress ?? []);
+        })
+        .catch(() => {}),
+      getEcosystems()
+        .then((ecos) => setEcosystems(ecos.filter((e) => e.published)))
+        .catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
 
   const watchedIds = new Set(
-    progress.filter((p) => p.videoCompletionPercentage >= 90).map((p) => p.videoId)
+    progress.filter((p) => p.video_completion_percentage >= 90).map((p) => p.video_id)
   );
   const continueVideo = assignedVideos.find((v) => !watchedIds.has(v.id)) ?? assignedVideos[0];
   const points = progress.length * 20;
 
   const fact = conservationFacts[new Date().getDate() % conservationFacts.length];
-  const featured = exploreEcosystems[new Date().getDate() % exploreEcosystems.length];
+  // Admin-starred ecosystem wins; otherwise rotate daily through the list
+  const featured =
+    ecosystems.find((e) => e.featured) ??
+    (ecosystems.length > 0 ? ecosystems[new Date().getDate() % ecosystems.length] : null);
 
   if (loading) {
     return (
@@ -115,13 +116,13 @@ export default function StudentHome() {
         {assignedVideos.length ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {assignedVideos.slice(0, 3).map((v) => {
-              const prog = progress.find((p) => p.videoId === v.id);
+              const prog = progress.find((p) => p.video_id === v.id);
               return (
                 <VideoCard
                   key={v.id}
                   video={v}
                   href={`/student/watch/${v.id}`}
-                  progress={prog?.videoCompletionPercentage ?? 0}
+                  progress={prog?.video_completion_percentage ?? 0}
                   points={20}
                 />
               );
@@ -136,24 +137,26 @@ export default function StudentHome() {
 
       {/* Featured ecosystem + daily fact */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-        <Link
-          href="/student/explore"
-          className="card-lift relative overflow-hidden rounded-3xl p-8 text-cream"
-          style={{ background: `linear-gradient(120deg, ${featured.color}, #0d2419)` }}
-        >
-          <Badge tone="gold">Featured ecosystem</Badge>
-          <div className="mt-4 flex items-center gap-4">
-            {(() => {
-              const I = getEcoIcon(featured.id);
-              return <I className="h-14 w-14 shrink-0" aria-hidden strokeWidth={1.5} />;
-            })()}
-            <div>
-              <h3 className="display text-2xl font-bold">{featured.name}</h3>
-              <p className="mt-1 max-w-sm text-forest-100/90">{featured.blurb}</p>
+        {featured && (
+          <Link
+            href="/student/explore"
+            className="card-lift relative overflow-hidden rounded-3xl p-8 text-cream"
+            style={{ background: `linear-gradient(120deg, ${featured.color}, #0d2419)` }}
+          >
+            <Badge tone="gold">Featured ecosystem</Badge>
+            <div className="mt-4 flex items-center gap-4">
+              {(() => {
+                const I = getEcoIconByKey(featured.icon, featured.id);
+                return <I className="h-14 w-14 shrink-0" aria-hidden strokeWidth={1.5} />;
+              })()}
+              <div>
+                <h3 className="display text-2xl font-bold">{featured.name}</h3>
+                <p className="mt-1 max-w-sm text-forest-100/90">{featured.blurb}</p>
+              </div>
             </div>
-          </div>
-          <p className="mt-4 text-sm font-semibold">Explore this world</p>
-        </Link>
+            <p className="mt-4 text-sm font-semibold">Explore this world</p>
+          </Link>
+        )}
         <div className="rounded-3xl bg-gold-300/30 p-6 ring-1 ring-gold-300/50">
           <Globe className="h-8 w-8 text-forest-600" aria-hidden strokeWidth={1.75} />
           <h3 className="display mt-2 font-bold text-forest-900">Daily conservation fact</h3>

@@ -14,6 +14,7 @@
  */
 
 import { getSupabaseClient } from "./supabase/client";
+import { getBlockTags } from "./activityRouting";
 import { animals, getAnimal } from "@/data/animals";
 import type {
   Unit,
@@ -55,6 +56,7 @@ function mapUnit(r: Row): Unit {
     coverImage: r.cover_image ?? "",
     coverEmoji: "",
     published: Boolean(r.published),
+    featured: Boolean(r.featured),
     program: r.program ?? "",
     assessmentTask: r.assessment_task ?? "",
     createdAt: r.created_at ?? "",
@@ -70,13 +72,16 @@ function mapTopic(r: Row): Topic {
     animalFocus: r.animal_focus ?? [],
     ecosystemFocus: r.ecosystem_focus ?? [],
     difficulty: r.difficulty,
+    featured: Boolean(r.featured),
+    slidesUrl: r.slides_url ?? "",
+    coverImage: r.cover_image ?? "",
     videoIds: (r.videos ?? []).map((v: Row) => v.id),
     quizIds: (r.quizzes ?? []).map((q: Row) => q.id),
     resourceIds: (r.resources ?? []).map((res: Row) => res.id),
   };
 }
 
-function mapVideo(r: Row): Video {
+export function mapVideo(r: Row): Video {
   return {
     id: r.id,
     title: r.title,
@@ -123,7 +128,8 @@ function mapQuestion(r: Row): Question {
     questionText: r.question_text,
     type: r.type,
     options: r.options ?? [],
-    correctAnswer: r.correct_answer,
+    // correct_answer is omitted from student-facing queries — only present for admin/teacher
+    ...(r.correct_answer !== undefined && { correctAnswer: r.correct_answer }),
     explanation: r.explanation ?? "",
     difficulty: r.difficulty,
     linkedConcept: r.linked_concept ?? "",
@@ -134,7 +140,7 @@ function mapQuiz(r: Row): Quiz {
   return {
     id: r.id,
     title: r.title,
-    topicId: r.topic_id,
+    topicId: r.topic_id ?? "",
     questions: (r.questions ?? [])
       .sort((a: Row, b: Row) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map(mapQuestion),
@@ -165,7 +171,13 @@ function mapUser(r: Row, classIds: string[] = []): User {
     avatarUrl: r.avatar_url ?? "",
     createdAt: r.created_at ?? "",
     animalId: r.animal_id ?? undefined,
+    pin: r.pin ?? undefined,
   };
+}
+
+/** 4-digit student sign-in PIN (no leading zero, easy to read off a card). */
+function generatePin(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
 }
 
 function mapClass(r: Row): ClassGroup {
@@ -204,8 +216,8 @@ function mapProgress(r: Row): StudentProgress {
     id: r.id,
     studentId: r.student_id,
     classId: r.class_id,
-    unitId: r.unit_id,
-    topicId: r.topic_id,
+    unitId: r.unit_id ?? "",
+    topicId: r.topic_id ?? "",
     videoId: r.video_id,
     watchTimeSeconds: r.watch_time_seconds ?? 0,
     videoCompletionPercentage: Number(r.video_completion_percentage ?? 0),
@@ -318,6 +330,349 @@ export async function removeLessonFromUnit(unitId: string, lessonId: string): Pr
     .eq("lesson_id", lessonId);
 }
 
+/** All unit↔lesson links, for building "part of unit X" lookups in one query. */
+export async function getUnitLessonLinks(): Promise<Array<{ unitId: string; lessonId: string }>> {
+  const { data } = await getSupabaseClient()
+    .from("unit_lessons")
+    .select("unit_id, lesson_id")
+    .order("order_index");
+  return (data ?? []).map((r: Row) => ({ unitId: r.unit_id as string, lessonId: r.lesson_id as string }));
+}
+
+// ---- Explore ecosystems ----
+
+import type { Ecosystem } from "@/types";
+
+function mapEcosystem(r: Row): Ecosystem {
+  return {
+    id: r.id,
+    name: r.name,
+    blurb: r.blurb ?? "",
+    color: r.color ?? "#2d6a4f",
+    icon: r.icon ?? "",
+    tags: r.tags ?? [],
+    featured: Boolean(r.featured),
+    published: Boolean(r.published),
+    sortOrder: r.sort_order ?? 0,
+  };
+}
+
+/** All ecosystems in display order (callers filter on published as needed). */
+export async function getEcosystems(): Promise<Ecosystem[]> {
+  const { data } = await getSupabaseClient()
+    .from("ecosystems")
+    .select("*")
+    .order("sort_order");
+  return (data ?? []).map(mapEcosystem);
+}
+
+export async function upsertEcosystem(eco: Ecosystem): Promise<void> {
+  const { error } = await getSupabaseClient().from("ecosystems").upsert({
+    id: eco.id,
+    name: eco.name,
+    blurb: eco.blurb,
+    color: eco.color,
+    icon: eco.icon,
+    tags: eco.tags,
+    featured: eco.featured,
+    published: eco.published,
+    sort_order: eco.sortOrder,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteEcosystem(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from("ecosystems").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- Professional learning sessions ----
+
+import type { PLSession } from "@/types";
+
+function mapPLSession(r: Row): PLSession {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description ?? "",
+    sessionDate: r.session_date ?? "",
+    timeLabel: r.time_label ?? "",
+    cost: r.cost ?? "",
+    mode: r.mode ?? "in-person",
+    location: r.location ?? "",
+    linkUrl: r.link_url ?? "",
+    imageUrl: r.image_url ?? "",
+    published: Boolean(r.published),
+  };
+}
+
+/** All PL sessions, soonest first (callers filter on published/date). */
+export async function getPLSessions(): Promise<PLSession[]> {
+  const { data } = await getSupabaseClient()
+    .from("pl_sessions")
+    .select("*")
+    .order("session_date", { ascending: true, nullsFirst: false });
+  return (data ?? []).map(mapPLSession);
+}
+
+export async function upsertPLSession(session: PLSession): Promise<void> {
+  const { error } = await getSupabaseClient().from("pl_sessions").upsert({
+    id: session.id,
+    title: session.title,
+    description: session.description,
+    session_date: session.sessionDate || null,
+    time_label: session.timeLabel,
+    cost: session.cost,
+    mode: session.mode,
+    location: session.location,
+    link_url: session.linkUrl,
+    image_url: session.imageUrl,
+    published: session.published,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function deletePLSession(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from("pl_sessions").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- PL bookings ----
+
+import type { PLBooking } from "@/types";
+
+function mapPLBooking(r: Row): PLBooking {
+  return {
+    id: r.id,
+    sessionId: r.session_id,
+    teacherId: r.teacher_id,
+    name: r.name ?? "",
+    email: r.email ?? "",
+    bookedAt: r.booked_at ?? "",
+  };
+}
+
+export async function bookPLSession(input: {
+  sessionId: string;
+  teacherId: string;
+  name: string;
+  email: string;
+}): Promise<void> {
+  const { error } = await getSupabaseClient().from("pl_bookings").insert({
+    id: newId("plb"),
+    session_id: input.sessionId,
+    teacher_id: input.teacherId,
+    name: input.name,
+    email: input.email,
+  });
+  if (error) {
+    if (error.code === "23505") throw new Error("You've already booked this session.");
+    throw new Error(error.message);
+  }
+}
+
+export async function cancelPLBooking(sessionId: string, teacherId: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("pl_bookings")
+    .delete()
+    .eq("session_id", sessionId)
+    .eq("teacher_id", teacherId);
+  if (error) throw new Error(error.message);
+}
+
+/** Session ids the teacher has booked (RLS limits rows to their own). */
+export async function getMyPLBookings(teacherId: string): Promise<string[]> {
+  const { data } = await getSupabaseClient()
+    .from("pl_bookings")
+    .select("session_id")
+    .eq("teacher_id", teacherId);
+  return (data ?? []).map((r: Row) => r.session_id as string);
+}
+
+/** All bookings across sessions — admin only (RLS enforced). */
+export async function getAllPLBookings(): Promise<PLBooking[]> {
+  const { data } = await getSupabaseClient()
+    .from("pl_bookings")
+    .select("*")
+    .order("booked_at");
+  return (data ?? []).map(mapPLBooking);
+}
+
+/** Uploads a PL session image to the public bucket and returns its URL. */
+export async function uploadPLImage(file: File): Promise<string> {
+  const supabase = getSupabaseClient();
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `pl-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("pl-images").upload(path, file, {
+    cacheControl: "3600",
+    upsert: true,
+  });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("pl-images").getPublicUrl(path).data.publicUrl;
+}
+
+// ---- Site banners ----
+
+import type { SiteBanner } from "@/types";
+
+function mapBanner(r: Row): SiteBanner {
+  return {
+    id: r.id,
+    placement: r.placement ?? "teacher",
+    eyebrow: r.eyebrow ?? "",
+    title: r.title ?? "",
+    message: r.message ?? "",
+    imageUrl: r.image_url ?? "",
+    imagePosX: r.image_pos_x ?? 50,
+    imagePosY: r.image_pos_y ?? 50,
+    linkUrl: r.link_url ?? "",
+    linkLabel: r.link_label ?? "",
+    active: Boolean(r.active),
+    sortOrder: r.sort_order ?? 0,
+  };
+}
+
+/** All banners for a placement, in display order. */
+export async function getBanners(placement: string): Promise<SiteBanner[]> {
+  const { data } = await getSupabaseClient()
+    .from("site_banners")
+    .select("*")
+    .eq("placement", placement)
+    .order("sort_order");
+  return (data ?? []).map(mapBanner);
+}
+
+export async function saveBanner(banner: SiteBanner): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("site_banners")
+    .upsert({
+      id: banner.id,
+      placement: banner.placement,
+      eyebrow: banner.eyebrow,
+      title: banner.title,
+      message: banner.message,
+      image_url: banner.imageUrl,
+      image_pos_x: Math.round(banner.imagePosX),
+      image_pos_y: Math.round(banner.imagePosY),
+      link_url: banner.linkUrl,
+      link_label: banner.linkLabel,
+      active: banner.active,
+      sort_order: banner.sortOrder,
+      updated_at: new Date().toISOString(),
+    });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteBanner(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from("site_banners").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Uploads a banner image to the public bucket and returns its public URL. */
+export async function uploadBannerImage(file: File): Promise<string> {
+  const supabase = getSupabaseClient();
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `banner-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("banners").upload(path, file, {
+    cacheControl: "3600",
+    upsert: true,
+  });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("banners").getPublicUrl(path).data.publicUrl;
+}
+
+// ---- Unit documents (Word downloads for teachers) ----
+
+export type UnitDocKind = "program" | "assessment";
+
+/** Uploads a unit document (Word) and returns its public URL. */
+export async function uploadUnitDocument(
+  unitId: string,
+  kind: UnitDocKind,
+  file: File
+): Promise<string> {
+  const supabase = getSupabaseClient();
+  const safeName = file.name.replace(/[^\w.\-() ]+/g, "");
+  const path = `${unitId}/${kind}-${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("unit-docs").upload(path, file, {
+    cacheControl: "3600",
+    upsert: true,
+  });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("unit-docs").getPublicUrl(path).data.publicUrl;
+}
+
+export async function setUnitDocument(
+  unitId: string,
+  kind: UnitDocKind,
+  url: string
+): Promise<void> {
+  const column = kind === "program" ? "program" : "assessment_task";
+  const { error } = await getSupabaseClient()
+    .from("units")
+    .update({ [column]: url })
+    .eq("id", unitId);
+  if (error) throw new Error(error.message);
+}
+
+/** Original filename from an uploaded unit-doc URL (strips the kind-timestamp prefix). */
+export function unitDocFilename(url: string): string {
+  const last = decodeURIComponent(url.split("/").pop() ?? "");
+  const match = last.match(/^(?:program|assessment)-\d+-(.+)$/);
+  return match ? match[1] : last || "document";
+}
+
+// ---- Cover images (unit & lesson cards) ----
+
+export async function uploadCoverImage(
+  kind: "unit" | "lesson",
+  id: string,
+  file: File
+): Promise<string> {
+  const supabase = getSupabaseClient();
+  const safeName = file.name.replace(/[^\w.\-() ]+/g, "");
+  const path = `${kind}/${id}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("covers").upload(path, file, {
+    cacheControl: "3600",
+    upsert: true,
+  });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("covers").getPublicUrl(path).data.publicUrl;
+}
+
+export async function setUnitCover(id: string, url: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("units").update({ cover_image: url }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function setLessonCover(id: string, url: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("topics").update({ cover_image: url }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- Featured content ----
+
+export async function setUnitFeatured(id: string, featured: boolean): Promise<void> {
+  const { error } = await getSupabaseClient().from("units").update({ featured }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function setLessonFeatured(id: string, featured: boolean): Promise<void> {
+  const { error } = await getSupabaseClient().from("topics").update({ featured }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Attaches (or clears) the slide deck link shown at the start of a lesson. */
+export async function setLessonSlides(id: string, slidesUrl: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("topics")
+    .update({ slides_url: slidesUrl })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 // ---- Videos ----
 
 export async function getVideos(): Promise<Video[]> {
@@ -385,10 +740,13 @@ export async function getQuiz(id: string): Promise<Quiz | null> {
   return data ? mapQuiz(data) : null;
 }
 
-export async function getQuizByTopic(topicId: string): Promise<Quiz | null> {
+export async function getQuizByTopic(topicId: string, studentMode = false): Promise<Quiz | null> {
+  const questionsSelect = studentMode
+    ? "questions(id,question_text,type,options,explanation,difficulty,linked_concept,sort_order)"
+    : "questions(*)";
   const { data } = await getSupabaseClient()
     .from("quizzes")
-    .select("*, questions(*)")
+    .select(`*, ${questionsSelect}`)
     .eq("topic_id", topicId)
     .limit(1)
     .maybeSingle();
@@ -398,19 +756,15 @@ export async function getQuizByTopic(topicId: string): Promise<Quiz | null> {
 // ---- Schools ----
 
 export async function getSchools(): Promise<School[]> {
-  const { data } = await getSupabaseClient()
-    .from("schools")
-    .select("*, teachers:users!school_id(id,role), students:users!school_id(id,role)");
+  const { data } = await getSupabaseClient().rpc("get_school_stats");
   if (!data) return [];
-  return data.map((r: Row) => {
-    // Separate teachers and students from the joined users.
-    const allUsers: Row[] = r.teachers ?? [];
-    return mapSchool({
+  return (data as Row[]).map((r) =>
+    mapSchool({
       ...r,
-      teachers: allUsers.filter((u) => u.role === "teacher"),
-      students: allUsers.filter((u) => u.role === "student"),
-    });
-  });
+      teachers: (r.teacher_ids ?? []).map((id: string) => ({ id, role: "teacher" })),
+      students: (r.student_ids ?? []).map((id: string) => ({ id, role: "student" })),
+    })
+  );
 }
 
 export async function getSchool(id: string): Promise<School | null> {
@@ -483,6 +837,14 @@ export async function getClassesByTeacher(teacherId: string): Promise<ClassGroup
     .from("classes")
     .select(CLASS_SELECT)
     .eq("teacher_id", teacherId);
+  return (data ?? []).map(mapClass);
+}
+
+export async function getClassesBySchool(schoolId: string): Promise<ClassGroup[]> {
+  const { data } = await getSupabaseClient()
+    .from("classes")
+    .select(CLASS_SELECT)
+    .eq("school_id", schoolId);
   return (data ?? []).map(mapClass);
 }
 
@@ -603,9 +965,47 @@ export async function createQuiz(quiz: Omit<Quiz, "id">): Promise<Quiz> {
   const { error } = await supabase.from("quizzes").insert({
     id,
     title: quiz.title,
-    topic_id: quiz.topicId,
+    topic_id: quiz.topicId || null,
   });
   if (error) throw new Error(error.message);
+
+  if (quiz.questions.length > 0) {
+    const { error: qError } = await supabase.from("questions").insert(
+      quiz.questions.map((q, i) => ({
+        id: newId("q"),
+        quiz_id: id,
+        question_text: q.questionText,
+        type: q.type,
+        options: q.options,
+        correct_answer: q.correctAnswer,
+        explanation: q.explanation,
+        difficulty: q.difficulty,
+        linked_concept: q.linkedConcept,
+        sort_order: i,
+      }))
+    );
+    if (qError) throw new Error(qError.message);
+  }
+
+  return (await getQuiz(id))!;
+}
+
+/** Update a quiz's title and replace its full question set. */
+export async function updateQuiz(
+  id: string,
+  quiz: { title: string; questions: Question[] }
+): Promise<Quiz> {
+  const supabase = getSupabaseClient();
+
+  const { error } = await supabase
+    .from("quizzes")
+    .update({ title: quiz.title })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  // Replace all questions — simplest way to handle edits, removals & reorders
+  const { error: delError } = await supabase.from("questions").delete().eq("quiz_id", id);
+  if (delError) throw new Error(delError.message);
 
   if (quiz.questions.length > 0) {
     const { error: qError } = await supabase.from("questions").insert(
@@ -688,8 +1088,8 @@ export async function createVideo(video: Omit<Video, "id">): Promise<Video> {
       id,
       title: video.title,
       description: video.description,
-      topic_id: video.topicId,
-      unit_id: video.unitId,
+      topic_id: video.topicId || null,
+      unit_id: video.unitId || null,
       video_url: video.videoUrl,
       thumbnail_url: video.thumbnailUrl,
       duration_seconds: video.durationSeconds,
@@ -814,6 +1214,7 @@ export async function createClass(
       email: "",
       role: "student",
       school_id: input.schoolId,
+      pin: generatePin(),
       created_at: new Date().toISOString().slice(0, 10),
     }));
 
@@ -864,6 +1265,7 @@ export async function addAlias(classId: string): Promise<User | null> {
     email: "",
     role: "student",
     school_id: cls.schoolId,
+    pin: generatePin(),
     created_at: today,
   });
 
@@ -903,7 +1305,7 @@ export async function assignLessonToClass(
 // ---- Mutations: Student Progress ----
 
 export async function upsertProgress(
-  progress: Omit<StudentProgress, "id">
+  progress: Omit<StudentProgress, "id"> & { unitId?: string; topicId?: string }
 ): Promise<StudentProgress> {
   const supabase = getSupabaseClient();
 
@@ -923,8 +1325,8 @@ export async function upsertProgress(
       id,
       student_id: progress.studentId,
       class_id: progress.classId,
-      unit_id: progress.unitId,
-      topic_id: progress.topicId,
+      unit_id: progress.unitId || null,
+      topic_id: progress.topicId || null,
       video_id: progress.videoId,
       watch_time_seconds: progress.watchTimeSeconds,
       video_completion_percentage: progress.videoCompletionPercentage,
@@ -958,6 +1360,7 @@ import type {
   TaggedActivityBlock,
   StudentActivityResponse,
   BlockResponse,
+  Difficulty,
 } from "@/types";
 
 function mapLessonItem(r: Row): LessonItem {
@@ -995,7 +1398,7 @@ function mapStudentActivityResponse(r: Row): StudentActivityResponse {
   };
 }
 
-export async function getLessonItems(lessonId: string): Promise<LessonItemWithContent[]> {
+export async function getLessonItems(lessonId: string, studentMode = false): Promise<LessonItemWithContent[]> {
   const supabase = getSupabaseClient();
 
   const { data: items } = await supabase
@@ -1009,12 +1412,18 @@ export async function getLessonItems(lessonId: string): Promise<LessonItemWithCo
   const videoIds = items.filter((i: Row) => i.item_type === "video").map((i: Row) => i.item_id);
   const quizIds  = items.filter((i: Row) => i.item_type === "quiz").map((i: Row) => i.item_id);
 
+  // In student mode, omit correct_answer from the Supabase query so it never
+  // reaches the browser. Grading is handled server-side by /api/student/quiz-submit.
+  const questionsSelect = studentMode
+    ? "questions(id,question_text,type,options,explanation,difficulty,linked_concept,sort_order)"
+    : "questions(*)";
+
   const [videosData, quizzesData] = await Promise.all([
     videoIds.length
       ? supabase.from("videos").select("*").in("id", videoIds)
       : { data: [] },
     quizIds.length
-      ? supabase.from("quizzes").select("*, questions(*)").in("id", quizIds)
+      ? supabase.from("quizzes").select(`*, ${questionsSelect}`).in("id", quizIds)
       : { data: [] },
   ]);
 
@@ -1026,16 +1435,18 @@ export async function getLessonItems(lessonId: string): Promise<LessonItemWithCo
     if (r.item_type === "video") {
       const video = videoMap.get(r.item_id);
       if (video) acc.push({ ...base, itemType: "video", video });
-    } else {
+    } else if (r.item_type === "quiz") {
       const quiz = quizMap.get(r.item_id);
       if (quiz) acc.push({ ...base, itemType: "quiz", quiz });
+    } else if (r.item_type === "activity") {
+      acc.push({ ...base, itemType: "activity" });
     }
     return acc;
   }, []);
 }
 
-export async function getLessonOrTopicItems(id: string): Promise<LessonItemWithContent[]> {
-  const items = await getLessonItems(id);
+export async function getLessonOrTopicItems(id: string, studentMode = false): Promise<LessonItemWithContent[]> {
+  const items = await getLessonItems(id, studentMode);
   if (items.length > 0) return items;
 
   // Fall back: treat id as a topicId and synthesise a sequence
@@ -1066,7 +1477,7 @@ export async function getLessonOrTopicItems(id: string): Promise<LessonItemWithC
 
 export async function addItemToLesson(
   lessonId: string,
-  itemType: "video" | "quiz",
+  itemType: "video" | "quiz" | "activity",
   itemId: string,
   orderIndex: number
 ): Promise<LessonItem> {
@@ -1119,7 +1530,7 @@ export async function getActivityForVideoTags(videoTags: string[]): Promise<Acti
   if (!videoTags.length) return null;
   const all = await getActivities();
   return all.find((a) =>
-    a.blocks.some((b) => b.topicTag && videoTags.includes(b.topicTag))
+    a.blocks.some((b) => getBlockTags(b).some((t) => videoTags.includes(t)))
   ) ?? null;
 }
 
@@ -1130,6 +1541,61 @@ export async function getActivitiesForLesson(lessonId: string): Promise<Activity
     .eq("lesson_id", lessonId)
     .order("difficulty");
   return (data ?? []).map(mapActivity);
+}
+
+export async function getActivitiesByIds(ids: string[]): Promise<Activity[]> {
+  if (!ids.length) return [];
+  const { data } = await getSupabaseClient()
+    .from("activities")
+    .select("*")
+    .in("id", ids);
+  const byId = new Map((data ?? []).map((r: Row) => [r.id as string, mapActivity(r)]));
+  return ids.map((id) => byId.get(id)).filter((a): a is Activity => Boolean(a));
+}
+
+/*
+ * Picks the 3-4 activities that make up a student's worksheet from a lesson's
+ * activity pool. Quiz performance sets the preferred difficulty tier;
+ * interest scores (video tags weighted by watch behaviour) rank activities
+ * within each tier. Adjacent tiers fill remaining slots when the target tier
+ * runs short.
+ */
+export function selectAdaptiveActivities(
+  pool: Activity[],
+  avgQuizScore: number | null,
+  interestByTag: Record<string, number>,
+  count = 4
+): Activity[] {
+  if (pool.length === 0) return [];
+
+  const target: Difficulty =
+    avgQuizScore === null ? "core"
+    : avgQuizScore >= 80 ? "advanced"
+    : avgQuizScore >= 50 ? "core"
+    : "foundation";
+
+  const fallbackOrder: Record<Difficulty, Difficulty[]> = {
+    advanced:   ["advanced", "core", "foundation"],
+    core:       ["core", "foundation", "advanced"],
+    foundation: ["foundation", "core", "advanced"],
+  };
+  const tierRank = new Map(fallbackOrder[target].map((d, i) => [d, i]));
+
+  const interestScore = (a: Activity): number => {
+    const tags = new Set<string>(a.topicTags ?? []);
+    a.blocks.forEach((b) => getBlockTags(b).forEach((t) => tags.add(t)));
+    let score = 0;
+    tags.forEach((t) => { score += interestByTag[t] ?? 0; });
+    return score;
+  };
+
+  return [...pool]
+    .sort((a, b) => {
+      const tier = (tierRank.get(a.difficulty) ?? 3) - (tierRank.get(b.difficulty) ?? 3);
+      if (tier !== 0) return tier;
+      return interestScore(b) - interestScore(a);
+    })
+    .slice(0, count);
 }
 
 export type PointEventType =
@@ -1253,6 +1719,26 @@ export async function getActivitiesBySetId(setId: string): Promise<Activity[]> {
 
 export async function deleteActivity(id: string): Promise<void> {
   await getSupabaseClient().from("activities").delete().eq("id", id);
+}
+
+export async function deleteUnit(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from("units").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteTopic(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from("topics").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteVideo(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from("videos").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteQuiz(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from("quizzes").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 // ---- Student Activity Responses ----

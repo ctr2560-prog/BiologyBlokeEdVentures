@@ -7,12 +7,11 @@
  *  - Wrong role  → redirects to the user's own portal home
  *  - Admin       → can preview any portal (RoleSwitcher visible)
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { navByRole, roleHome } from "./navConfig";
-import { RoleSwitcher } from "./RoleSwitcher";
 import { Logo } from "@/components/ui/Logo";
 import { Menu, X, LogOut, Loader } from "lucide-react";
 import type { Role } from "@/types";
@@ -28,11 +27,14 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Signing out intentionally goes to the home page; the guard below must not
+  // race it back to the login screen when currentUser flips to null.
+  const loggingOutRef = useRef(false);
 
   useEffect(() => {
     if (!authReady) return;
     if (!currentUser) {
-      router.push(role === "student" ? "/" : "/login");
+      router.push(loggingOutRef.current || role === "student" ? "/" : "/login");
       return;
     }
     // Admin may preview any portal. All other roles are confined to their own.
@@ -56,30 +58,34 @@ export function AppShell({
   if (!currentUser) return null;
   if (currentUser.role !== "admin" && currentUser.role !== role) return null;
 
-  const isAdmin = currentUser.role === "admin";
   const nav = navByRole[role];
 
   const isActive = (href: string) =>
     href === `/${role}` ? pathname === href : pathname.startsWith(href);
 
   const handleLogout = () => {
+    loggingOutRef.current = true;
     logout();
-    router.push(role === "student" ? "/" : "/login");
+    router.push("/");
   };
 
   const NavLinks = () => (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
+    <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
       {nav.map((item) => (
         <Link
           key={item.href}
           href={item.href}
-          className={`flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-150 ${
             isActive(item.href)
-              ? "bg-forest-700 text-cream shadow-soft"
-              : "text-charcoal-soft hover:bg-forest-50 hover:text-forest-800"
+              ? "bg-white/15 text-cream shadow-sm"
+              : "text-forest-100/60 hover:bg-white/8 hover:text-cream"
           }`}
         >
-          <item.Icon className="h-5 w-5 shrink-0" aria-hidden strokeWidth={1.75} />
+          <item.Icon
+            className={`h-4.5 w-4.5 shrink-0 transition-colors ${isActive(item.href) ? "text-gold-400" : ""}`}
+            aria-hidden
+            strokeWidth={isActive(item.href) ? 2 : 1.75}
+          />
           {item.label}
         </Link>
       ))}
@@ -87,11 +93,10 @@ export function AppShell({
   );
 
   const BottomBar = () => (
-    <div className="space-y-2 border-t border-sand p-3">
-      {isAdmin && <RoleSwitcher currentPortal={role} />}
+    <div className="border-t border-white/10 p-3">
       <button
         onClick={handleLogout}
-        className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm text-charcoal-soft hover:bg-clay-400/10 hover:text-clay-600"
+        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-forest-100/50 transition-all hover:bg-white/8 hover:text-cream"
       >
         <LogOut className="h-4 w-4" aria-hidden /> Sign out
       </button>
@@ -100,41 +105,41 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-cream">
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-sand bg-white/80 backdrop-blur lg:flex">
-        <div className="flex items-center gap-2 px-5 py-5">
-          <Logo size={40} withWordmark />
+      {/* Desktop sidebar — dark forest */}
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-forest-950 lg:flex">
+        <div className="flex justify-center px-6 py-7">
+          <Logo size={48} variant="white" />
         </div>
         <NavLinks />
         <BottomBar />
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sand bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
-        <Logo size={34} withWordmark />
+      {/* Mobile top bar — dark so the white logo is legible */}
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-forest-950 px-4 py-3 lg:hidden">
+        <Logo size={44} variant="white" />
         <button
           onClick={() => setDrawerOpen(true)}
           aria-label="Open menu"
-          className="grid h-10 w-10 place-items-center rounded-2xl bg-forest-50 text-forest-800"
+          className="grid h-10 w-10 place-items-center rounded-2xl bg-white/10 text-cream"
         >
           <Menu className="h-5 w-5" aria-hidden />
         </button>
       </header>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — dark forest */}
       {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
             className="absolute inset-0 bg-forest-950/40 backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
           />
-          <div className="rise-in absolute inset-y-0 left-0 flex w-72 flex-col bg-white shadow-hero">
+          <div className="rise-in absolute inset-y-0 left-0 flex w-72 flex-col bg-forest-950 shadow-hero">
             <div className="flex items-center justify-between px-5 py-4">
-              <Logo size={36} withWordmark />
+              <Logo size={48} variant="white" />
               <button
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close menu"
-                className="grid h-9 w-9 place-items-center rounded-full text-charcoal-soft hover:bg-charcoal/8"
+                className="grid h-9 w-9 place-items-center rounded-full text-forest-100/50 hover:bg-white/10 hover:text-cream"
               >
                 <X className="h-5 w-5" aria-hidden />
               </button>

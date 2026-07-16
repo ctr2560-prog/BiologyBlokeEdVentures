@@ -111,6 +111,19 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
       render: (s) => <AliasChip user={s} />,
     },
     {
+      key: "pin",
+      header: "PIN",
+      align: "center",
+      render: (s) =>
+        s.pin ? (
+          <span className="rounded-lg bg-gold-300/25 px-2 py-0.5 font-mono text-sm font-bold tracking-widest text-forest-800">
+            {s.pin}
+          </span>
+        ) : (
+          <span className="text-charcoal-soft">-</span>
+        ),
+    },
+    {
       key: "activity",
       header: "Reels watched",
       align: "center",

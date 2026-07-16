@@ -103,7 +103,7 @@ const ecoMedia: Record<string, string> = {
 /* ---------- Why short-form ---------- */
 export function WhyShortForm() {
   const stats: { v: string; l: string; Icon: LucideIcon }[] = [
-    { v: "60-120s", l: "The length of a BioBloke reel", Icon: Timer },
+    { v: "60-120s", l: "The length of an Edventra reel", Icon: Timer },
     { v: "Where they scroll", l: "Learning in the format kids already love", Icon: Smartphone },
     { v: "Real nature", l: "Original conservation footage, never stock", Icon: Globe },
   ];
@@ -126,7 +126,7 @@ export function WhyShortForm() {
         <Reveal delay={100}>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-charcoal-soft">
             The average student watches hours of short-form video every day, yet spends
-            less time in the natural world than any generation before them. BioBloke meets
+            less time in the natural world than any generation before them. Edventra meets
             them where their attention already lives, then turns 60 seconds of wonder into
             real, lasting learning.
           </p>
@@ -422,7 +422,7 @@ export function FounderStory() {
         {/* Story */}
         <div className="order-1 lg:order-2">
           <Reveal>
-            <p className={`${eyebrow} text-forest-600`}>Meet the Biology Bloke</p>
+            <p className={`${eyebrow} text-forest-600`}>About the creator</p>
           </Reveal>
           <AnimatedHeading
             text="From the wild, into the classroom, and back again."
@@ -430,11 +430,12 @@ export function FounderStory() {
           />
           <Reveal delay={100}>
             <p className="mt-4 text-lg text-charcoal-soft">
-              Biology Bloke is built and filmed by Cameron Rodgers, a multi-award-winning
-              Australian educator and wildlife presenter on a mission to bring the natural
-              world into every classroom. From orangutans in Sumatra to big cat country in
-              East Africa and wildlife across Australia, every reel and every learning
-              experience carries one belief: that learning is how we change the world.
+              Edventra is built and filmed by Cameron Rodgers — The Biology Bloke — a
+              multi-award-winning Australian educator and wildlife presenter on a mission
+              to bring the natural world into every classroom. From orangutans in Sumatra
+              to big cat country in East Africa and wildlife across Australia, every reel
+              and every learning experience carries one belief: that learning is how we
+              change the world.
             </p>
           </Reveal>
           <Reveal delay={160}>
