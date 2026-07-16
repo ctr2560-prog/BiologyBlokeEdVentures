@@ -41,11 +41,16 @@ export async function GET() {
   ];
 
   // Fetch all supporting data in parallel.
-  const [unitsRes, topicsRes, videosRes, progressRes] = await Promise.all([
+  // Videos link to a lesson via lesson_items (new) and/or videos.topic_id (legacy),
+  // so we resolve both and group by the owning topic.
+  const [unitsRes, topicsRes, legacyVideosRes, lessonItemsRes, progressRes] = await Promise.all([
     supabase.from("units").select("*").in("id", unitIds),
     supabase.from("topics").select("*").in("id", topicIds),
     topicIds.length
       ? supabase.from("videos").select("*").in("topic_id", topicIds).order("created_at")
+      : Promise.resolve({ data: [] }),
+    topicIds.length
+      ? supabase.from("lesson_items").select("lesson_id, item_id, order_index").eq("item_type", "video").in("lesson_id", topicIds).order("order_index")
       : Promise.resolve({ data: [] }),
     supabase
       .from("student_progress")
@@ -53,14 +58,30 @@ export async function GET() {
       .eq("student_id", studentId),
   ]);
 
+  // Fetch the videos referenced by the lesson sequence.
+  const seqVideoIds = [...new Set((lessonItemsRes.data ?? []).map((i) => i.item_id as string))];
+  const seqVideosRes = seqVideoIds.length
+    ? await supabase.from("videos").select("*").in("id", seqVideoIds)
+    : { data: [] };
+  const videoById = new Map((seqVideosRes.data ?? []).map((v) => [v.id as string, v]));
+
   // Index by id for easy lookup on the client.
   const units = Object.fromEntries((unitsRes.data ?? []).map((u) => [u.id, u]));
   const topics = Object.fromEntries((topicsRes.data ?? []).map((t) => [t.id, t]));
   const videosByTopic: Record<string, unknown[]> = {};
-  for (const v of videosRes.data ?? []) {
-    const tid = v.topic_id as string;
+  const pushVideo = (tid: string, v: unknown) => {
     if (!videosByTopic[tid]) videosByTopic[tid] = [];
     videosByTopic[tid].push(v);
+  };
+  // Preferred: lesson_items order per topic
+  for (const item of lessonItemsRes.data ?? []) {
+    const v = videoById.get(item.item_id as string);
+    if (v) pushVideo(item.lesson_id as string, v);
+  }
+  // Legacy topic_id links, only for topics the sequence didn't already cover
+  for (const v of legacyVideosRes.data ?? []) {
+    const tid = v.topic_id as string;
+    if (!videosByTopic[tid]) pushVideo(tid, v);
   }
 
   return NextResponse.json({

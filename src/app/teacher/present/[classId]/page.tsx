@@ -1,6 +1,7 @@
 "use client";
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import MuxPlayer from "@mux/mux-player-react";
 import { SectionHeader, Button, EmptyState } from "@/components/ui/primitives";
 import {
@@ -347,10 +348,14 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
                     className="block w-full text-left"
                   >
                     <div
-                      className="flex h-28 items-center justify-center"
+                      className="relative flex h-28 items-center justify-center overflow-hidden"
                       style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
                     >
-                      <Film className="h-10 w-10 text-cream/90" aria-hidden strokeWidth={1.5} />
+                      {t.coverImage?.startsWith("http") ? (
+                        <Image src={t.coverImage} alt="" fill className="object-cover" sizes="400px" />
+                      ) : (
+                        <Film className="h-10 w-10 text-cream/90" aria-hidden strokeWidth={1.5} />
+                      )}
                     </div>
                     <div className="px-4 pt-4">
                       <p className="font-semibold text-forest-900">{t.title}</p>

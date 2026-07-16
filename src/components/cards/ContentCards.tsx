@@ -5,10 +5,12 @@
  * the gradient/icon for a real <Image> once media is uploaded. Icons are SVG
  * (lucide-react), no emojis.
  */
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Unit, Video, Resource, Topic, ClassGroup } from "@/types";
 import { Badge, ProgressBar } from "@/components/ui/primitives";
+import { getClassAnimal, REGION_GRADIENT, type ClassAnimal } from "@/data/classAnimals";
 import { formatWatchTime } from "@/lib/analytics";
 import {
   Leaf,
@@ -47,10 +49,17 @@ export function UnitCard({ unit, href }: { unit: Unit; href: string }) {
       className="card-lift group block overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5"
     >
       <div
-        className="relative flex h-36 items-center justify-center"
+        className="relative flex h-36 items-center justify-center overflow-hidden"
         style={{ background: heroGradient(unit.id) }}
       >
-        <Leaf className="h-14 w-14 text-cream/90 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
+        {unit.coverImage?.startsWith("http") ? (
+          <>
+            <Image src={unit.coverImage} alt="" fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="400px" />
+            <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-950/40 to-transparent" aria-hidden />
+          </>
+        ) : (
+          <Leaf className="h-14 w-14 text-cream/90 drop-shadow-lg transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
+        )}
         <span className="absolute left-3 top-3">
           <Badge tone="gold">{unit.stage}</Badge>
         </span>
@@ -207,6 +216,62 @@ export function ResourceCard({ resource }: { resource: Resource }) {
   );
 }
 
+/*
+ * Class banner: shows the class's wildlife photo (from /public/animals) when
+ * available, otherwise a region-themed gradient with the animal glyph. The
+ * photo <img> quietly removes itself on error, revealing the fallback beneath —
+ * so classes look great whether or not photos have been dropped in yet.
+ */
+function ClassCardBanner({ cls, animal }: { cls: ClassGroup; animal: ClassAnimal }) {
+  const [hasPhoto, setHasPhoto] = useState(true);
+  return (
+    <div
+      className="relative flex aspect-[4/3] items-end justify-between overflow-hidden p-4"
+      style={{ background: REGION_GRADIENT[animal.region] }}
+    >
+      {/* Real photo (if present) */}
+      {hasPhoto && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={animal.image}
+          alt={animal.name}
+          onError={() => setHasPhoto(false)}
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      )}
+      {/* Fallback glyph + texture (only when no photo) */}
+      {!hasPhoto && (
+        <>
+          <span
+            className="pointer-events-none absolute -right-1 -top-2 select-none text-[5.5rem] leading-none drop-shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6"
+            aria-hidden
+          >
+            {animal.emoji}
+          </span>
+          <span
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
+            style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "16px 16px" }}
+            aria-hidden
+          />
+        </>
+      )}
+      {/* Legibility scrim over photos */}
+      {hasPhoto && (
+        <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-950/70 via-forest-950/10 to-transparent" aria-hidden />
+      )}
+      <div className="relative">
+        <span className="display block text-lg font-bold text-cream drop-shadow">{cls.yearGroup}</span>
+        <span className="mt-0.5 inline-flex items-center gap-1 text-[0.7rem] font-semibold text-cream/85 drop-shadow">
+          {animal.name} · {animal.region}
+        </span>
+      </div>
+      <span className="glass relative rounded-full px-3 py-1 text-xs font-bold tracking-wider text-forest-800">
+        {cls.classCode}
+      </span>
+    </div>
+  );
+}
+
 export function ClassCard({
   cls,
   studentCount,
@@ -216,20 +281,13 @@ export function ClassCard({
   studentCount: number;
   href: string;
 }) {
+  const animal = getClassAnimal(cls.id);
   return (
     <Link
       href={href}
       className="card-lift group block overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5"
     >
-      <div
-        className="flex h-24 items-end justify-between p-4"
-        style={{ background: heroGradient(cls.id) }}
-      >
-        <span className="display text-lg font-bold text-cream drop-shadow">{cls.yearGroup}</span>
-        <span className="glass rounded-full px-3 py-1 text-xs font-bold tracking-wider text-forest-800">
-          {cls.classCode}
-        </span>
-      </div>
+      <ClassCardBanner cls={cls} animal={animal} />
       <div className="p-5">
         <h3 className="display text-lg font-bold text-forest-900">{cls.name}</h3>
         <div className="mt-2 flex items-center gap-3 text-sm text-charcoal-soft">

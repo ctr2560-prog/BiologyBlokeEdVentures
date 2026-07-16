@@ -7,6 +7,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useApp } from "@/lib/store";
 import { SectionHeader, EmptyState, Badge } from "@/components/ui/primitives";
 import {
@@ -168,20 +169,26 @@ export default function TeacherResources() {
             >
               {/* Unit header */}
               <div
-                className="flex items-center gap-3 px-5 py-4"
+                className="relative flex items-center gap-3 overflow-hidden px-5 py-4"
                 style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 90%)" }}
               >
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/15">
+                {group.unit.coverImage?.startsWith("http") && (
+                  <>
+                    <Image src={group.unit.coverImage} alt="" fill className="object-cover" sizes="900px" />
+                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-forest-950/90 via-forest-950/70 to-forest-950/40" aria-hidden />
+                  </>
+                )}
+                <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/15">
                   <Layers className="h-5 w-5 text-cream" aria-hidden />
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="relative min-w-0 flex-1">
                   <h2 className="display truncate text-lg font-bold text-cream">{group.unit.title}</h2>
                   <p className="text-xs text-forest-100/70">
                     {group.unit.subject} · {group.unit.stage}
                   </p>
                 </div>
                 {group.modes.has("teacher-led") && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gold-400 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-forest-950">
+                  <span className="relative inline-flex shrink-0 items-center gap-1 rounded-full bg-gold-400 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-forest-950">
                     <UserCog className="h-3 w-3" aria-hidden /> Teacher-led
                   </span>
                 )}

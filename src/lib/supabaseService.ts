@@ -65,6 +65,13 @@ function mapUnit(r: Row): Unit {
 }
 
 function mapTopic(r: Row): Topic {
+  // Content links to a lesson two ways: the legacy videos.topic_id / quizzes.topic_id
+  // columns, and the lesson_items sequence. New uploads use lesson_items only,
+  // so the counts must union both sources (deduped) or cards read "0 videos".
+  const items = (r.lesson_items ?? []) as Row[];
+  const seqOf = (type: string) => items.filter((i) => i.item_type === type).map((i) => i.item_id as string);
+  const merge = (a: string[], b: string[]) => [...new Set([...a, ...b])];
+
   return {
     id: r.id,
     unitId: r.unit_id,
@@ -78,9 +85,9 @@ function mapTopic(r: Row): Topic {
     featured: Boolean(r.featured),
     slidesUrl: r.slides_url ?? "",
     coverImage: r.cover_image ?? "",
-    videoIds: (r.videos ?? []).map((v: Row) => v.id),
-    quizIds: (r.quizzes ?? []).map((q: Row) => q.id),
-    resourceIds: (r.resources ?? []).map((res: Row) => res.id),
+    videoIds: merge((r.videos ?? []).map((v: Row) => v.id as string), seqOf("video")),
+    quizIds: merge((r.quizzes ?? []).map((q: Row) => q.id as string), seqOf("quiz")),
+    resourceIds: merge((r.resources ?? []).map((res: Row) => res.id as string), seqOf("resource")),
   };
 }
 
@@ -286,14 +293,14 @@ export async function getUnit(id: string): Promise<Unit | null> {
 export async function getTopics(): Promise<Topic[]> {
   const { data } = await getSupabaseClient()
     .from("topics")
-    .select("*, videos(id), quizzes(id), resources(id)");
+    .select("*, videos(id), quizzes(id), resources(id), lesson_items(item_type, item_id)");
   return (data ?? []).map(mapTopic);
 }
 
 export async function getTopic(id: string): Promise<Topic | null> {
   const { data } = await getSupabaseClient()
     .from("topics")
-    .select("*, videos(id), quizzes(id), resources(id)")
+    .select("*, videos(id), quizzes(id), resources(id), lesson_items(item_type, item_id)")
     .eq("id", id)
     .single();
   return data ? mapTopic(data) : null;
@@ -310,7 +317,7 @@ export async function getTopicsByUnit(unitId: string): Promise<Topic[]> {
   const ids = (links as Row[]).map((l) => l.lesson_id as string);
   const { data } = await supabase
     .from("topics")
-    .select("*, videos(id), quizzes(id), resources(id)")
+    .select("*, videos(id), quizzes(id), resources(id), lesson_items(item_type, item_id)")
     .in("id", ids);
   const topicMap = new Map((data ?? []).map((t: Row) => [t.id as string, mapTopic(t)]));
   return ids.map((id) => topicMap.get(id)).filter((t): t is Topic => !!t);
@@ -957,7 +964,7 @@ export async function createTopic(data: {
       subject: data.subject ?? "Science",
       stage: data.stage ?? "Stage 3",
     })
-    .select("*, videos(id), quizzes(id), resources(id)")
+    .select("*, videos(id), quizzes(id), resources(id), lesson_items(item_type, item_id)")
     .single();
   if (error) throw new Error(error.message);
   return mapTopic(row);
