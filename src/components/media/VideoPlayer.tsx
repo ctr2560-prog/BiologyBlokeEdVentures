@@ -82,7 +82,7 @@ export function VideoPlayer({ video, onComplete, liveSignalsRef, showDoneButton 
           playbackId={video.muxPlaybackId ?? ""}
           metadata={{ video_title: video.title }}
           streamType="on-demand"
-          accentColor="#40916c"
+          accentColor="#4f9776"
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
           style={{ width: "100%", aspectRatio: "16/9" }}

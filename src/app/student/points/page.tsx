@@ -62,7 +62,7 @@ export default function ExplorerPoints() {
       {/* Points hero */}
       <div
         className="overflow-hidden rounded-3xl p-8 text-center text-cream shadow-hero"
-        style={{ background: "linear-gradient(120deg, #2d6a4f, #14352a)" }}
+        style={{ background: "linear-gradient(120deg, #3d7a5e, #204535)" }}
       >
         {loading ? (
           <div className="flex items-center justify-center py-4">

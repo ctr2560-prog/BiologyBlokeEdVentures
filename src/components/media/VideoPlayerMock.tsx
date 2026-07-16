@@ -108,7 +108,7 @@ export function VideoPlayerMock({
     <div className="mx-auto max-w-md">
       {/* Vertical cinematic reel */}
       <div className="relative aspect-[9/14] overflow-hidden rounded-3xl shadow-hero"
-        style={{ background: "linear-gradient(160deg, #0d2419 0%, #1b4332 50%, #2d6a4f 100%)" }}>
+        style={{ background: "linear-gradient(160deg, #163329 0%, #2c5844 50%, #3d7a5e 100%)" }}>
         <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
 
         {/* Animal "frame" */}

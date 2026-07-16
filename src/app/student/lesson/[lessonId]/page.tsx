@@ -460,7 +460,7 @@ export default function LessonPlayerPage({
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col"
-      style={{ background: "linear-gradient(175deg, #0d2419 0%, #14352a 55%, #1b4332 100%)" }}
+      style={{ background: "linear-gradient(175deg, #163329 0%, #204535 55%, #2c5844 100%)" }}
     >
       {/* ── Top bar: close + story progress ── */}
       <div className="shrink-0 px-4 pt-4 pb-2">

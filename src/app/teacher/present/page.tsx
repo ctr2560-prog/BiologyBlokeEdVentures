@@ -58,7 +58,7 @@ export default function PresentIndexPage() {
             >
               <div
                 className="flex h-28 items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
+                style={{ background: "linear-gradient(135deg, #2c5844, #4f9776)" }}
               >
                 <Presentation
                   className="h-10 w-10 text-cream/90"

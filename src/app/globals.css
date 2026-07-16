@@ -6,20 +6,20 @@
   deep forest greens, warm cream/sand, clay brown, soft gold, misty blue.
 */
 @theme {
-  --color-forest-950: #0d2419;
-  --color-forest-900: #14352a;
-  --color-forest-800: #1b4332;
-  --color-forest-700: #2d6a4f;
-  --color-forest-600: #40916c;
-  --color-forest-500: #52b788;
-  --color-forest-400: #74c69d;
-  --color-forest-100: #d8f3dc;
-  --color-forest-50: #eef7f0;
+  --color-forest-950: #163329;
+  --color-forest-900: #204535;
+  --color-forest-800: #2c5844;
+  --color-forest-700: #3d7a5e;
+  --color-forest-600: #4f9776;
+  --color-forest-500: #72b493;
+  --color-forest-400: #9bd0b2;
+  --color-forest-100: #d5ecdf;
+  --color-forest-50: #edf6f0;
 
-  --color-cream: #faf6ef;
-  --color-cream-dark: #f3ecdf;
-  --color-sand: #e9dcc9;
-  --color-sand-dark: #d9c7a7;
+  --color-cream: #f5f7f4;
+  --color-cream-dark: #e9efe8;
+  --color-sand: #dce4da;
+  --color-sand-dark: #c2cfbf;
   --color-clay-600: #8b5e3c;
   --color-clay-500: #a47148;
   --color-clay-400: #c08552;
@@ -180,7 +180,7 @@ h1, h2, h3, h4, .display {
 
 /* Shimmering gradient text */
 .text-shimmer {
-  background: linear-gradient(100deg, #74c69d, #f2d9a9 45%, #74c69d 70%);
+  background: linear-gradient(100deg, #9bd0b2, #f2d9a9 45%, #9bd0b2 70%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;

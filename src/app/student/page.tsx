@@ -108,7 +108,7 @@ export default function StudentHome() {
       {/* Hero */}
       <div
         className="relative overflow-hidden rounded-3xl p-8 text-cream shadow-hero"
-        style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 55%, #40916c 100%)" }}
+        style={{ background: "linear-gradient(120deg, #204535 0%, #3d7a5e 55%, #4f9776 100%)" }}
       >
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.08]"
@@ -161,7 +161,7 @@ export default function StudentHome() {
                 >
                   <div
                     className="relative flex h-32 items-center justify-center overflow-hidden"
-                    style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
+                    style={{ background: "linear-gradient(135deg, #2c5844, #4f9776)" }}
                   >
                     {l.coverImage?.startsWith("http") ? (
                       <Image src={l.coverImage} alt="" fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="400px" />
@@ -203,7 +203,7 @@ export default function StudentHome() {
           <Link
             href="/student/explore"
             className="card-lift relative overflow-hidden rounded-3xl p-8 text-cream"
-            style={{ background: `linear-gradient(120deg, ${featured.color}, #0d2419)` }}
+            style={{ background: `linear-gradient(120deg, ${featured.color}, #163329)` }}
           >
             <Badge tone="gold">Featured ecosystem</Badge>
             <div className="mt-4 flex items-center gap-4">

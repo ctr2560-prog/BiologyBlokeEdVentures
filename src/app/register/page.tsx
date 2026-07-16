@@ -126,7 +126,7 @@ export default function RegisterPage() {
       {/* Left panel: branding */}
       <div
         className="hidden flex-col items-center justify-between px-12 py-12 lg:flex lg:w-[45%]"
-        style={{ background: "linear-gradient(160deg, #14352a 0%, #1b4332 55%, #0d2419 100%)" }}
+        style={{ background: "linear-gradient(160deg, #204535 0%, #2c5844 55%, #163329 100%)" }}
       >
         <div />
         <div className="text-center">

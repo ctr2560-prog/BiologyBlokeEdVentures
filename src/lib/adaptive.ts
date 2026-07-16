@@ -110,7 +110,7 @@ export function generateAdaptiveRecommendation(
 
 export function engagementColor(level: EngagementLevel): string {
   return level === "high"
-    ? "#2d6a4f"
+    ? "#3d7a5e"
     : level === "medium"
     ? "#d4a373"
     : "#a47148";
@@ -123,7 +123,7 @@ export function taskTypeMeta(type: TaskType): { label: string; Icon: LucideIcon;
     case "support":
       return { label: "Support", Icon: LifeBuoy, color: "#a47148" };
     case "core":
-      return { label: "Core", Icon: Sprout, color: "#2d6a4f" };
+      return { label: "Core", Icon: Sprout, color: "#3d7a5e" };
     case "extension":
       return { label: "Extension", Icon: Rocket, color: "#5c8aa8" };
     case "challenge":

@@ -148,7 +148,7 @@ export default function ClassWork() {
                 >
                   <div
                     className="relative flex items-center gap-4 p-5"
-                    style={{ background: "linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%)" }}
+                    style={{ background: "linear-gradient(135deg, #2c5844 0%, #3d7a5e 100%)" }}
                   >
                     <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/15">
                       <PlayCircle className="h-6 w-6 text-cream" aria-hidden />

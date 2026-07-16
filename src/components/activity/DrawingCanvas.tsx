@@ -5,10 +5,10 @@ import { Eraser, Trash2 } from "lucide-react";
 
 const COLOURS = [
   { hex: "#1a1a1a", label: "Black" },
-  { hex: "#2d6a4f", label: "Forest" },
+  { hex: "#3d7a5e", label: "Forest" },
   { hex: "#c44b30", label: "Clay" },
   { hex: "#d4a84b", label: "Gold" },
-  { hex: "#4b8fd4", label: "Sky" },
+  { hex: "#72b493", label: "Sky" },
 ];
 
 const SIZES = [

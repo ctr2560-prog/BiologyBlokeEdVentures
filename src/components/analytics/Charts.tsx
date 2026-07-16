@@ -35,7 +35,7 @@ interface Datum {
   value: number;
 }
 
-const PALETTE = ["#2d6a4f", "#40916c", "#52b788", "#74c69d", "#d4a373", "#5c8aa8", "#a47148"];
+const PALETTE = ["#3d7a5e", "#4f9776", "#72b493", "#9bd0b2", "#d4a373", "#5c8aa8", "#a47148"];
 
 export function BarChart({
   data,
@@ -89,14 +89,14 @@ export function LineChart({ data }: { data: Datum[] }) {
       <svg viewBox={`0 0 ${w} ${h}`} className="h-32 w-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="lc" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#52b788" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#52b788" stopOpacity="0" />
+            <stop offset="0%" stopColor="#72b493" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#72b493" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path d={area} fill="url(#lc)" />
-        <path d={path} fill="none" stroke="#2d6a4f" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        <path d={path} fill="none" stroke="#3d7a5e" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
         {points.map((p) => (
-          <circle key={p.label} cx={p.x} cy={p.y} r="1.6" fill="#2d6a4f" vectorEffect="non-scaling-stroke" />
+          <circle key={p.label} cx={p.x} cy={p.y} r="1.6" fill="#3d7a5e" vectorEffect="non-scaling-stroke" />
         ))}
       </svg>
       <div className="mt-2 flex justify-between text-[0.65rem] font-medium text-charcoal-soft">
@@ -111,7 +111,7 @@ export function LineChart({ data }: { data: Datum[] }) {
 export function DonutChart({
   value,
   label,
-  color = "#2d6a4f",
+  color = "#3d7a5e",
 }: {
   value: number;
   label: string;
@@ -123,7 +123,7 @@ export function DonutChart({
   return (
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 100 100" className="h-28 w-28 -rotate-90">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#e9dcc9" strokeWidth="10" />
+        <circle cx="50" cy="50" r={r} fill="none" stroke="#dce4da" strokeWidth="10" />
         <circle
           cx="50"
           cy="50"

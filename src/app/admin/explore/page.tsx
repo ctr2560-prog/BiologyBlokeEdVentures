@@ -14,7 +14,7 @@ import {
 import type { Ecosystem } from "@/types";
 
 const COLOR_CHOICES = [
-  "#1b4332", "#2d6a4f", "#40916c", "#74c69d", "#a47148", "#c08552",
+  "#2c5844", "#3d7a5e", "#4f9776", "#9bd0b2", "#a47148", "#c08552",
   "#8b5e3c", "#d4a373", "#5c8aa8", "#457b9d", "#3b3a63", "#6d597a",
 ];
 
@@ -127,7 +127,7 @@ export default function AdminExplorePage() {
                 {/* Tile preview — matches what students see */}
                 <div
                   className={`relative aspect-[2/1] p-4 text-cream ${eco.published ? "" : "opacity-45"}`}
-                  style={{ background: `linear-gradient(150deg, ${eco.color}, #0d2419)` }}
+                  style={{ background: `linear-gradient(150deg, ${eco.color}, #163329)` }}
                 >
                   <div
                     className="pointer-events-none absolute inset-0 opacity-[0.1]"
@@ -284,7 +284,7 @@ function EcosystemForm({
         {/* Live tile preview */}
         <div
           className="relative overflow-hidden rounded-3xl p-5 text-cream"
-          style={{ background: `linear-gradient(150deg, ${draft.color}, #0d2419)` }}
+          style={{ background: `linear-gradient(150deg, ${draft.color}, #163329)` }}
         >
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.1]"

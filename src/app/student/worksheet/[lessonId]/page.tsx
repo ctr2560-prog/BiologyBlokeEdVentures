@@ -197,7 +197,7 @@ export default function StudentWorksheetPage({
       <div className="mx-auto max-w-2xl space-y-6 pb-20">
         <div
           className="overflow-hidden rounded-3xl text-cream shadow-hero"
-          style={{ background: "linear-gradient(120deg, #14352a, #2d6a4f)" }}
+          style={{ background: "linear-gradient(120deg, #204535, #3d7a5e)" }}
         >
           <div className="p-10 text-center">
             <p className="text-6xl">🎉</p>
@@ -231,7 +231,7 @@ export default function StudentWorksheetPage({
       {/* Header */}
       <div
         className="overflow-hidden rounded-3xl shadow-hero"
-        style={{ background: "linear-gradient(120deg, #14352a, #2d6a4f)" }}
+        style={{ background: "linear-gradient(120deg, #204535, #3d7a5e)" }}
       >
         <div className="px-6 py-8">
           <div className="flex items-center gap-2">

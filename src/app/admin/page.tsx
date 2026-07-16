@@ -3,23 +3,28 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SectionHeader, StatCard, Button, Badge } from "@/components/ui/primitives";
 import { Film, FolderTree, School as SchoolIcon, BarChart3, Loader } from "lucide-react";
-import { AnalyticsChartCard, BarChart, LineChart } from "@/components/analytics/Charts";
+import { AnalyticsChartCard, BarChart } from "@/components/analytics/Charts";
 import { InsightCard } from "@/components/cards/InsightCards";
 import { formatWatchTime } from "@/lib/analytics";
 import {
   getProgress,
+  getAllQuizResults,
+  getVideoLessonMap,
   getVideos,
   getTopics,
   getUnits,
   getSchools,
   getStudents,
   getTeachers,
+  type ClassQuizResult,
 } from "@/lib/supabaseService";
 import type { StudentProgress, Video, Topic, Unit, School, User } from "@/types";
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<StudentProgress[]>([]);
+  const [quizResults, setQuizResults] = useState<ClassQuizResult[]>([]);
+  const [videoLesson, setVideoLesson] = useState<Map<string, string>>(new Map());
   const [videos, setVideos] = useState<Video[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -29,10 +34,12 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     Promise.all([
-      getProgress(), getVideos(), getTopics(), getUnits(),
+      getProgress(), getAllQuizResults(), getVideoLessonMap(),
+      getVideos(), getTopics(), getUnits(),
       getSchools(), getStudents(), getTeachers(),
-    ]).then(([pr, vi, to, un, sc, st, te]) => {
-      setProgress(pr); setVideos(vi); setTopics(to); setUnits(un);
+    ]).then(([pr, qr, vl, vi, to, un, sc, st, te]) => {
+      setProgress(pr); setQuizResults(qr); setVideoLesson(vl);
+      setVideos(vi); setTopics(to); setUnits(un);
       setSchools(sc); setStudents(st); setTeachers(te);
       setLoading(false);
     });
@@ -44,9 +51,29 @@ export default function AdminDashboard() {
   const totalWatchTime = progress.reduce((a, p) => a + p.watchTimeSeconds, 0);
   const completions = progress.filter((p) => p.videoCompletionPercentage >= 90).length;
   const avgCompletion = avg(progress.map((p) => p.videoCompletionPercentage));
-  const quizNums = progress.map((p) => p.quizScore).filter((s): s is number => s !== null);
-  const avgQuiz = avg(quizNums);
+
+  // "Active" = students who have actually engaged (watched or did a quiz),
+  // not every alias card generated when a class was created.
+  const activeStudentIds = new Set<string>();
+  progress.forEach((p) => activeStudentIds.add(p.studentId));
+  quizResults.forEach((q) => activeStudentIds.add(q.studentId));
+  const activeStudents = activeStudentIds.size;
+  // Quiz scores come from server-graded quiz_results, not the legacy progress column.
+  const avgQuiz = avg(quizResults.map((q) => q.score));
   const avgWatch = progress.length ? Math.round(totalWatchTime / progress.length) : 0;
+
+  // Quiz average per lesson (topic) from quiz_results.
+  const quizAvgByTopic = new Map<string, number>();
+  {
+    const byTopic = new Map<string, number[]>();
+    quizResults.forEach((q) => {
+      if (!q.topicId) return;
+      const arr = byTopic.get(q.topicId) ?? [];
+      arr.push(q.score);
+      byTopic.set(q.topicId, arr);
+    });
+    byTopic.forEach((arr, tid) => quizAvgByTopic.set(tid, avg(arr)));
+  }
 
   const topicCounts = new Map<string, number>();
   progress.forEach((p) => topicCounts.set(p.topicId, (topicCounts.get(p.topicId) ?? 0) + 1));
@@ -54,37 +81,47 @@ export default function AdminDashboard() {
   const popularTopic = topics.find((t) => t.id === popularTopicId)?.title ?? "-";
 
   const watchByUnit = units.map((u) => {
-    const unitTopicIds = new Set(topics.filter((t) => t.unitId === u.id).map((t) => t.id));
     const mins = Math.round(
-      progress.filter((p) => unitTopicIds.has(p.topicId)).reduce((a, p) => a + p.watchTimeSeconds, 0) / 60
+      progress.filter((p) => p.unitId === u.id).reduce((a, p) => a + p.watchTimeSeconds, 0) / 60
     );
     return { label: u.title.slice(0, 22), value: mins };
   }).filter((d) => d.value > 0);
 
-  const quizByTopic = topics.map((t) => {
-    const qs = progress.filter((p) => p.topicId === t.id).map((p) => p.quizScore).filter((s): s is number => s !== null);
-    return { label: t.title.slice(0, 22), value: qs.length ? avg(qs) : 0 };
-  }).filter((d) => d.value > 0).slice(0, 8);
+  const quizByTopic = topics
+    .map((t) => ({ label: t.title.slice(0, 22), value: quizAvgByTopic.get(t.id) ?? 0 }))
+    .filter((d) => d.value > 0)
+    .slice(0, 8);
 
-  const monthCounts = new Map<string, Set<string>>();
-  progress.forEach((p) => {
-    const m = p.lastActive.slice(0, 7);
-    if (!monthCounts.has(m)) monthCounts.set(m, new Set());
-    monthCounts.get(m)!.add(p.studentId);
-  });
-  const activeOverTime = [...monthCounts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-6)
-    .map(([label, set]) => ({ label: label.slice(5), value: set.size }));
+  // Engagement funnel — distinct students who reach each stage of the flow.
+  const watchedStudents = new Set(progress.map((p) => p.studentId));
+  const completedStudents = new Set(
+    progress.filter((p) => p.videoCompletionPercentage >= 90).map((p) => p.studentId)
+  );
+  const quizzedStudents = new Set(quizResults.map((q) => q.studentId));
+  const engagementFunnel = [
+    { label: "Started", value: watchedStudents.size },
+    { label: "Finished a video", value: completedStudents.size },
+    { label: "Took a quiz", value: quizzedStudents.size },
+  ];
 
-  const videoViewMap = new Map<string, { views: number; avgCompletion: number; avgQuiz: number }>();
+  const videoViewMap = new Map<string, { views: number; completions: number[] }>();
   progress.forEach((p) => {
-    const e = videoViewMap.get(p.videoId) ?? { views: 0, avgCompletion: 0, avgQuiz: 0 };
+    const e = videoViewMap.get(p.videoId) ?? { views: 0, completions: [] };
     e.views++;
+    e.completions.push(p.videoCompletionPercentage);
     videoViewMap.set(p.videoId, e);
   });
   const topVideos = videos
-    .map((v) => ({ video: v, views: videoViewMap.get(v.id)?.views ?? 0, avgCompletion: videoViewMap.get(v.id)?.avgCompletion ?? 0, avgQuiz: videoViewMap.get(v.id)?.avgQuiz ?? 0 }))
+    .map((v) => {
+      const e = videoViewMap.get(v.id);
+      const lessonId = videoLesson.get(v.id);
+      return {
+        video: v,
+        views: e?.views ?? 0,
+        avgCompletion: e ? avg(e.completions) : 0,
+        avgQuiz: lessonId ? quizAvgByTopic.get(lessonId) ?? 0 : 0,
+      };
+    })
     .filter((v) => v.views > 0)
     .sort((a, b) => b.views - a.views)
     .slice(0, 4);
@@ -118,7 +155,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Schools" value={schools.length} sublabel={`${schools.filter((s) => s.active).length} active`} />
         <StatCard label="Active teachers" value={teachers.length} tone="mist" />
-        <StatCard label="Active students" value={students.length} tone="gold" />
+        <StatCard label="Active students" value={activeStudents} sublabel={`of ${students.length} enrolled`} tone="gold" />
         <StatCard label="Videos" value={videos.length} sublabel={`${units.length} units`} tone="clay" />
         <StatCard label="Avg watch time" value={formatWatchTime(avgWatch)} />
         <StatCard label="Avg quiz score" value={`${avgQuiz}%`} tone="mist" />
@@ -130,8 +167,8 @@ export default function AdminDashboard() {
         <AnalyticsChartCard title="Watch time by unit" subtitle="Total minutes watched">
           {watchByUnit.length ? <BarChart data={watchByUnit} unit="m" /> : <p className="py-6 text-center text-sm text-charcoal-soft">No watch data yet</p>}
         </AnalyticsChartCard>
-        <AnalyticsChartCard title="Active learners over time" subtitle="Monthly unique students">
-          {activeOverTime.length ? <LineChart data={activeOverTime} /> : <p className="py-6 text-center text-sm text-charcoal-soft">No activity data yet</p>}
+        <AnalyticsChartCard title="Learner engagement funnel" subtitle="Students reaching each stage">
+          {watchedStudents.size ? <BarChart data={engagementFunnel} tone="#4f9776" /> : <p className="py-6 text-center text-sm text-charcoal-soft">No activity data yet</p>}
         </AnalyticsChartCard>
         <AnalyticsChartCard title="Quiz results by topic" subtitle="Average score %">
           {quizByTopic.length ? <BarChart data={quizByTopic} unit="%" tone="#5c8aa8" /> : <p className="py-6 text-center text-sm text-charcoal-soft">No quiz data yet</p>}

@@ -480,8 +480,8 @@ export default function LandingPage() {
                   className="mx-auto flex w-fit flex-col items-center gap-2 rounded-3xl px-8 py-5 text-cream shadow-soft"
                   style={{
                     background: `linear-gradient(150deg, ${
-                      animal ? getAnimalColor(animal.id) : "#2d6a4f"
-                    }, #0d2419)`,
+                      animal ? getAnimalColor(animal.id) : "#3d7a5e"
+                    }, #163329)`,
                   }}
                 >
                   <Icon className="h-10 w-10" aria-hidden strokeWidth={1.5} />
@@ -534,7 +534,7 @@ export default function LandingPage() {
                       key={s.id}
                       onClick={() => pickAnimal(s.id)}
                       className="card-lift group flex flex-col items-center gap-2 overflow-hidden rounded-2xl p-3 text-cream shadow-soft"
-                      style={{ background: `linear-gradient(150deg, ${getAnimalColor(animal.id)}, #0d2419)` }}
+                      style={{ background: `linear-gradient(150deg, ${getAnimalColor(animal.id)}, #163329)` }}
                     >
                       <Icon className="h-8 w-8 transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
                       <span className="text-xs font-semibold">{animal.name}</span>

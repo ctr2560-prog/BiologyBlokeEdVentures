@@ -222,7 +222,7 @@ export default function TeacherDashboard() {
       {/* Professional learning CTA */}
       <div
         className="relative overflow-hidden rounded-3xl p-6 text-cream shadow-hero md:p-8"
-        style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 70%, #40916c 100%)" }}
+        style={{ background: "linear-gradient(120deg, #204535 0%, #3d7a5e 70%, #4f9776 100%)" }}
       >
         <GraduationCap className="absolute -bottom-6 right-6 h-32 w-32 text-white/[0.07]" aria-hidden />
         <div className="relative flex flex-wrap items-center justify-between gap-4">

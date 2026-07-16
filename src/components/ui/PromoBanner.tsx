@@ -32,7 +32,7 @@ export function PromoBanner({ banner }: { banner: SiteBanner }) {
       ) : (
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 100%)" }}
+          style={{ background: "linear-gradient(120deg, #204535 0%, #3d7a5e 100%)" }}
         />
       )}
 

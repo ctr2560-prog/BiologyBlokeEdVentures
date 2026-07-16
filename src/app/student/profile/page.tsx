@@ -40,7 +40,7 @@ export default function StudentProfile() {
 
       {/* Explorer card */}
       <div className="overflow-hidden rounded-3xl shadow-hero">
-        <div className="flex items-center gap-5 p-8 text-cream" style={{ background: "linear-gradient(120deg, #1b4332, #40916c)" }}>
+        <div className="flex items-center gap-5 p-8 text-cream" style={{ background: "linear-gradient(120deg, #2c5844, #4f9776)" }}>
           <span className="grid h-20 w-20 place-items-center rounded-3xl bg-cream text-4xl font-bold text-forest-800">
             {studentName.slice(0, 1)}
           </span>

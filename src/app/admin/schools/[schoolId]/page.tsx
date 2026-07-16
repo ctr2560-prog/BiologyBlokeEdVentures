@@ -3,31 +3,39 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  SectionHeader, StatCard, Badge, Button,
+  SectionHeader, StatCard, Badge, Modal,
 } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { AliasChip } from "@/components/ui/AliasChip";
-import { EngagementPill, AdaptiveRecommendationPanel } from "@/components/cards/InsightCards";
 import { AnalyticsChartCard, BarChart } from "@/components/analytics/Charts";
+import { WorksheetReview } from "@/components/insights/WorksheetReview";
 import {
   getSchool, getClassesBySchool, getStudentsByClass,
-  getProgressByClass, getTopics, getVideo, getUser,
+  getProgressByClass, getQuizResultsByClass, getResponsesByClass,
+  getActivitiesByIds, getTopics, getUser,
+  type ClassQuizResult,
 } from "@/lib/supabaseService";
 import { formatWatchTime } from "@/lib/analytics";
-import { generateAdaptiveRecommendation } from "@/lib/adaptive";
-import { ArrowLeft, Loader, Users, BookOpen } from "lucide-react";
-import type { School, ClassGroup, User, StudentProgress, Video, Topic } from "@/types";
+import { ArrowLeft, Loader, Users, BookOpen, FileText } from "lucide-react";
+import type {
+  School, ClassGroup, User, StudentProgress, Topic, StudentActivityResponse, Activity,
+} from "@/types";
 
 const avg = (nums: number[]) =>
   nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
 
-function computeAnalytics(progress: StudentProgress[], topicNames: Map<string, string>) {
+function computeAnalytics(
+  progress: StudentProgress[],
+  quizResults: ClassQuizResult[],
+  topicNames: Map<string, string>
+) {
+  // Quiz performance comes from server-graded quiz_results, grouped by lesson.
   const topicMap = new Map<string, number[]>();
-  progress.forEach((p) => {
-    if (p.quizScore === null) return;
-    const arr = topicMap.get(p.topicId) ?? [];
-    arr.push(p.quizScore);
-    topicMap.set(p.topicId, arr);
+  quizResults.forEach((q) => {
+    if (!q.topicId) return;
+    const arr = topicMap.get(q.topicId) ?? [];
+    arr.push(q.score);
+    topicMap.set(q.topicId, arr);
   });
   const topicPerformance = [...topicMap.entries()].map(([tid, scores]) => ({
     topic: topicNames.get(tid) ?? tid,
@@ -35,7 +43,7 @@ function computeAnalytics(progress: StudentProgress[], topicNames: Map<string, s
   }));
   return {
     avgCompletion: avg(progress.map((p) => p.videoCompletionPercentage)),
-    avgQuiz: avg(progress.filter((p) => p.quizScore !== null).map((p) => p.quizScore as number)),
+    avgQuiz: avg(quizResults.map((q) => q.score)),
     studentsNeedingSupport: [...new Set(
       progress.filter((p) => p.recommendedTaskType === "support").map((p) => p.studentId),
     )].length,
@@ -57,9 +65,11 @@ export default function SchoolDetailPage() {
   const [teacher, setTeacher] = useState<User | null>(null);
   const [students, setStudents] = useState<User[]>([]);
   const [progress, setProgress] = useState<StudentProgress[]>([]);
+  const [quizResults, setQuizResults] = useState<ClassQuizResult[]>([]);
+  const [responses, setResponses] = useState<StudentActivityResponse[]>([]);
+  const [activityById, setActivityById] = useState<Map<string, Activity>>(new Map());
   const [topicNames, setTopicNames] = useState<Map<string, string>>(new Map());
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
-  const [detailVideo, setDetailVideo] = useState<Video | null>(null);
 
   const [schoolLoading, setSchoolLoading] = useState(true);
   const [classLoading, setClassLoading] = useState(false);
@@ -84,30 +94,53 @@ export default function SchoolDetailPage() {
     setSelectedStudent(null);
 
     const cls = classes.find((c) => c.id === classId);
-    const [studentsData, progressData, teacherData] = await Promise.all([
+    const [studentsData, progressData, quizData, responseData, teacherData] = await Promise.all([
       getStudentsByClass(classId),
       getProgressByClass(classId),
+      getQuizResultsByClass(classId),
+      getResponsesByClass(classId),
       cls?.teacherId ? getUser(cls.teacherId) : Promise.resolve(null),
     ]);
+    const activityIds = [...new Set(responseData.map((r) => r.activityId))];
+    const activities = activityIds.length ? await getActivitiesByIds(activityIds) : [];
 
     setStudents(studentsData);
     setProgress(progressData);
+    setQuizResults(quizData);
+    setResponses(responseData);
+    setActivityById(new Map(activities.map((a) => [a.id, a])));
     setTeacher(teacherData);
     setClassLoading(false);
   }, [classId, classes]);
 
   useEffect(() => { loadClass(); }, [loadClass]);
 
-  // Lazy-load video for student drill-down
-  useEffect(() => {
-    if (!selectedStudent) { setDetailVideo(null); return; }
-    const latest = progress
-      .filter((p) => p.studentId === selectedStudent)
-      .sort((a, b) => b.lastActive.localeCompare(a.lastActive))[0];
-    if (latest?.videoId) getVideo(latest.videoId).then(setDetailVideo);
-  }, [selectedStudent, progress]);
+  const analytics = useMemo(
+    () => computeAnalytics(progress, quizResults, topicNames),
+    [progress, quizResults, topicNames]
+  );
 
-  const analytics = useMemo(() => computeAnalytics(progress, topicNames), [progress, topicNames]);
+  const quizByStudent = useMemo(() => {
+    const scores = new Map<string, number[]>();
+    quizResults.forEach((q) => {
+      const arr = scores.get(q.studentId) ?? [];
+      arr.push(q.score);
+      scores.set(q.studentId, arr);
+    });
+    return new Map(
+      [...scores.entries()].map(([sid, arr]) => [sid, Math.round(arr.reduce((a, b) => a + b, 0) / arr.length)])
+    );
+  }, [quizResults]);
+
+  const responsesByStudent = useMemo(() => {
+    const m = new Map<string, StudentActivityResponse[]>();
+    responses.forEach((r) => {
+      const arr = m.get(r.studentId) ?? [];
+      arr.push(r);
+      m.set(r.studentId, arr);
+    });
+    return m;
+  }, [responses]);
 
   const tableRows = useMemo(() =>
     students.map((s) => {
@@ -125,29 +158,13 @@ export default function SchoolDetailPage() {
         .sort((a, b) => b.lastActive.localeCompare(a.lastActive))[0]
     : undefined;
 
-  const detailRec =
-    detailProg && detailVideo
-      ? generateAdaptiveRecommendation({
-          watchTimeSeconds: detailProg.watchTimeSeconds,
-          durationSeconds: detailVideo.durationSeconds,
-          quizScore: detailProg.quizScore,
-          replayCount: detailProg.replayCount,
-          clickedCurious: detailProg.clickedCurious,
-          clickedHelp: detailProg.clickedHelp,
-        })
-      : null;
-
   const selectedUser = students.find((s) => s.id === selectedStudent);
   const detailTopicName = detailProg ? (topicNames.get(detailProg.topicId) ?? "") : "";
   const currentClass = classes.find((c) => c.id === classId);
 
   type TableRow = (typeof tableRows)[number];
   const columns: Column<TableRow>[] = [
-    {
-      key: "name",
-      header: "Explorer",
-      render: (r) => <AliasChip user={r.student} />,
-    },
+    { key: "name", header: "Explorer", render: (r) => <AliasChip user={r.student} /> },
     {
       key: "completion",
       header: "Completion",
@@ -175,39 +192,38 @@ export default function SchoolDetailPage() {
       key: "quiz",
       header: "Quiz",
       align: "center",
-      render: (r) => r.latest?.quizScore != null ? `${r.latest.quizScore}%` : "-",
+      render: (r) => {
+        const q = quizByStudent.get(r.student.id);
+        return q != null ? `${q}%` : "-";
+      },
     },
     {
-      key: "focus",
-      header: "Adaptive focus",
-      render: (r) =>
-        r.latest ? (
-          <span className="text-charcoal-soft">{r.latest.adaptiveFocusArea}</span>
-        ) : "-",
-    },
-    {
-      key: "engagement",
-      header: "Engagement",
+      key: "worksheet",
+      header: "Adaptive worksheet",
       align: "center",
-      render: (r) => r.latest ? <EngagementPill level={r.latest.engagementLevel} /> : "-",
-    },
-    {
-      key: "rec",
-      header: "Recommendation",
-      render: (r) =>
-        r.latest ? (
-          <Badge
-            tone={
-              r.latest.recommendedTaskType === "support" ? "clay"
-              : r.latest.recommendedTaskType === "extension" ? "mist"
-              : "forest"
-            }
+      render: (r) => {
+        const resp = responsesByStudent.get(r.student.id) ?? [];
+        if (resp.length === 0) {
+          return <span className="text-xs text-charcoal-soft/60">Not started yet</span>;
+        }
+        const isOpen = selectedStudent === r.student.id;
+        const submitted = resp.filter((x) => x.submittedAt).length;
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedStudent(isOpen ? null : r.student.id);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+              isOpen ? "bg-forest-800 text-cream" : "bg-forest-700 text-cream hover:bg-forest-800"
+            }`}
           >
-            {r.latest.recommendedTaskType === "support" ? "Support"
-              : r.latest.recommendedTaskType === "extension" ? "Extension"
-              : "Core"}
-          </Badge>
-        ) : "-",
+            <FileText className="h-3.5 w-3.5" aria-hidden />
+            {isOpen ? "Hide worksheet" : "View worksheet"}
+            {submitted === 0 && <span className="rounded-full bg-gold-400 px-1.5 text-[10px] text-forest-950">draft</span>}
+          </button>
+        );
+      },
     },
   ];
 
@@ -386,54 +402,44 @@ export default function SchoolDetailPage() {
                       }
                     />
                     <p className="mt-2 text-xs text-charcoal-soft">
-                      Click a student to see their adaptive recommendation.
+                      Click a student&apos;s <span className="font-semibold text-forest-700">View worksheet</span> button to see their answers.
                     </p>
                   </>
                 )}
               </div>
 
-              {/* Student drill-down */}
-              {detailProg && detailRec && selectedUser && (
-                <div className="rise-in grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
-                    <AliasChip user={selectedUser} size={40} />
-                    <p className="mt-2 text-sm text-charcoal-soft">
-                      Latest: {detailTopicName}
-                      {detailVideo ? ` · ${detailVideo.title}` : ""}
-                    </p>
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <MiniStat label="Watched" value={`${detailProg.videoCompletionPercentage}%`} />
-                      <MiniStat
-                        label="Quiz"
-                        value={detailProg.quizScore != null ? `${detailProg.quizScore}%` : "—"}
-                      />
-                      <MiniStat label="Replays" value={detailProg.replayCount} />
-                      <MiniStat
-                        label="Worksheet"
-                        value={detailProg.worksheetCompleted ? "Done" : "Pending"}
-                      />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {detailProg.clickedCurious && <Badge tone="mist">Curious</Badge>}
-                      {detailProg.clickedHelp && <Badge tone="clay">Asked for help</Badge>}
-                    </div>
+              {/* Worksheet review modal */}
+              <Modal
+                open={!!selectedUser}
+                onClose={() => setSelectedStudent(null)}
+                title={selectedUser ? `${selectedUser.name}'s adaptive worksheet` : "Adaptive worksheet"}
+                maxWidth="max-w-2xl"
+              >
+                {selectedUser && (
+                  <div className="space-y-4">
+                    {detailProg && (
+                      <div className="flex items-center gap-3 rounded-2xl bg-forest-50 px-4 py-3">
+                        <AliasChip user={selectedUser} size={36} />
+                        <span className="text-sm text-charcoal-soft">
+                          {detailProg.videoCompletionPercentage}% watched
+                          {selectedStudent && quizByStudent.get(selectedStudent) != null
+                            ? ` · ${quizByStudent.get(selectedStudent)}% quiz`
+                            : ""}
+                          {detailTopicName ? ` · ${detailTopicName}` : ""}
+                        </span>
+                      </div>
+                    )}
+                    <WorksheetReview
+                      responses={selectedStudent ? responsesByStudent.get(selectedStudent) ?? [] : []}
+                      activityById={activityById}
+                    />
                   </div>
-                  <AdaptiveRecommendationPanel rec={detailRec} audience="teacher" />
-                </div>
-              )}
+                )}
+              </Modal>
             </>
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-2xl bg-cream/60 p-3">
-      <p className="text-xs text-charcoal-soft">{label}</p>
-      <p className="display text-lg font-bold text-forest-900">{value}</p>
     </div>
   );
 }

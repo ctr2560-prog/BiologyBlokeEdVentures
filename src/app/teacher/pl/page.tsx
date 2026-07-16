@@ -132,7 +132,7 @@ export default function TeacherPLPage() {
                   ) : (
                     <div
                       className="absolute inset-0"
-                      style={{ background: "linear-gradient(120deg, #14352a, #2d6a4f)" }}
+                      style={{ background: "linear-gradient(120deg, #204535, #3d7a5e)" }}
                     >
                       <GraduationCap className="absolute -bottom-4 right-4 h-20 w-20 text-white/10" aria-hidden />
                     </div>

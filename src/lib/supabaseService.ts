@@ -367,7 +367,7 @@ function mapEcosystem(r: Row): Ecosystem {
     id: r.id,
     name: r.name,
     blurb: r.blurb ?? "",
-    color: r.color ?? "#2d6a4f",
+    color: r.color ?? "#3d7a5e",
     icon: r.icon ?? "",
     tags: r.tags ?? [],
     featured: Boolean(r.featured),
@@ -896,19 +896,44 @@ export interface ClassQuizResult {
   submittedAt: string;
 }
 
-export async function getQuizResultsByClass(classId: string): Promise<ClassQuizResult[]> {
-  const { data } = await getSupabaseClient()
-    .from("quiz_results")
-    .select("quiz_id, student_id, lesson_id, score, attempts, submitted_at")
-    .eq("class_id", classId);
-  return (data ?? []).map((r: Row) => ({
+function mapQuizResult(r: Row): ClassQuizResult {
+  return {
     quizId: r.quiz_id as string,
     studentId: r.student_id as string,
     topicId: (r.lesson_id as string) ?? null,
     score: Number(r.score),
     attempts: (r.attempts as number) ?? 1,
     submittedAt: (r.submitted_at as string) ?? "",
-  }));
+  };
+}
+
+export async function getQuizResultsByClass(classId: string): Promise<ClassQuizResult[]> {
+  const { data } = await getSupabaseClient()
+    .from("quiz_results")
+    .select("quiz_id, student_id, lesson_id, score, attempts, submitted_at")
+    .eq("class_id", classId);
+  return (data ?? []).map(mapQuizResult);
+}
+
+/** Every quiz result platform-wide (admin analytics). */
+export async function getAllQuizResults(): Promise<ClassQuizResult[]> {
+  const { data } = await getSupabaseClient()
+    .from("quiz_results")
+    .select("quiz_id, student_id, lesson_id, score, attempts, submitted_at");
+  return (data ?? []).map(mapQuizResult);
+}
+
+/** Map each video to the lesson(s) it appears in, via the sequence. */
+export async function getVideoLessonMap(): Promise<Map<string, string>> {
+  const { data } = await getSupabaseClient()
+    .from("lesson_items")
+    .select("lesson_id, item_id")
+    .eq("item_type", "video");
+  const map = new Map<string, string>();
+  (data ?? []).forEach((r: Row) => {
+    if (!map.has(r.item_id as string)) map.set(r.item_id as string, r.lesson_id as string);
+  });
+  return map;
 }
 
 // ---- Assignments ----

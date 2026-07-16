@@ -50,7 +50,7 @@ export function AdaptiveRecommendationPanel({
     <div className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5">
       <div
         className="flex items-center gap-3 px-5 py-4 text-cream"
-        style={{ background: `linear-gradient(120deg, ${meta.color}, #1b4332)` }}
+        style={{ background: `linear-gradient(120deg, ${meta.color}, #2c5844)` }}
       >
         <meta.Icon className="h-7 w-7" aria-hidden strokeWidth={1.75} />
         <div>

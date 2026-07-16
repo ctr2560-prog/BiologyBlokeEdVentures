@@ -19,7 +19,7 @@ export interface ClassAnimal {
 /** Region gradients, tuned to the Edventra earthy palette. */
 export const REGION_GRADIENT: Record<AnimalRegion, string> = {
   Australia: "linear-gradient(135deg, #8b5e3c 0%, #c08552 55%, #6b7f3a 100%)",
-  Sumatra:   "linear-gradient(135deg, #0d2419 0%, #1b4332 55%, #2d6a4f 100%)",
+  Sumatra:   "linear-gradient(135deg, #163329 0%, #2c5844 55%, #3d7a5e 100%)",
   Africa:    "linear-gradient(135deg, #a4703a 0%, #d9a45b 55%, #e6c088 100%)",
 };
 

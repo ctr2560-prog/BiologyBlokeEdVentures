@@ -496,7 +496,7 @@ function ResearchPreview({ block, n }: { block: ResearchBlock; n: number }) {
 }
 
 function DrawingPreview({ block, n }: { block: DrawingBlock; n: number }) {
-  const COLOURS = ["#1b4332", "#a47148", "#5c8aa8", "#d4a373", "#e63946", "#000000"];
+  const COLOURS = ["#2c5844", "#a47148", "#5c8aa8", "#d4a373", "#e63946", "#000000"];
   const [pen, setPen] = useState(COLOURS[0]);
   return (
     <Card>
@@ -521,7 +521,7 @@ function DrawingPreview({ block, n }: { block: DrawingBlock; n: number }) {
               type="button"
               onClick={() => setPen(c)}
               className="rounded-full transition-transform hover:scale-110"
-              style={{ width: 20, height: 20, background: c, border: pen === c ? "3px solid #40916c" : "2px solid rgba(0,0,0,0.15)", outline: pen === c ? "2px solid white" : "none", outlineOffset: -4 }}
+              style={{ width: 20, height: 20, background: c, border: pen === c ? "3px solid #4f9776" : "2px solid rgba(0,0,0,0.15)", outline: pen === c ? "2px solid white" : "none", outlineOffset: -4 }}
             />
           ))}
         </div>

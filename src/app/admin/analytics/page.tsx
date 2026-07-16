@@ -5,17 +5,19 @@ import { Film, Loader, ThumbsUp, ThumbsDown } from "lucide-react";
 import {
   AnalyticsChartCard,
   BarChart,
-  LineChart,
   DonutChart,
 } from "@/components/analytics/Charts";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { formatWatchTime } from "@/lib/analytics";
 import {
   getProgress,
+  getAllQuizResults,
+  getVideoLessonMap,
   getVideos,
   getTopics,
   getUnits,
   getClasses,
+  type ClassQuizResult,
 } from "@/lib/supabaseService";
 import type { StudentProgress, Video, Topic, Unit, ClassGroup } from "@/types";
 
@@ -33,6 +35,8 @@ interface VideoStat {
 export default function AdminAnalytics() {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<StudentProgress[]>([]);
+  const [quizResults, setQuizResults] = useState<ClassQuizResult[]>([]);
+  const [videoLesson, setVideoLesson] = useState<Map<string, string>>(new Map());
   const [videos, setVideos] = useState<Video[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -40,12 +44,14 @@ export default function AdminAnalytics() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getProgress(), getVideos(), getTopics(), getUnits(), getClasses()]).then(
-      ([pr, vi, to, un, cl]) => {
-        setProgress(pr); setVideos(vi); setTopics(to); setUnits(un); setClasses(cl);
-        setLoading(false);
-      }
-    );
+    Promise.all([
+      getProgress(), getAllQuizResults(), getVideoLessonMap(),
+      getVideos(), getTopics(), getUnits(), getClasses(),
+    ]).then(([pr, qr, vl, vi, to, un, cl]) => {
+      setProgress(pr); setQuizResults(qr); setVideoLesson(vl);
+      setVideos(vi); setTopics(to); setUnits(un); setClasses(cl);
+      setLoading(false);
+    });
   }, []);
 
   const avg = (nums: number[]) =>
@@ -54,14 +60,25 @@ export default function AdminAnalytics() {
   const totalWatchTime = progress.reduce((a, p) => a + p.watchTimeSeconds, 0);
   const completions = progress.filter((p) => p.videoCompletionPercentage >= 90).length;
   const avgCompletion = avg(progress.map((p) => p.videoCompletionPercentage));
-  const quizNums = progress.map((p) => p.quizScore).filter((s): s is number => s !== null);
-  const avgQuizScore = avg(quizNums);
+  const avgQuizScore = avg(quizResults.map((q) => q.score));
 
-  // Watch time by unit
+  // Quiz average per lesson (topic) from server-graded quiz_results.
+  const quizAvgByTopic = new Map<string, number>();
+  {
+    const byTopic = new Map<string, number[]>();
+    quizResults.forEach((q) => {
+      if (!q.topicId) return;
+      const arr = byTopic.get(q.topicId) ?? [];
+      arr.push(q.score);
+      byTopic.set(q.topicId, arr);
+    });
+    byTopic.forEach((arr, tid) => quizAvgByTopic.set(tid, avg(arr)));
+  }
+
+  // Watch time by unit (progress rows carry the unit via backfilled unit_id)
   const watchByUnit = units.map((u) => {
-    const unitTopicIds = new Set(topics.filter((t) => t.unitId === u.id).map((t) => t.id));
     const mins = Math.round(
-      progress.filter((p) => unitTopicIds.has(p.topicId)).reduce((a, p) => a + p.watchTimeSeconds, 0) / 60
+      progress.filter((p) => p.unitId === u.id).reduce((a, p) => a + p.watchTimeSeconds, 0) / 60
     );
     return { label: u.title.slice(0, 22), value: mins };
   }).filter((d) => d.value > 0);
@@ -79,35 +96,35 @@ export default function AdminAnalytics() {
     .map(([label, avgs]) => ({ label, value: avg(avgs) }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  // Quiz by topic
-  const quizByTopic = topics.map((t) => {
-    const qs = progress.filter((p) => p.topicId === t.id).map((p) => p.quizScore).filter((s): s is number => s !== null);
-    return { label: t.title.slice(0, 22), value: qs.length ? avg(qs) : 0 };
-  }).filter((d) => d.value > 0).slice(0, 8);
+  // Quiz by topic (from quiz_results)
+  const quizByTopic = topics
+    .map((t) => ({ label: t.title.slice(0, 22), value: quizAvgByTopic.get(t.id) ?? 0 }))
+    .filter((d) => d.value > 0)
+    .slice(0, 8);
 
-  // Active users over time
-  const monthCounts = new Map<string, Set<string>>();
-  progress.forEach((p) => {
-    const m = p.lastActive.slice(0, 7);
-    if (!monthCounts.has(m)) monthCounts.set(m, new Set());
-    monthCounts.get(m)!.add(p.studentId);
-  });
-  const activeOverTime = [...monthCounts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-6)
-    .map(([label, set]) => ({ label: label.slice(5), value: set.size }));
+  // Engagement funnel — distinct students reaching each stage of the flow.
+  const watchedStudents = new Set(progress.map((p) => p.studentId));
+  const completedStudents = new Set(
+    progress.filter((p) => p.videoCompletionPercentage >= 90).map((p) => p.studentId)
+  );
+  const quizzedStudents = new Set(quizResults.map((q) => q.studentId));
+  const engagementFunnel = [
+    { label: "Started", value: watchedStudents.size },
+    { label: "Finished a video", value: completedStudents.size },
+    { label: "Took a quiz", value: quizzedStudents.size },
+  ];
 
   // Video stats
   const videoStats: VideoStat[] = videos.map((video) => {
     const rows = progress.filter((p) => p.videoId === video.id);
-    const qs = rows.map((p) => p.quizScore).filter((s): s is number => s !== null);
+    const lessonId = videoLesson.get(video.id);
     return {
       video,
       views: rows.length,
       avgWatchTime: rows.length ? avg(rows.map((p) => p.watchTimeSeconds)) : 0,
       avgCompletion: rows.length ? avg(rows.map((p) => p.videoCompletionPercentage)) : 0,
       replays: 0,
-      avgQuiz: qs.length ? avg(qs) : 0,
+      avgQuiz: lessonId ? quizAvgByTopic.get(lessonId) ?? 0 : 0,
       likes: rows.filter((p) => p.videoReaction === "like").length,
       dislikes: rows.filter((p) => p.videoReaction === "dislike").length,
     };
@@ -197,10 +214,10 @@ export default function AdminAnalytics() {
           {engagementByYearGroup.length ? <BarChart data={engagementByYearGroup} unit="%" tone="#5c8aa8" /> : <p className="py-6 text-center text-sm text-charcoal-soft">No year group data yet</p>}
         </AnalyticsChartCard>
         <AnalyticsChartCard title="Quiz results by topic" subtitle="Average score %">
-          {quizByTopic.length ? <BarChart data={quizByTopic} unit="%" tone="#40916c" /> : <p className="py-6 text-center text-sm text-charcoal-soft">No quiz data yet</p>}
+          {quizByTopic.length ? <BarChart data={quizByTopic} unit="%" tone="#4f9776" /> : <p className="py-6 text-center text-sm text-charcoal-soft">No quiz data yet</p>}
         </AnalyticsChartCard>
-        <AnalyticsChartCard title="Active learners over time" subtitle="Monthly unique students">
-          {activeOverTime.length ? <LineChart data={activeOverTime} /> : <p className="py-6 text-center text-sm text-charcoal-soft">No activity data yet</p>}
+        <AnalyticsChartCard title="Learner engagement funnel" subtitle="Students reaching each stage">
+          {watchedStudents.size ? <BarChart data={engagementFunnel} tone="#4f9776" /> : <p className="py-6 text-center text-sm text-charcoal-soft">No activity data yet</p>}
         </AnalyticsChartCard>
       </div>
 

@@ -349,7 +349,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
                   >
                     <div
                       className="relative flex h-28 items-center justify-center overflow-hidden"
-                      style={{ background: "linear-gradient(135deg, #1b4332, #40916c)" }}
+                      style={{ background: "linear-gradient(135deg, #2c5844, #4f9776)" }}
                     >
                       {t.coverImage?.startsWith("http") ? (
                         <Image src={t.coverImage} alt="" fill className="object-cover" sizes="400px" />
@@ -480,14 +480,14 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
 
           <div
             className="relative flex aspect-video items-center justify-center overflow-hidden rounded-3xl shadow-hero"
-            style={{ background: "linear-gradient(160deg, #0d2419, #1b4332 55%, #2d6a4f)" }}
+            style={{ background: "linear-gradient(160deg, #163329, #2c5844 55%, #3d7a5e)" }}
           >
             {stepVideo?.muxPlaybackId ? (
               <MuxPlayer
                 playbackId={stepVideo.muxPlaybackId}
                 metadata={{ video_title: stepVideo.title }}
                 streamType="on-demand"
-                accentColor="#40916c"
+                accentColor="#4f9776"
                 className="absolute inset-0 h-full w-full"
               />
             ) : (

@@ -14,7 +14,7 @@ const PAD = { top: 24, right: 20, bottom: 56, left: 52 };
 const INNER_W = CHART_W - PAD.left - PAD.right;
 const INNER_H = CHART_H - PAD.top - PAD.bottom;
 
-const FOREST = "#2d6a4f";
+const FOREST = "#3d7a5e";
 const GRID = "#e4ddd1";
 
 function Chart({

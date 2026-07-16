@@ -79,7 +79,7 @@ export default function TeacherUnitPage({
       {/* Hero */}
       <div
         className="relative overflow-hidden rounded-3xl shadow-hero"
-        style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 90%)" }}
+        style={{ background: "linear-gradient(120deg, #204535 0%, #3d7a5e 90%)" }}
       >
         {unit.coverImage?.startsWith("http") ? (
           <>

@@ -15,7 +15,7 @@ export function AliasAvatar({
   size?: number;
 }) {
   const animal = getAnimal(user.animalId ?? "");
-  const color = animal ? getAnimalColor(animal.id) : "#2d6a4f";
+  const color = animal ? getAnimalColor(animal.id) : "#3d7a5e";
   const Icon = animal ? getAnimalIcon(animal.kind) : null;
   return (
     <span

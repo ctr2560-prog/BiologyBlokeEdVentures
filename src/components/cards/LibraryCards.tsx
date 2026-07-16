@@ -56,7 +56,7 @@ export function LibraryUnitCard({
           <>
             <div
               className="absolute inset-0"
-              style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 80%)" }}
+              style={{ background: "linear-gradient(120deg, #204535 0%, #3d7a5e 80%)" }}
             />
             <Layers className="absolute -bottom-3 right-4 h-16 w-16 text-white/10 transition-transform group-hover:scale-110" aria-hidden />
           </>

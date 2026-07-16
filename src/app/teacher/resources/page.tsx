@@ -170,7 +170,7 @@ export default function TeacherResources() {
               {/* Unit header */}
               <div
                 className="relative flex items-center gap-3 overflow-hidden px-5 py-4"
-                style={{ background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 90%)" }}
+                style={{ background: "linear-gradient(120deg, #204535 0%, #3d7a5e 90%)" }}
               >
                 {group.unit.coverImage?.startsWith("http") && (
                   <>

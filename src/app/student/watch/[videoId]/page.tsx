@@ -404,7 +404,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
         <div className="mx-auto max-w-xl space-y-4">
           <div
             className="overflow-hidden rounded-3xl text-cream shadow-hero"
-            style={{ background: "linear-gradient(120deg, #14352a, #2d6a4f)" }}
+            style={{ background: "linear-gradient(120deg, #204535, #3d7a5e)" }}
           >
             <div className="p-8 text-center">
               <p className="text-5xl"></p>

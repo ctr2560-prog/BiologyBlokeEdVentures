@@ -82,7 +82,7 @@ export const getAnimalIcon = (kind: AnimalKind): LucideIcon => animalKindIcon[ki
 
 // Deterministic tile colour per animal id (varied nature palette).
 const animalPalette = [
-  "#2d6a4f", "#1b4332", "#a47148", "#d4a373", "#5c8aa8", "#40916c",
+  "#3d7a5e", "#2c5844", "#a47148", "#d4a373", "#5c8aa8", "#4f9776",
   "#c08552", "#6d597a", "#bc6c25", "#457b9d", "#588157", "#8b5e3c",
   "#3b3a63", "#e07a5f", "#7fa8c9", "#b5838d",
 ];

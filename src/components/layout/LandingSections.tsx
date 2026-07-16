@@ -196,7 +196,7 @@ export function HowItWorks() {
   return (
     <section
       className="relative overflow-hidden py-20 md:py-28"
-      style={{ background: "linear-gradient(160deg, #14352a 0%, #1b4332 55%, #0d2419 100%)" }}
+      style={{ background: "linear-gradient(160deg, #204535 0%, #2c5844 55%, #163329 100%)" }}
     >
       <Aurora />
       <div className="relative mx-auto max-w-6xl px-6">
@@ -294,7 +294,7 @@ export function ContentShowcase() {
                   {media ? (
                     <CardVideo media={media} index={i} />
                   ) : (
-                    <div className="absolute inset-0 rounded-[inherit]" style={{ background: `linear-gradient(150deg, ${eco.color}, #0d2419)` }} />
+                    <div className="absolute inset-0 rounded-[inherit]" style={{ background: `linear-gradient(150deg, ${eco.color}, #163329)` }} />
                   )}
                   {/* legibility scrim */}
                   <div

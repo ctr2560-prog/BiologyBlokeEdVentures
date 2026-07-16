@@ -462,7 +462,7 @@ export default function PrintWorksheetPage({
         <div
           className="flex items-center gap-4 px-6 py-5"
           style={{
-            background: "linear-gradient(120deg, #14352a 0%, #2d6a4f 95%)",
+            background: "linear-gradient(120deg, #204535 0%, #3d7a5e 95%)",
             WebkitPrintColorAdjust: "exact",
             printColorAdjust: "exact",
           }}

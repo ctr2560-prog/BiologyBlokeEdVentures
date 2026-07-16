@@ -242,7 +242,7 @@ function SchoolPreview() {
             <div className="h-4 flex-1 overflow-hidden rounded-full bg-charcoal/5">
               <div
                 className="h-full rounded-full"
-                style={{ width: `${b.v}%`, background: ["#2d6a4f", "#40916c", "#d4a373"][i] }}
+                style={{ width: `${b.v}%`, background: ["#3d7a5e", "#4f9776", "#d4a373"][i] }}
               />
             </div>
           </div>

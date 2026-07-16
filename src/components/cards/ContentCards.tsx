@@ -31,11 +31,11 @@ import {
 // Warm nature gradients keyed loosely by a seed string.
 function heroGradient(seed: string): string {
   const gradients = [
-    "linear-gradient(135deg, #1b4332 0%, #2d6a4f 55%, #52b788 100%)",
+    "linear-gradient(135deg, #2c5844 0%, #3d7a5e 55%, #72b493 100%)",
     "linear-gradient(135deg, #8b5e3c 0%, #a47148 55%, #d4a373 100%)",
-    "linear-gradient(135deg, #14352a 0%, #40916c 100%)",
+    "linear-gradient(135deg, #204535 0%, #4f9776 100%)",
     "linear-gradient(135deg, #5c8aa8 0%, #7fa8c9 55%, #a9c5d3 100%)",
-    "linear-gradient(135deg, #40916c 0%, #74c69d 100%)",
+    "linear-gradient(135deg, #4f9776 0%, #9bd0b2 100%)",
   ];
   let h = 0;
   for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) % gradients.length;

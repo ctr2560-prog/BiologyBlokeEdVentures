@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
   return (
     <div
       className="flex min-h-screen flex-col items-center justify-center px-6 py-16"
-      style={{ background: "linear-gradient(160deg, #0a1f14 0%, #0d2419 60%, #060f0a 100%)" }}
+      style={{ background: "linear-gradient(160deg, #0a1f14 0%, #163329 60%, #060f0a 100%)" }}
     >
       {/* Back link */}
       <div className="absolute left-6 top-6">
