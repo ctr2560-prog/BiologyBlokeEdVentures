@@ -7,6 +7,7 @@
  */
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useApp } from "@/lib/store";
 import { Button, Badge, EmptyState } from "@/components/ui/primitives";
 import { VideoPlayer } from "@/components/media/VideoPlayer";
@@ -14,7 +15,7 @@ import { VideoPlayerMock, type WatchSignals } from "@/components/media/VideoPlay
 import { StudentBlockRenderer } from "../../activity/[activityId]/renderers";
 import { filterBlocksForStudent } from "@/lib/activityRouting";
 import { toSlidesEmbedUrl } from "@/lib/slides";
-import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation } from "lucide-react";
+import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation, ChevronUp } from "lucide-react";
 import {
   getLessonOrTopicItems,
   getTopic,
@@ -80,6 +81,22 @@ export default function LessonPlayerPage({
   const buildStartedRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // ── Swipe-to-advance state ────────────────────────────────────────────────
+  // Auto-advance timer after quiz submit; cleared by advanceOrFinish.
+  const autoNextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Debounce so trackpad momentum doesn't skip multiple steps at once.
+  const wheelLockRef = useRef(0);
+  const touchRef = useRef<{ y: number; atBottom: boolean } | null>(null);
+  // Live watch signals from the video player, so a swipe mid-video can
+  // record whatever was watched so far without pressing "Done watching".
+  const liveSignalsRef = useRef<WatchSignals | null>(null);
+
+  const atScrollBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollTop + el.clientHeight >= el.scrollHeight - 32;
+  };
 
   useEffect(() => {
     Promise.all([
@@ -200,21 +217,23 @@ export default function LessonPlayerPage({
 
   const handleVideoComplete = (s: WatchSignals) => setSignals(s);
 
-  const handleSaveVideoProgress = async () => {
-    if (!signals || !currentItem || currentItem.itemType !== "video") return;
+  const handleSaveVideoProgress = async (live?: WatchSignals) => {
+    const sig = live ?? signals;
+    if (!sig || !currentItem || currentItem.itemType !== "video") return;
     const video = currentItem.video as Video;
     setSaving(true);
     const weight =
-      signals.completion / 100 +
-      signals.replayCount * 0.25 +
-      (signals.clickedCurious ? 0.5 : 0) -
-      (signals.skipped ? 0.5 : 0);
+      sig.completion / 100 +
+      sig.replayCount * 0.25 +
+      (sig.clickedCurious ? 0.5 : 0) +
+      (sig.reaction === "like" ? 0.5 : sig.reaction === "dislike" ? -0.5 : 0) -
+      (sig.skipped ? 0.5 : 0);
     setWatchHistory((prev) => [
       ...prev,
       {
         tags: video.tags,
-        watchTimeSeconds: signals.watchTimeSeconds,
-        completion: signals.completion,
+        watchTimeSeconds: sig.watchTimeSeconds,
+        completion: sig.completion,
         weight,
       },
     ]);
@@ -225,12 +244,13 @@ export default function LessonPlayerPage({
         unitId: video.unitId,
         topicId: video.topicId,
         videoId: video.id,
-        watchTimeSeconds: signals.watchTimeSeconds,
-        videoCompletionPercentage: signals.completion,
-        replayCount: signals.replayCount,
-        skipped: signals.skipped,
-        clickedCurious: signals.clickedCurious,
-        clickedHelp: signals.clickedHelp,
+        watchTimeSeconds: sig.watchTimeSeconds,
+        videoCompletionPercentage: sig.completion,
+        replayCount: sig.replayCount,
+        skipped: sig.skipped,
+        clickedCurious: sig.clickedCurious,
+        clickedHelp: sig.clickedHelp,
+        videoReaction: sig.reaction,
         quizScore: null,
         quizAttempts: 0,
         worksheetCompleted: false,
@@ -250,10 +270,10 @@ export default function LessonPlayerPage({
       topicId: video.topicId,
       unitId: video.unitId,
       classId,
-      metadata: { watchTimeSeconds: signals.watchTimeSeconds, completion: signals.completion },
+      metadata: { watchTimeSeconds: sig.watchTimeSeconds, completion: sig.completion },
     });
     await awardPoints(studentId, classId, "video_completed", video.id);
-    if (signals.clickedCurious) {
+    if (sig.clickedCurious) {
       await awardPoints(studentId, classId, "curious_click", video.id);
     }
     setSaving(false);
@@ -284,13 +304,20 @@ export default function LessonPlayerPage({
         await awardPoints(studentId, classId, "quiz_ace", quiz.id);
       }
       setQuizSubmitted(true);
+      // Show the marked answers briefly, then move on automatically.
+      autoNextRef.current = setTimeout(() => advanceOrFinish(), 2000);
     } finally {
       setSaving(false);
     }
   };
 
   const advanceOrFinish = async () => {
+    if (autoNextRef.current) {
+      clearTimeout(autoNextRef.current);
+      autoNextRef.current = null;
+    }
     setSignals(null);
+    liveSignalsRef.current = null;
     setAnswers({});
     setQuizSubmitted(false);
     setQuizResultDetails({});
@@ -304,6 +331,56 @@ export default function LessonPlayerPage({
       setDone(true);
     } else {
       setCurrentIndex(nextIndex);
+    }
+  };
+
+  /*
+   * What a swipe-up (or scroll past the end) does on the current step.
+   * Returns null when the step isn't ready to advance — quizzes must be
+   * submitted first, the worksheet must be submitted via its own button.
+   */
+  const swipeAction = (): (() => void) | null => {
+    if (saving) return null;
+    if (onSlides) return () => setSlidesDone(true);
+    if (done) return null;
+    if (currentItem?.itemType === "video") {
+      // Swipe works mid-video: record whatever was watched so far. Skipping
+      // early is a legitimate signal — it lowers that video's interest weight.
+      const sig = signals ?? liveSignalsRef.current ?? {
+        watchTimeSeconds: 0,
+        completion: 0,
+        replayCount: 0,
+        skipped: true,
+        clickedCurious: false,
+        clickedHelp: false,
+      };
+      return () => handleSaveVideoProgress(sig);
+    }
+    if (currentItem?.itemType === "quiz" && quizSubmitted) return advanceOrFinish;
+    return null;
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchRef.current = { y: e.touches[0].clientY, atBottom: atScrollBottom() };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchRef.current;
+    touchRef.current = null;
+    if (!start || !start.atBottom) return;
+    const dy = start.y - e.changedTouches[0].clientY;
+    if (dy < 70) return; // Not a deliberate upward swipe
+    swipeAction()?.();
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.deltaY < 60 || !atScrollBottom()) return;
+    const now = Date.now();
+    if (now - wheelLockRef.current < 900) return;
+    const act = swipeAction();
+    if (act) {
+      wheelLockRef.current = now;
+      act();
     }
   };
 
@@ -435,14 +512,28 @@ export default function LessonPlayerPage({
           </span>
         </div>
         {lesson && (
-          <p className="mx-auto mt-2 max-w-2xl truncate text-xs font-semibold text-white/40">
-            {lesson.title}
-          </p>
+          <div className="mx-auto mt-2 flex max-w-2xl items-center gap-2">
+            <Image
+              src="/edventra-white.png"
+              alt="Edventra"
+              width={472}
+              height={119}
+              className="h-4 w-auto opacity-60"
+            />
+            <span className="text-white/20">·</span>
+            <p className="min-w-0 truncate text-xs font-semibold text-white/40">{lesson.title}</p>
+          </div>
         )}
       </div>
 
       {/* ── Feed ── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto overscroll-contain"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
+      >
         <div
           key={done ? "done" : onSlides ? "slides" : currentIndex}
           className="rise-in mx-auto max-w-2xl px-4 pb-24 pt-2"
@@ -529,21 +620,14 @@ export default function LessonPlayerPage({
               </div>
 
               {currentItem.video.muxPlaybackId ? (
-                <VideoPlayer video={currentItem.video} onComplete={handleVideoComplete} />
+                <VideoPlayer
+                  video={currentItem.video}
+                  onComplete={handleVideoComplete}
+                  liveSignalsRef={liveSignalsRef}
+                  showDoneButton={false}
+                />
               ) : (
-                <VideoPlayerMock video={currentItem.video} onComplete={handleVideoComplete} />
-              )}
-
-              {signals && (
-                <div className="sticky bottom-4 pt-2">
-                  <button
-                    onClick={handleSaveVideoProgress}
-                    disabled={saving}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-gold-400 py-4 text-base font-bold text-forest-950 shadow-hero transition-transform hover:scale-[1.01] disabled:opacity-60"
-                  >
-                    {saving ? "Saving…" : "Keep going →"}
-                  </button>
-                </div>
+                <VideoPlayerMock video={currentItem.video} onComplete={handleVideoComplete} liveSignalsRef={liveSignalsRef} />
               )}
             </div>
           ) : currentItem?.itemType === "quiz" ? (
@@ -713,6 +797,16 @@ export default function LessonPlayerPage({
               </div>
             )
           ) : null}
+
+          {/* Swipe hint — shown whenever the current step is ready to advance */}
+          {swipeAction() && (
+            <div className="pointer-events-none mt-8 flex flex-col items-center gap-1 text-forest-100/50">
+              <ChevronUp className="float-y-fast h-5 w-5" aria-hidden />
+              <span className="text-[0.65rem] font-semibold uppercase tracking-widest">
+                Swipe up for the next step
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

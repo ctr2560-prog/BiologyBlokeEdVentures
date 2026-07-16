@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Button, Badge, ProgressBar } from "@/components/ui/primitives";
-import { Play, Pause, Compass, HelpingHand, RotateCcw, SkipForward, Check } from "lucide-react";
+import { Play, Pause, ThumbsUp, ThumbsDown, RotateCcw, SkipForward, Check } from "lucide-react";
 import type { Video } from "@/types";
 
 export interface WatchSignals {
@@ -17,22 +17,43 @@ export interface WatchSignals {
   skipped: boolean;
   clickedCurious: boolean;
   clickedHelp: boolean;
+  /** TikTok-style reaction, saved to student_progress.video_reaction. */
+  reaction?: "like" | "dislike";
 }
 
 export function VideoPlayerMock({
   video,
   onComplete,
+  liveSignalsRef,
 }: {
   video: Video;
   onComplete: (signals: WatchSignals) => void;
+  /** Live snapshot of signals so far — enables swipe-to-advance mid-video. */
+  liveSignalsRef?: React.MutableRefObject<WatchSignals | null>;
 }) {
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0); // simulated seconds watched
   const [replays, setReplays] = useState(0);
-  const [curious, setCurious] = useState(false);
-  const [help, setHelp] = useState(false);
+  const [reaction, setReaction] = useState<"like" | "dislike" | undefined>(undefined);
   const [finished, setFinished] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const toggleReaction = (r: "like" | "dislike") =>
+    setReaction((prev) => (prev === r ? undefined : r));
+
+  // Keep the parent's live snapshot in sync with the simulated playback.
+  useEffect(() => {
+    if (!liveSignalsRef) return;
+    liveSignalsRef.current = {
+      watchTimeSeconds: elapsed,
+      completion: Math.min(100, Math.round((elapsed / video.durationSeconds) * 100)),
+      replayCount: replays,
+      skipped: elapsed < video.durationSeconds * 0.25,
+      clickedCurious: false,
+      clickedHelp: false,
+      reaction,
+    };
+  }, [elapsed, replays, reaction, liveSignalsRef, video.durationSeconds]);
 
   // Play at 8x so a 90s reel simulates in ~11s, keeps the demo snappy.
   const SPEED = 8;
@@ -77,8 +98,9 @@ export function VideoPlayerMock({
       completion: Math.min(100, Math.round((elapsed / duration) * 100)),
       replayCount: replays,
       skipped,
-      clickedCurious: curious,
-      clickedHelp: help,
+      clickedCurious: false,
+      clickedHelp: false,
+      reaction,
     });
   };
 
@@ -135,19 +157,23 @@ export function VideoPlayerMock({
         )}
       </div>
 
-      {/* Engagement buttons */}
+      {/* Reactions */}
       <div className="mt-4 flex gap-2">
         <button
-          onClick={() => setCurious((c) => !c)}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${curious ? "bg-mist-500 text-white" : "bg-mist-100 text-mist-600"}`}
+          onClick={() => toggleReaction("like")}
+          aria-label="Like this video"
+          aria-pressed={reaction === "like"}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${reaction === "like" ? "bg-forest-600 text-white" : "bg-forest-50 text-forest-700"}`}
         >
-          <Compass className="h-4 w-4" aria-hidden /> I&apos;m curious!
+          <ThumbsUp className="h-4 w-4" aria-hidden /> Like
         </button>
         <button
-          onClick={() => setHelp((h) => !h)}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${help ? "bg-clay-500 text-white" : "bg-clay-400/15 text-clay-600"}`}
+          onClick={() => toggleReaction("dislike")}
+          aria-label="Dislike this video"
+          aria-pressed={reaction === "dislike"}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors ${reaction === "dislike" ? "bg-clay-500 text-white" : "bg-clay-400/15 text-clay-600"}`}
         >
-          <HelpingHand className="h-4 w-4" aria-hidden /> I need help
+          <ThumbsDown className="h-4 w-4" aria-hidden /> Dislike
         </button>
       </div>
 

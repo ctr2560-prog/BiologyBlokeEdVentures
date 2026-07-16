@@ -81,13 +81,13 @@ export function LibraryUnitCard({
         {unit.description && (
           <p className="line-clamp-2 text-xs text-charcoal-soft">{unit.description}</p>
         )}
-        <div className="mt-auto flex flex-wrap items-center gap-2 pt-1 text-xs text-charcoal-soft">
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1 text-xs text-charcoal-soft">
+          <Badge tone="forest">{unit.subject}</Badge>
           {unit.stage && <Badge tone="gold">{unit.stage}</Badge>}
           <span className="flex items-center gap-1">
             <BookOpen className="h-3.5 w-3.5" aria-hidden />
             {lessonCount} lesson{lessonCount !== 1 ? "s" : ""}
           </span>
-          {unit.yearGroups.length > 0 && <span>{unit.yearGroups.join(", ")}</span>}
         </div>
         <Link
           href={href}
@@ -151,16 +151,9 @@ export function LibraryLessonCard({
         {lesson.description && (
           <p className="line-clamp-2 text-xs text-charcoal-soft">{lesson.description}</p>
         )}
-        <div className="mt-auto flex flex-wrap items-center gap-2 pt-1 text-xs text-charcoal-soft">
-          <Badge
-            tone={
-              lesson.difficulty === "foundation" ? "clay"
-              : lesson.difficulty === "advanced" ? "mist"
-              : "forest"
-            }
-          >
-            {lesson.difficulty}
-          </Badge>
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1 text-xs text-charcoal-soft">
+          <Badge tone="forest">{lesson.subject}</Badge>
+          <Badge tone="gold">{lesson.stage}</Badge>
           <span className="flex items-center gap-1">
             <Film className="h-3.5 w-3.5" aria-hidden /> {lesson.videoIds.length}
           </span>

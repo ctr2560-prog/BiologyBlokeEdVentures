@@ -8,7 +8,7 @@ import { CoverImageControl } from "@/components/forms/CoverImageControl";
 import {
   getUnits, getTopics, getTopicsByUnit,
   addLessonToUnit, removeLessonFromUnit, deleteUnit, createTopic, deleteTopic,
-  setUnitFeatured,
+  setUnitFeatured, setUnitMeta,
   uploadUnitDocument, setUnitDocument, unitDocFilename,
   type UnitDocKind,
 } from "@/lib/supabaseService";
@@ -17,7 +17,8 @@ import {
   Trash2, Loader, ArrowRight, FolderPlus, PenLine, X, Star,
   FileText, Upload, Download,
 } from "lucide-react";
-import type { Unit, Topic } from "@/types";
+import type { Unit, Topic, Subject, Stage } from "@/types";
+import { SUBJECTS } from "@/types";
 
 // ── Unit document slot (Word downloads for teachers) ──────────────────────────
 
@@ -136,6 +137,8 @@ function NewLessonModal({
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [subject, setSubject] = useState<Subject>("Science");
+  const [stage, setStage] = useState<Stage>("Stage 3");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -145,7 +148,13 @@ function NewLessonModal({
     setSaving(true);
     setError("");
     try {
-      const lesson = await createTopic({ title: title.trim(), description: description.trim(), difficulty: "core" });
+      const lesson = await createTopic({
+        title: title.trim(),
+        description: description.trim(),
+        difficulty: "core",
+        subject,
+        stage,
+      });
       if (unitId) await addLessonToUnit(unitId, lesson.id, lessonCount);
       router.push(`/admin/lessons/${lesson.id}`);
       onClose();
@@ -198,6 +207,33 @@ function NewLessonModal({
             rows={2}
             className={`${inputClass} w-full resize-none`}
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-forest-900">Subject</label>
+            <select
+              value={subject}
+              onChange={(e) => setSubject(e.target.value as Subject)}
+              className={`${inputClass} w-full`}
+            >
+              {SUBJECTS.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-forest-900">Stage</label>
+            <select
+              value={stage}
+              onChange={(e) => setStage(e.target.value as Stage)}
+              className={`${inputClass} w-full`}
+            >
+              {(["Stage 3", "Stage 4", "Stage 5"] as Stage[]).map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {error && (
@@ -298,6 +334,8 @@ function UnitAccordion({
   const router = useRouter();
   const [open, setOpen]               = useState(false);
   const [featured, setFeatured]       = useState(unit.featured);
+  const [subject, setSubjectState]    = useState<Subject>(unit.subject);
+  const [stage, setStageState]        = useState<Stage>(unit.stage);
   const [lessons, setLessons]         = useState<Topic[]>([]);
   const [loaded, setLoaded]           = useState(false);
   const [loadingLessons, setLoadingLessons] = useState(false);
@@ -347,6 +385,17 @@ function UnitAccordion({
       await setUnitFeatured(unit.id, next);
     } catch {
       setFeatured(!next);
+    }
+  };
+
+  const handleUnitMeta = async (fields: { subject?: Subject; stage?: Stage }) => {
+    if (fields.subject) setSubjectState(fields.subject);
+    if (fields.stage) setStageState(fields.stage);
+    try {
+      await setUnitMeta(unit.id, fields);
+    } catch {
+      setSubjectState(unit.subject);
+      setStageState(unit.stage);
     }
   };
 
@@ -441,6 +490,35 @@ function UnitAccordion({
             </div>
           ) : (
             <>
+              {/* Learning area + stage (drives teacher library filters) */}
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-charcoal-soft">
+                  Classification
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={subject}
+                    onChange={(e) => handleUnitMeta({ subject: e.target.value as Subject })}
+                    className="rounded-full border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 focus:border-forest-400 focus:outline-none"
+                    title="Learning area"
+                  >
+                    {SUBJECTS.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={stage}
+                    onChange={(e) => handleUnitMeta({ stage: e.target.value as Stage })}
+                    className="rounded-full border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 focus:border-forest-400 focus:outline-none"
+                    title="Stage"
+                  >
+                    {(["Stage 3", "Stage 4", "Stage 5"] as Stage[]).map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* Cover image for teacher library cards */}
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-charcoal-soft">

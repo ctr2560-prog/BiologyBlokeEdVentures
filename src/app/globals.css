@@ -81,16 +81,30 @@ h1, h2, h3, h4, .display {
   transform: translateY(0) scale(0.99);
 }
 
-/* Gentle entrance for page content */
+/* Gentle entrance for page content.
+   The end keyframe must be `transform: none` — a retained transform creates a
+   containing block that breaks position:fixed overlays (e.g. the lesson feed). */
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 .rise-in {
   animation: rise-in 0.45s ease both;
 }
 .rise-in-delayed {
   animation: rise-in 0.45s ease 0.12s both;
+}
+
+/* Transform-free entrance for layout wrappers that host fixed overlays.
+   fill-mode backwards (not both): a retained opacity animation keeps a
+   stacking context alive, which would trap full-screen z-50 overlays
+   below the z-20 sidebar forever. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in {
+  animation: fade-in 0.4s ease backwards;
 }
 
 /* Progress bar fill animation */

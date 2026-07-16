@@ -2,22 +2,46 @@
 import { useRef, useState } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 import { Button } from "@/components/ui/primitives";
-import { HelpCircle, Sparkles } from "lucide-react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 import type { WatchSignals } from "./VideoPlayerMock";
 import type { Video } from "@/types";
 
 interface VideoPlayerProps {
   video: Video;
   onComplete: (signals: WatchSignals) => void;
+  /**
+   * Optional live snapshot of the watch signals so far — lets the parent
+   * advance on a swipe mid-video without waiting for a button press.
+   */
+  liveSignalsRef?: React.MutableRefObject<WatchSignals | null>;
+  /** Hide the "Done watching" strip when the parent advances by swipe. */
+  showDoneButton?: boolean;
 }
 
-export function VideoPlayer({ video, onComplete }: VideoPlayerProps) {
+export function VideoPlayer({ video, onComplete, liveSignalsRef, showDoneButton = true }: VideoPlayerProps) {
   const watchedRef = useRef(0);
   const lastTimeRef = useRef(0);
   const replayCountRef = useRef(0);
-  const [clickedCurious, setClickedCurious] = useState(false);
-  const [clickedHelp, setClickedHelp] = useState(false);
+  const [reaction, setReaction] = useState<"like" | "dislike" | undefined>(undefined);
   const [ended, setEnded] = useState(false);
+
+  const snapshotSignals = (react = reaction): WatchSignals => ({
+    watchTimeSeconds: Math.round(watchedRef.current),
+    completion: video.durationSeconds
+      ? Math.min(99, Math.round((watchedRef.current / video.durationSeconds) * 100))
+      : 50,
+    replayCount: replayCountRef.current,
+    skipped: watchedRef.current < (video.durationSeconds ?? 60) * 0.25,
+    clickedCurious: false,
+    clickedHelp: false,
+    reaction: react,
+  });
+
+  const handleReaction = (r: "like" | "dislike") => {
+    const next = reaction === r ? undefined : r; // Tap again to un-react
+    setReaction(next);
+    if (liveSignalsRef) liveSignalsRef.current = snapshotSignals(next);
+  };
 
   const handleTimeUpdate = (e: Event) => {
     const el = e.target as HTMLVideoElement;
@@ -31,18 +55,12 @@ export function VideoPlayer({ video, onComplete }: VideoPlayerProps) {
       watchedRef.current += current - last;
     }
     lastTimeRef.current = current;
+    if (liveSignalsRef) liveSignalsRef.current = snapshotSignals();
   };
 
   const finish = (completion: number) => {
     setEnded(true);
-    onComplete({
-      watchTimeSeconds: Math.round(watchedRef.current),
-      completion: Math.round(completion),
-      replayCount: replayCountRef.current,
-      skipped: watchedRef.current < (video.durationSeconds ?? 60) * 0.25,
-      clickedCurious,
-      clickedHelp,
-    });
+    onComplete({ ...snapshotSignals(), completion: Math.round(completion) });
   };
 
   const handleEnded = () => {
@@ -74,32 +92,34 @@ export function VideoPlayer({ video, onComplete }: VideoPlayerProps) {
         {!ended && (
           <div className="absolute bottom-16 right-4 flex flex-col gap-2">
             <button
-              onClick={() => setClickedCurious(true)}
-              className={`flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-semibold shadow-lift transition-all ${
-                clickedCurious
-                  ? "bg-gold-400 text-forest-900"
+              onClick={() => handleReaction("like")}
+              aria-label="Like this video"
+              aria-pressed={reaction === "like"}
+              className={`grid h-10 w-10 place-items-center rounded-full shadow-lift transition-all ${
+                reaction === "like"
+                  ? "bg-forest-600 text-white scale-110"
                   : "bg-white/90 text-forest-800 hover:bg-white"
               }`}
             >
-              <Sparkles className="h-4 w-4" aria-hidden />
-              {clickedCurious ? "Curious!" : "I'm curious"}
+              <ThumbsUp className="h-4 w-4" aria-hidden />
             </button>
             <button
-              onClick={() => setClickedHelp(true)}
-              className={`flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-semibold shadow-lift transition-all ${
-                clickedHelp
-                  ? "bg-clay-400 text-white"
+              onClick={() => handleReaction("dislike")}
+              aria-label="Dislike this video"
+              aria-pressed={reaction === "dislike"}
+              className={`grid h-10 w-10 place-items-center rounded-full shadow-lift transition-all ${
+                reaction === "dislike"
+                  ? "bg-clay-500 text-white scale-110"
                   : "bg-white/90 text-forest-800 hover:bg-white"
               }`}
             >
-              <HelpCircle className="h-4 w-4" aria-hidden />
-              {clickedHelp ? "Got it flagged" : "Need help"}
+              <ThumbsDown className="h-4 w-4" aria-hidden />
             </button>
           </div>
         )}
       </div>
 
-      {!ended && (
+      {!ended && showDoneButton && (
         <div className="flex items-center justify-between rounded-2xl bg-forest-50 px-4 py-3">
           <p className="text-sm text-charcoal-soft">
             {video.learningIntent}

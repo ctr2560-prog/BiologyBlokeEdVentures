@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { SectionHeader, StatCard, Badge } from "@/components/ui/primitives";
-import { Film, Loader } from "lucide-react";
+import { Film, Loader, ThumbsUp, ThumbsDown } from "lucide-react";
 import {
   AnalyticsChartCard,
   BarChart,
@@ -26,6 +26,8 @@ interface VideoStat {
   avgCompletion: number;
   replays: number;
   avgQuiz: number;
+  likes: number;
+  dislikes: number;
 }
 
 export default function AdminAnalytics() {
@@ -106,6 +108,8 @@ export default function AdminAnalytics() {
       avgCompletion: rows.length ? avg(rows.map((p) => p.videoCompletionPercentage)) : 0,
       replays: 0,
       avgQuiz: qs.length ? avg(qs) : 0,
+      likes: rows.filter((p) => p.videoReaction === "like").length,
+      dislikes: rows.filter((p) => p.videoReaction === "dislike").length,
     };
   }).filter((v) => v.views > 0).sort((a, b) => b.views - a.views);
 
@@ -136,6 +140,31 @@ export default function AdminAnalytics() {
       ),
     },
     { key: "quiz", header: "Avg quiz", align: "center", render: (r) => `${r.avgQuiz}%` },
+    {
+      key: "reactions",
+      header: "Reactions",
+      align: "center",
+      render: (r) => {
+        const total = r.likes + r.dislikes;
+        if (total === 0) return <span className="text-xs text-charcoal-soft/60">—</span>;
+        const ratio = Math.round((r.likes / total) * 100);
+        return (
+          <div className="inline-flex flex-col items-center gap-1">
+            <div className="flex items-center gap-2.5 text-sm">
+              <span className="flex items-center gap-1 font-semibold text-forest-700">
+                <ThumbsUp className="h-3.5 w-3.5" aria-hidden /> {r.likes}
+              </span>
+              <span className="flex items-center gap-1 font-semibold text-clay-600">
+                <ThumbsDown className="h-3.5 w-3.5" aria-hidden /> {r.dislikes}
+              </span>
+            </div>
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-clay-400/30">
+              <div className="h-full rounded-full bg-forest-500" style={{ width: `${ratio}%` }} />
+            </div>
+          </div>
+        );
+      },
+    },
   ];
 
   if (loading) {
@@ -195,11 +224,13 @@ export default function AdminAnalytics() {
                   <Film className="h-6 w-6 text-forest-600" aria-hidden />
                   <h3 className="display text-lg font-bold text-forest-900">{detail.video.title}</h3>
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                   <MiniStat label="Views" value={detail.views} />
                   <MiniStat label="Avg watch" value={formatWatchTime(detail.avgWatchTime)} />
                   <MiniStat label="Avg quiz" value={`${detail.avgQuiz}%`} />
                   <MiniStat label="Drop-off" value={`${100 - detail.avgCompletion}%`} />
+                  <MiniStat label="Likes" value={detail.likes} />
+                  <MiniStat label="Dislikes" value={detail.dislikes} />
                 </div>
                 <div className="mt-4 rounded-2xl bg-gold-300/20 px-4 py-3 text-sm text-clay-600">
                   {detail.avgCompletion >= 80
@@ -207,6 +238,13 @@ export default function AdminAnalytics() {
                     : detail.avgCompletion >= 50
                     ? "Moderate completion. A stronger hook in the first 30 seconds could improve watch-through."
                     : "Low completion rate. Consider shortening the reel or adding an early curiosity moment."}
+                  {detail.likes + detail.dislikes > 0 && (
+                    <>
+                      {" "}
+                      {Math.round((detail.likes / (detail.likes + detail.dislikes)) * 100)}% of
+                      reactions are likes.
+                    </>
+                  )}
                 </div>
               </div>
             </div>

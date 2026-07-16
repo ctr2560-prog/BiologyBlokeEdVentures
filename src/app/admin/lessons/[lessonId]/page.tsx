@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import {
   getTopic, getLessonItems,
   addItemToLesson, removeLessonItem, reorderLessonItems,
-  setLessonFeatured, setLessonSlides, deleteTopic,
+  setLessonFeatured, setLessonSlides, deleteTopic, setTopicMeta,
 } from "@/lib/supabaseService";
 import { toSlidesEmbedUrl } from "@/lib/slides";
 import { CoverImageControl } from "@/components/forms/CoverImageControl";
@@ -18,8 +18,9 @@ import {
   Presentation, Eye, EyeOff, Image as ImageIcon,
 } from "lucide-react";
 import type {
-  Topic, Video, Quiz, LessonItemWithContent,
+  Topic, Video, Quiz, LessonItemWithContent, Subject, Stage,
 } from "@/types";
+import { SUBJECTS } from "@/types";
 
 type LibraryActivity = { id: string; title: string; difficulty: string; lesson_id: string | null; blocks: unknown[] };
 
@@ -227,6 +228,17 @@ export default function LessonBuilderPage({
     }
   };
 
+  const handleMetaChange = async (fields: { subject?: Subject; stage?: Stage }) => {
+    if (!lesson) return;
+    const prev = lesson;
+    setLesson({ ...lesson, ...fields });
+    try {
+      await setTopicMeta(lesson.id, fields);
+    } catch {
+      setLesson(prev);
+    }
+  };
+
   const handleDeleteLesson = async () => {
     if (!lesson) return;
     if (!confirm(`Delete lesson "${lesson.title}"? Its sequence and linked activities go with it. This cannot be undone.`)) return;
@@ -308,6 +320,26 @@ export default function LessonBuilderPage({
             >
               {lesson.difficulty}
             </Badge>
+            <select
+              value={lesson.subject}
+              onChange={(e) => handleMetaChange({ subject: e.target.value as Subject })}
+              className="rounded-full border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 focus:border-forest-400 focus:outline-none"
+              title="Learning area"
+            >
+              {SUBJECTS.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+            <select
+              value={lesson.stage}
+              onChange={(e) => handleMetaChange({ stage: e.target.value as Stage })}
+              className="rounded-full border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 focus:border-forest-400 focus:outline-none"
+              title="Stage"
+            >
+              {(["Stage 3", "Stage 4", "Stage 5"] as Stage[]).map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
             <button
               onClick={handleToggleFeatured}
               title={lesson.featured ? "Remove from featured" : "Feature on teacher dashboard"}

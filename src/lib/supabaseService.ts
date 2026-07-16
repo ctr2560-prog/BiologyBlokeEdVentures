@@ -47,6 +47,7 @@ function mapUnit(r: Row): Unit {
   return {
     id: r.id,
     title: r.title,
+    subject: r.subject ?? "Science",
     stage: r.stage,
     yearGroups: r.year_groups ?? [],
     description: r.description ?? "",
@@ -69,6 +70,8 @@ function mapTopic(r: Row): Topic {
     unitId: r.unit_id,
     title: r.title,
     description: r.description ?? "",
+    subject: r.subject ?? "Science",
+    stage: r.stage ?? "Stage 3",
     animalFocus: r.animal_focus ?? [],
     ecosystemFocus: r.ecosystem_focus ?? [],
     difficulty: r.difficulty,
@@ -939,6 +942,8 @@ export async function createTopic(data: {
   title: string;
   description: string;
   difficulty: "foundation" | "core" | "advanced";
+  subject?: string;
+  stage?: string;
 }): Promise<Topic> {
   const id = newId("topic");
   const { data: row, error } = await getSupabaseClient()
@@ -949,11 +954,31 @@ export async function createTopic(data: {
       title: data.title,
       description: data.description,
       difficulty: data.difficulty,
+      subject: data.subject ?? "Science",
+      stage: data.stage ?? "Stage 3",
     })
     .select("*, videos(id), quizzes(id), resources(id)")
     .single();
   if (error) throw new Error(error.message);
   return mapTopic(row);
+}
+
+/** Update a lesson's learning area / stage (used by the lesson builder). */
+export async function setTopicMeta(
+  id: string,
+  fields: { subject?: string; stage?: string }
+): Promise<void> {
+  const { error } = await getSupabaseClient().from("topics").update(fields).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Update a unit's learning area / stage. */
+export async function setUnitMeta(
+  id: string,
+  fields: { subject?: string; stage?: string }
+): Promise<void> {
+  const { error } = await getSupabaseClient().from("units").update(fields).eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 // ---- Mutations: Quizzes ----
@@ -1141,6 +1166,7 @@ export async function createUnit(unit: Omit<Unit, "id" | "createdAt">): Promise<
     .insert({
       id,
       title: unit.title,
+      subject: unit.subject,
       stage: unit.stage,
       year_groups: unit.yearGroups,
       description: unit.description,
@@ -1280,6 +1306,14 @@ export async function assignLessonToClass(
   const supabase = getSupabaseClient();
   const id = newId("assign");
   const today = new Date().toISOString().slice(0, 10);
+
+  // Re-assigning the same unit to the same class replaces the old assignment
+  // (e.g. switching delivery mode) instead of duplicating it in classwork.
+  await supabase
+    .from("assignments")
+    .delete()
+    .eq("class_id", input.classId)
+    .eq("unit_id", input.unitId);
 
   const { error } = await supabase.from("assignments").insert({
     id,

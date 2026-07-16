@@ -1,6 +1,7 @@
 "use client";
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import MuxPlayer from "@mux/mux-player-react";
 import { SectionHeader, Button, EmptyState } from "@/components/ui/primitives";
 import {
   getClass,
@@ -23,7 +24,6 @@ import {
   Loader,
   ThumbsUp,
   ThumbsDown,
-  Minus,
   X,
   Sparkles,
   Presentation,
@@ -31,6 +31,19 @@ import {
 
 type SessionStage = "pick" | "slides" | "watch" | "react" | "quiz" | "worksheet";
 type Reaction = "loved" | "meh" | "skip";
+
+/*
+ * A present session is a flat, ordered list of steps built from the lesson's
+ * actual item sequence (lesson_items). Every video is immediately followed by
+ * a mandatory reaction step, quizzes appear in their real position, and a
+ * single worksheet-recommendations step closes the session.
+ */
+type PresentStep =
+  | { kind: "slides" }
+  | { kind: "watch"; video: Video; videoNumber: number; videoCount: number }
+  | { kind: "react"; video: Video }
+  | { kind: "quiz"; quiz: Quiz; quizNumber: number; quizCount: number }
+  | { kind: "worksheet" };
 
 interface QuizResult {
   questionId: string;
@@ -109,26 +122,24 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
   }, [classId]);
 
   // Session state
-  const [stage, setStage] = useState<SessionStage>("pick");
   const [topicData, setTopicData] = useState<{
     topic: Topic;
-    videos: Video[];
-    quiz: Quiz | null;
     activity: Activity | null;
   } | null>(null);
+  const [steps, setSteps] = useState<PresentStep[]>([]);
+  const [stepIndex, setStepIndex] = useState(-1); // -1 = topic picker
   const [topicLoading, setTopicLoading] = useState(false);
-  const [videoIndex, setVideoIndex] = useState(0);
 
-  // Stage 2 reaction
-  const [reaction, setReaction] = useState<Reaction | null>(null);
+  // One class reaction recorded per video, in order.
+  const [reactions, setReactions] = useState<Reaction[]>([]);
 
-  // Stage 3 quiz
+  // Quiz state (per current quiz step)
   const [quizIndex, setQuizIndex] = useState(0);
   const [lockedAnswer, setLockedAnswer] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
 
-  // Stage 4 worksheet
+  // Worksheet
   const [classDifficulty, setClassDifficulty] = useState<Difficulty>("core");
   const [recommendations, setRecommendations] = useState<{
     recommended: number[];
@@ -139,10 +150,10 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
 
   const startTopic = async (topicId: string) => {
     setTopicLoading(true);
-    setStage("watch");
-    setReaction(null);
+    setStepIndex(-1);
+    setSteps([]);
+    setReactions([]);
     setQuizIndex(0);
-    setVideoIndex(0);
     setLockedAnswer(null);
     setRevealed(false);
     setQuizResults([]);
@@ -154,28 +165,95 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
       getLessonOrTopicItems(topicId),
       getActivitiesForLesson(topicId),
     ]);
+
     const videos = items
       .filter((i): i is Extract<typeof items[number], { itemType: "video" }> => i.itemType === "video")
       .map((i) => i.video);
-    const quiz =
-      items.find((i): i is Extract<typeof items[number], { itemType: "quiz" }> => i.itemType === "quiz")
-        ?.quiz ?? null;
+    const videoCount = videos.length;
+    const quizzes = items
+      .filter((i): i is Extract<typeof items[number], { itemType: "quiz" }> => i.itemType === "quiz")
+      .map((i) => i.quiz);
+    const quizCount = quizzes.length;
+
     // Prefer an activity linked to this lesson; fall back to a tag match.
     const allTags = [...new Set(videos.flatMap((v) => v.tags))];
     const activity =
       linkedActivities[0] ??
       (allTags.length ? await getActivityForVideoTags(allTags) : null);
 
-    setTopicData({ topic: topic!, videos, quiz, activity });
-    // Lessons with a slide deck open on the slides stage
+    // Build the ordered step list straight from the lesson sequence.
+    const built: PresentStep[] = [];
     if (topic?.slidesUrl && toSlidesEmbedUrl(topic.slidesUrl)) {
-      setStage("slides");
+      built.push({ kind: "slides" });
     }
+    let vNum = 0;
+    let qNum = 0;
+    for (const item of items) {
+      if (item.itemType === "video") {
+        vNum++;
+        built.push({ kind: "watch", video: item.video, videoNumber: vNum, videoCount });
+        // Mandatory class reaction immediately after every video.
+        built.push({ kind: "react", video: item.video });
+      } else if (item.itemType === "quiz") {
+        qNum++;
+        built.push({ kind: "quiz", quiz: item.quiz, quizNumber: qNum, quizCount });
+      }
+    }
+    built.push({ kind: "worksheet" });
+
+    setTopicData({ topic: topic!, activity });
+    setSteps(built);
+    setStepIndex(0);
     setTopicLoading(false);
   };
 
-  const allQuestions = useMemo(() => topicData?.quiz?.questions ?? [], [topicData]);
-  const currentQuestion = allQuestions[quizIndex] ?? null;
+  // Every quiz question across the whole lesson — used for the class score.
+  const lessonQuestions = useMemo(
+    () => steps.flatMap((s) => (s.kind === "quiz" ? s.quiz.questions : [])),
+    [steps]
+  );
+  const currentStep: PresentStep | null = stepIndex >= 0 ? steps[stepIndex] ?? null : null;
+  const stage: SessionStage = currentStep?.kind ?? "pick";
+  const stepQuiz = currentStep?.kind === "quiz" ? currentStep.quiz : null;
+  const stepQuestions = stepQuiz?.questions ?? [];
+  const currentQuestion = stepQuestions[quizIndex] ?? null;
+
+  // Overall class reaction: majority of recorded votes, ties + none → "skip".
+  const effectiveReaction: Reaction = useMemo(() => {
+    const loved = reactions.filter((r) => r === "loved").length;
+    const meh = reactions.filter((r) => r === "meh").length;
+    if (meh > loved) return "meh";
+    if (loved > 0) return "loved";
+    return "skip";
+  }, [reactions]);
+
+  // Build the worksheet recommendations from all quiz results gathered so far.
+  const finaliseWorksheet = (results: QuizResult[], reaction: Reaction) => {
+    const mcqQs = lessonQuestions.filter((q) => q.type !== "shortResponse");
+    const mcqCorrect = results.filter((r) => {
+      const q = lessonQuestions.find((q2) => q2.id === r.questionId);
+      return q && q.type !== "shortResponse" && r.correct;
+    }).length;
+    const pct = mcqQs.length === 0 ? 65 : Math.round((mcqCorrect / mcqQs.length) * 100);
+    const diff = pctToDifficulty(pct);
+    setClassDifficulty(diff);
+    if (topicData?.activity) {
+      setRecommendations(buildRecommendations(topicData.activity.blocks, diff, reaction));
+    }
+  };
+
+  // Advance to the next step in the lesson sequence.
+  const goNextStep = (opts?: { results?: QuizResult[]; reaction?: Reaction }) => {
+    setQuizIndex(0);
+    setLockedAnswer(null);
+    setRevealed(false);
+    const next = stepIndex + 1;
+    if (next >= steps.length) return;
+    if (steps[next].kind === "worksheet") {
+      finaliseWorksheet(opts?.results ?? quizResults, opts?.reaction ?? effectiveReaction);
+    }
+    setStepIndex(next);
+  };
 
   const revealAnswer = () => {
     if (!lockedAnswer || !currentQuestion) return;
@@ -187,23 +265,6 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
     setRevealed(true);
   };
 
-  const goToWorksheet = (results: QuizResult[], reactionOverride?: Reaction) => {
-    const eff = reactionOverride ?? reaction ?? "skip";
-    const mcqQs = allQuestions.filter((q) => q.type !== "shortResponse");
-    const mcqCorrect = results.filter((r) => {
-      const q = allQuestions.find((q2) => q2.id === r.questionId);
-      return q && q.type !== "shortResponse" && r.correct;
-    }).length;
-    const pct =
-      mcqQs.length === 0 ? 65 : Math.round((mcqCorrect / mcqQs.length) * 100);
-    const diff = pctToDifficulty(pct);
-    setClassDifficulty(diff);
-    if (topicData?.activity) {
-      setRecommendations(buildRecommendations(topicData.activity.blocks, diff, eff));
-    }
-    setStage("worksheet");
-  };
-
   const handleSaveSession = async (pct: number | null) => {
     if (!topicData || sessionSaved) return;
     setSaving(true);
@@ -211,9 +272,9 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
       await saveClassSession({
         classId,
         topicId: topicData.topic.id,
-        videoId: topicData.videos[0]?.id ?? null,
+        videoId: steps.find((s): s is Extract<PresentStep, { kind: "watch" }> => s.kind === "watch")?.video.id ?? null,
         teacherId: null,
-        classReaction: reaction,
+        classReaction: effectiveReaction,
         classScore: pct ?? 0,
         classDifficulty,
         recommendedQs: recommendations?.recommended ?? [],
@@ -227,12 +288,12 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
 
   const advanceQuiz = () => {
     const next = quizIndex + 1;
-    if (next < allQuestions.length) {
+    if (next < stepQuestions.length) {
       setQuizIndex(next);
       setLockedAnswer(null);
       setRevealed(false);
     } else {
-      goToWorksheet(quizResults);
+      goNextStep();
     }
   };
 
@@ -297,31 +358,36 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
     );
   }
 
-  const { topic, videos, quiz, activity } = topicData!;
-  const video = videos[videoIndex] ?? null;
+  const { topic, activity } = topicData!;
+  const stepVideo =
+    currentStep?.kind === "watch" || currentStep?.kind === "react" ? currentStep.video : null;
   const slidesEmbed = topic.slidesUrl ? toSlidesEmbedUrl(topic.slidesUrl) : null;
-  const STAGE_ORDER: SessionStage[] = slidesEmbed
-    ? ["slides", "watch", "react", "quiz", "worksheet"]
-    : ["watch", "react", "quiz", "worksheet"];
+
+  const backToPick = () => {
+    setTopicData(null);
+    setSteps([]);
+    setStepIndex(-1);
+  };
 
   function StageBar() {
     return (
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setStage("pick")}
+          onClick={backToPick}
           className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden /> All topics
         </button>
         <span className="truncate text-xs text-charcoal-soft">{topic.title}</span>
         <div className="ml-auto flex items-center gap-1.5">
-          {STAGE_ORDER.map((s, i) => (
+          {steps.map((s, i) => (
             <span
-              key={s}
+              key={i}
+              title={s.kind}
               className={`h-1.5 rounded-full transition-all ${
-                s === stage
+                i === stepIndex
                   ? "w-8 bg-forest-600"
-                  : STAGE_ORDER.indexOf(stage) > i
+                  : i < stepIndex
                   ? "w-3 bg-forest-400"
                   : "w-2 bg-sand-dark"
               }`}
@@ -357,8 +423,8 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
           </div>
 
           <div className="flex justify-end">
-            <Button size="lg" onClick={() => setStage("watch")}>
-              Start videos <ArrowRight className="h-4 w-4" aria-hidden />
+            <Button size="lg" onClick={() => goNextStep()}>
+              Start lesson <ArrowRight className="h-4 w-4" aria-hidden />
             </Button>
           </div>
         </div>
@@ -367,17 +433,18 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
   }
 
   // STAGE: WATCH
-  if (stage === "watch") {
+  if (stage === "watch" && currentStep?.kind === "watch") {
+    const { videoNumber, videoCount } = currentStep;
     return (
       <div className="space-y-5">
         <StageBar />
         <div className="mx-auto max-w-4xl space-y-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
-              Now watching{videos.length > 1 ? ` · video ${videoIndex + 1} of ${videos.length}` : ""}
+              Now watching{videoCount > 1 ? ` · video ${videoNumber} of ${videoCount}` : ""}
             </p>
             <h1 className="display mt-0.5 text-2xl font-bold text-forest-900 md:text-3xl">
-              {video?.title ?? topic.title}
+              {stepVideo?.title ?? topic.title}
             </h1>
           </div>
 
@@ -385,52 +452,39 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
             className="relative flex aspect-video items-center justify-center overflow-hidden rounded-3xl shadow-hero"
             style={{ background: "linear-gradient(160deg, #0d2419, #1b4332 55%, #2d6a4f)" }}
           >
-            {video?.muxPlaybackId ? (
-              <iframe
-                src={`https://stream.mux.com/${video.muxPlaybackId}`}
-                allow="autoplay; fullscreen"
-                className="absolute inset-0 h-full w-full rounded-3xl"
+            {stepVideo?.muxPlaybackId ? (
+              <MuxPlayer
+                playbackId={stepVideo.muxPlaybackId}
+                metadata={{ video_title: stepVideo.title }}
+                streamType="on-demand"
+                accentColor="#40916c"
+                className="absolute inset-0 h-full w-full"
               />
             ) : (
               <div className="flex flex-col items-center gap-3 text-cream/50">
                 <Film className="h-20 w-20" aria-hidden strokeWidth={1} />
                 <p className="text-sm">
-                  {video ? "Video processing — play when ready" : "No video for this topic yet"}
+                  {stepVideo ? "Video processing — play when ready" : "No video for this topic yet"}
                 </p>
               </div>
             )}
           </div>
 
           <div className="flex justify-end gap-2">
-            {videoIndex < videos.length - 1 ? (
-              <>
-                <Button variant="secondary" size="lg" onClick={() => setStage("react")}>
-                  Skip to reactions
-                </Button>
-                <Button size="lg" onClick={() => setVideoIndex((i) => i + 1)}>
-                  Next video <ArrowRight className="h-4 w-4" aria-hidden />
-                </Button>
-              </>
-            ) : (
-              <Button size="lg" onClick={() => setStage("react")}>
-                Done watching <ArrowRight className="h-4 w-4" aria-hidden />
-              </Button>
-            )}
+            <Button size="lg" onClick={() => goNextStep()}>
+              Done watching <ArrowRight className="h-4 w-4" aria-hidden />
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  // STAGE: REACT
+  // STAGE: REACT (mandatory after every video)
   if (stage === "react") {
     const handleReaction = (r: Reaction) => {
-      setReaction(r);
-      if (quiz && quiz.questions.length > 0) {
-        setStage("quiz");
-      } else {
-        goToWorksheet([], r);
-      }
+      setReactions((prev) => [...prev, r]);
+      goNextStep({ reaction: r === "meh" ? "meh" : effectiveReaction });
     };
 
     const OPTIONS: {
@@ -460,15 +514,6 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
         ring: "ring-clay-300",
         iconColor: "text-clay-500",
       },
-      {
-        key: "skip",
-        hands: "Skip vote",
-        label: "Move on",
-        Icon: Minus,
-        bg: "bg-sand",
-        ring: "ring-sand-dark",
-        iconColor: "text-charcoal-soft",
-      },
     ];
 
     return (
@@ -478,13 +523,13 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-forest-600">Class reaction</p>
             <h1 className="display mt-1 text-2xl font-bold text-forest-900 md:text-3xl">
-              How did the class feel about it?
+              How did the class feel about {stepVideo ? `“${stepVideo.title}”` : "it"}?
             </h1>
             <p className="mt-2 text-charcoal-soft">
-              Ask the class to vote with their hands. Tap the majority read.
+              Ask the class to vote with their hands, then tap the majority read to carry on.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {OPTIONS.map(({ key, hands, label, Icon, bg, ring, iconColor }) => (
               <button
                 key={key}
@@ -503,15 +548,22 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
   }
 
   // STAGE: QUIZ
-  if (stage === "quiz") {
+  if (stage === "quiz" && currentStep?.kind === "quiz") {
     const q = currentQuestion;
 
     if (!q) {
-      goToWorksheet(quizResults);
+      goNextStep();
       return null;
     }
 
     const isShortResponse = q.type === "shortResponse";
+    const isLastQuestion = quizIndex + 1 >= stepQuestions.length;
+    const nextIsWorksheet = steps[stepIndex + 1]?.kind === "worksheet";
+    const advanceLabel = !isLastQuestion
+      ? "Next question"
+      : nextIsWorksheet
+      ? "See worksheet"
+      : "Continue lesson";
 
     const handleShortReveal = () => {
       setQuizResults((prev) => [
@@ -527,10 +579,11 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
         <div className="mx-auto max-w-3xl space-y-5">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wide text-forest-600">
-              Hands-up quiz · {quizIndex + 1} of {allQuestions.length}
+              {currentStep.quizCount > 1 ? `Quiz ${currentStep.quizNumber} · ` : "Hands-up quiz · "}
+              question {quizIndex + 1} of {stepQuestions.length}
             </p>
             <div className="flex gap-1">
-              {allQuestions.map((_, i) => (
+              {stepQuestions.map((_, i) => (
                 <span
                   key={i}
                   className={`h-1.5 rounded-full transition-all ${
@@ -570,8 +623,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
                   </div>
                   <div className="flex justify-end">
                     <Button onClick={advanceQuiz}>
-                      {quizIndex + 1 < allQuestions.length ? "Next question" : "See worksheet"}{" "}
-                      <ArrowRight className="h-4 w-4" aria-hidden />
+                      {advanceLabel} <ArrowRight className="h-4 w-4" aria-hidden />
                     </Button>
                   </div>
                 </>
@@ -665,8 +717,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
               {revealed && (
                 <div className="flex justify-end pt-1">
                   <Button onClick={advanceQuiz}>
-                    {quizIndex + 1 < allQuestions.length ? "Next question" : "See worksheet"}{" "}
-                    <ArrowRight className="h-4 w-4" aria-hidden />
+                    {advanceLabel} <ArrowRight className="h-4 w-4" aria-hidden />
                   </Button>
                 </div>
               )}
@@ -690,9 +741,9 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
       advanced: "text-gold-700 bg-gold-100 ring-gold-300",
     };
 
-    const mcqQs = allQuestions.filter((q) => q.type !== "shortResponse");
+    const mcqQs = lessonQuestions.filter((q) => q.type !== "shortResponse");
     const mcqCorrect = quizResults.filter((r) => {
-      const q = allQuestions.find((q2) => q2.id === r.questionId);
+      const q = lessonQuestions.find((q2) => q2.id === r.questionId);
       return q && q.type !== "shortResponse" && r.correct;
     }).length;
     const classPct =
@@ -707,7 +758,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
               Worksheet recommendations
             </p>
             <h1 className="display mt-1 text-2xl font-bold text-forest-900 md:text-3xl">
-              Here's what the class should focus on
+              Here&apos;s what the class should focus on
             </h1>
             {classPct !== null && (
               <p className="mt-2 text-charcoal-soft">
@@ -724,14 +775,14 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
               <Sparkles className="h-4 w-4" aria-hidden />
               Class level: {DIFF_LABEL[classDifficulty]}
             </div>
-            {reaction && reaction !== "skip" && (
+            {effectiveReaction !== "skip" && (
               <div className="inline-flex items-center gap-2 rounded-2xl bg-sand px-4 py-2 text-sm font-semibold text-charcoal ring-1 ring-sand-dark">
-                {reaction === "loved" ? (
+                {effectiveReaction === "loved" ? (
                   <ThumbsUp className="h-4 w-4 text-forest-600" aria-hidden />
                 ) : (
                   <ThumbsDown className="h-4 w-4 text-clay-500" aria-hidden />
                 )}
-                {reaction === "loved" ? "Class loved it" : "Low engagement"}
+                {effectiveReaction === "loved" ? "Class loved it" : "Low engagement"}
               </div>
             )}
           </div>
@@ -744,7 +795,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
                     Start with these questions
                   </p>
                   <p className="mt-0.5 text-sm text-charcoal-soft">
-                    Matched to today's class level.
+                    Matched to today&apos;s class level.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {recommendations.recommended.map((n) => (
@@ -829,13 +880,7 @@ export default function PresentPage({ params }: { params: Promise<{ classId: str
             <Button variant="secondary" onClick={() => startTopic(topic.id)}>
               Run again
             </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setTopicData(null);
-                setStage("pick");
-              }}
-            >
+            <Button variant="secondary" onClick={backToPick}>
               Pick another topic
             </Button>
             <Link href={`/teacher/classes/${cls.id}`}>

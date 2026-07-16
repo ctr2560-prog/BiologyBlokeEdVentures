@@ -103,6 +103,7 @@ export default function TeacherUnitPage({
             {unit.title}
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-forest-100/80">
+            <Badge tone="forest">{unit.subject}</Badge>
             {unit.stage && <Badge tone="gold">{unit.stage}</Badge>}
             {unit.yearGroups.length > 0 && <span>{unit.yearGroups.join(", ")}</span>}
             <span className="flex items-center gap-1">

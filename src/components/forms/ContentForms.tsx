@@ -23,6 +23,7 @@ import {
 } from "@/lib/supabaseService";
 import type {
   Stage,
+  Subject,
   ResourceType,
   Difficulty,
   QuestionType,
@@ -31,6 +32,7 @@ import type {
   Topic,
   Unit,
 } from "@/types";
+import { SUBJECTS } from "@/types";
 
 const STAGES: Stage[] = ["Stage 3", "Stage 4", "Stage 5"];
 const DIFFICULTIES: Difficulty[] = ["foundation", "core", "advanced"];
@@ -38,6 +40,7 @@ const DIFFICULTIES: Difficulty[] = ["foundation", "core", "advanced"];
 // ---- Unit form ----
 export function UnitForm({ onSaved }: { onSaved: (unit: Unit) => void }) {
   const [title, setTitle]           = useState("");
+  const [subject, setSubject]       = useState<Subject>("Science");
   const [stage, setStage]           = useState<Stage>("Stage 3");
   const [yearGroups, setYearGroups] = useState("");
   const [description, setDescription] = useState("");
@@ -71,6 +74,7 @@ export function UnitForm({ onSaved }: { onSaved: (unit: Unit) => void }) {
     try {
       const unit = await createUnit({
         title,
+        subject,
         stage,
         yearGroups: yearGroups.split(",").map((y) => y.trim()).filter(Boolean),
         description,
@@ -109,7 +113,18 @@ export function UnitForm({ onSaved }: { onSaved: (unit: Unit) => void }) {
           placeholder="e.g. Australian Ecosystems"
         />
       </FormField>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
+        <FormField label="Subject">
+          <select
+            className={inputClass}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value as Subject)}
+          >
+            {SUBJECTS.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        </FormField>
         <FormField label="Stage">
           <select
             className={inputClass}

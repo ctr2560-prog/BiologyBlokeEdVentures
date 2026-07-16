@@ -65,9 +65,35 @@ export interface Assignment {
 
 export type Stage = "Stage 3" | "Stage 4" | "Stage 5";
 
+/** Curriculum learning area. Edventra launched in Science; the model is
+ *  subject-agnostic so units/lessons can expand across the curriculum. */
+export type Subject =
+  | "Science"
+  | "English"
+  | "Mathematics"
+  | "HSIE"
+  | "Geography"
+  | "History"
+  | "PDHPE"
+  | "Creative Arts"
+  | "Technology";
+
+export const SUBJECTS: Subject[] = [
+  "Science",
+  "English",
+  "Mathematics",
+  "HSIE",
+  "Geography",
+  "History",
+  "PDHPE",
+  "Creative Arts",
+  "Technology",
+];
+
 export interface Unit {
   id: string;
   title: string;
+  subject: Subject;
   stage: Stage;
   yearGroups: string[];
   description: string;
@@ -88,6 +114,8 @@ export interface Topic {
   unitId?: string;
   title: string;
   description: string;
+  subject: Subject;
+  stage: Stage;
   animalFocus: string[];
   ecosystemFocus: string[];
   difficulty: Difficulty;

@@ -150,10 +150,11 @@ export function AppShell({
         </div>
       )}
 
-      {/* Main content */}
+      {/* Main content — fade-in only: a transform here would trap the lesson
+          feed's position:fixed overlay inside this column */}
       <main className="lg:pl-64">
         <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
-          <div className="rise-in">{children}</div>
+          <div className="fade-in">{children}</div>
         </div>
       </main>
     </div>
