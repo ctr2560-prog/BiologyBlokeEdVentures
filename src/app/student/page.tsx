@@ -72,9 +72,12 @@ export default function StudentHome() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  const watchedIds = new Set(
-    progress.filter((p) => p.video_completion_percentage >= 90).map((p) => p.video_id)
-  );
+  // A video counts toward lesson progress once the student has a saved progress
+  // row for it. In the swipe-based feed a row is written every time they move
+  // past a reel (including an early exit), so finishing the lesson reliably
+  // reads as 100% and leaving early saves partial progress — rather than
+  // demanding a near-perfect ≥90% watch of every clip.
+  const watchedIds = new Set(progress.map((p) => p.video_id));
   const lessonProgress = (l: AssignedLesson) =>
     l.videoIds.length
       ? Math.round((l.videoIds.filter((id) => watchedIds.has(id)).length / l.videoIds.length) * 100)

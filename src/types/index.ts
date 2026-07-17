@@ -47,6 +47,10 @@ export interface ClassGroup {
   studentIds: string[];
   assignedUnitIds: string[];
   classCode: string;
+  /** When true, student devices play videos muted (captions only) — for
+   *  noise-sensitive rooms without headphones. */
+  silentMode: boolean;
+  headphoneMode: boolean;
 }
 
 export type DeliveryMode = "student-led" | "teacher-led";

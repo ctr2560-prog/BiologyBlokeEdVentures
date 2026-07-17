@@ -213,6 +213,8 @@ function mapClass(r: Row): ClassGroup {
     studentIds,
     assignedUnitIds,
     classCode: r.class_code,
+    silentMode: Boolean(r.silent_mode),
+    headphoneMode: Boolean(r.headphone_mode),
   };
 }
 
@@ -1328,6 +1330,24 @@ export async function removeStudentFromClass(classId: string, studentId: string)
     .delete()
     .eq("class_id", classId)
     .eq("student_id", studentId);
+}
+
+/** Toggle silent (captions-only) playback for a whole class. */
+export async function setClassSilentMode(classId: string, silent: boolean): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("classes")
+    .update({ silent_mode: silent })
+    .eq("id", classId);
+  if (error) throw new Error(error.message);
+}
+
+/** Toggle headphone (full-volume) playback for a whole class. */
+export async function setClassHeadphoneMode(classId: string, headphone: boolean): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("classes")
+    .update({ headphone_mode: headphone })
+    .eq("id", classId);
+  if (error) throw new Error(error.message);
 }
 
 export async function addAlias(classId: string): Promise<User | null> {

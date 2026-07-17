@@ -5,7 +5,7 @@ import { SectionHeader, Button, Badge, EmptyState } from "@/components/ui/primit
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { AliasChip } from "@/components/ui/AliasChip";
 import { EngagementPill } from "@/components/cards/InsightCards";
-import { Leaf, Printer, Plus, MonitorPlay, ClipboardList } from "lucide-react";
+import { Leaf, Printer, Plus, MonitorPlay, ClipboardList, VolumeX, Volume2, Headphones } from "lucide-react";
 import {
   getClass,
   getStudentsByClass,
@@ -13,6 +13,8 @@ import {
   getProgressByClass,
   addAlias,
   removeStudentFromClass,
+  setClassSilentMode,
+  setClassHeadphoneMode,
   getResponsesByClass,
   getActivity,
 } from "@/lib/supabaseService";
@@ -27,7 +29,39 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
   const [unitMap, setUnitMap] = useState<Map<string, Unit>>(new Map());
   const [activityResponses, setActivityResponses] = useState<StudentActivityResponse[]>([]);
   const [activityMap, setActivityMap] = useState<Map<string, Activity>>(new Map());
+  const [silentMode, setSilentModeState] = useState(false);
+  const [headphoneMode, setHeadphoneModeState] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const handleToggleSilent = async () => {
+    const next = !silentMode;
+    setSilentModeState(next);
+    // Silent and headphone are mutually exclusive — muting wins, so turn the
+    // other off when this one comes on.
+    if (next && headphoneMode) {
+      setHeadphoneModeState(false);
+      setClassHeadphoneMode(classId, false).catch(() => {});
+    }
+    try {
+      await setClassSilentMode(classId, next);
+    } catch {
+      setSilentModeState(!next);
+    }
+  };
+
+  const handleToggleHeadphone = async () => {
+    const next = !headphoneMode;
+    setHeadphoneModeState(next);
+    if (next && silentMode) {
+      setSilentModeState(false);
+      setClassSilentMode(classId, false).catch(() => {});
+    }
+    try {
+      await setClassHeadphoneMode(classId, next);
+    } catch {
+      setHeadphoneModeState(!next);
+    }
+  };
 
   const load = useCallback(async () => {
     const [clsData, studentsData, progressData, responsesData] = await Promise.all([
@@ -37,6 +71,10 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
       getResponsesByClass(classId),
     ]);
     setCls(clsData);
+    if (clsData) {
+      setSilentModeState(clsData.silentMode);
+      setHeadphoneModeState(clsData.headphoneMode);
+    }
     setStudents(studentsData);
     setAllProgress(progressData);
     setActivityResponses(responsesData);
@@ -214,6 +252,60 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
               </span>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Classroom audio controls */}
+      <div className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Classroom audio</p>
+        <p className="mt-1 text-xs text-charcoal-soft">
+          By default videos play quietly and are volume-capped so a room of devices stays manageable. Choose a mode for today&apos;s lesson:
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {/* Silent (captions-only) mode */}
+          <button
+            onClick={handleToggleSilent}
+            className="flex w-full items-center gap-4 rounded-2xl bg-cream p-4 text-left ring-1 ring-black/5 transition-shadow hover:shadow-soft"
+          >
+            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${silentMode ? "bg-forest-100 text-forest-700" : "bg-sand text-charcoal-soft"}`}>
+              <VolumeX className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-forest-900">Silent mode {silentMode ? "· on" : "· off"}</p>
+              <p className="mt-0.5 text-xs text-charcoal-soft">
+                Student videos play muted with captions — great for a quiet room without headphones.
+              </p>
+            </div>
+            <span
+              className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors ${silentMode ? "bg-forest-600" : "bg-charcoal/20"}`}
+              aria-hidden
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${silentMode ? "left-[1.375rem]" : "left-0.5"}`} />
+            </span>
+          </button>
+
+          {/* Headphone (full-volume) mode */}
+          <button
+            onClick={handleToggleHeadphone}
+            className="flex w-full items-center gap-4 rounded-2xl bg-cream p-4 text-left ring-1 ring-black/5 transition-shadow hover:shadow-soft"
+          >
+            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${headphoneMode ? "bg-forest-100 text-forest-700" : "bg-sand text-charcoal-soft"}`}>
+              <Headphones className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-forest-900">Headphone mode {headphoneMode ? "· on" : "· off"}</p>
+              <p className="mt-0.5 text-xs text-charcoal-soft">
+                Unlocks full volume for the class — use when every student has headphones.
+              </p>
+            </div>
+            <span
+              className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors ${headphoneMode ? "bg-forest-600" : "bg-charcoal/20"}`}
+              aria-hidden
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${headphoneMode ? "left-[1.375rem]" : "left-0.5"}`} />
+            </span>
+          </button>
         </div>
       </div>
 

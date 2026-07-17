@@ -147,7 +147,17 @@ export default function SchoolDetailPage() {
       const prog = progress
         .filter((p) => p.studentId === s.id)
         .sort((a, b) => b.lastActive.localeCompare(a.lastActive));
-      return { student: s, latest: prog[0] as StudentProgress | undefined, count: prog.length };
+      const avgCompletion = prog.length
+        ? Math.round(prog.reduce((a, p) => a + p.videoCompletionPercentage, 0) / prog.length)
+        : undefined;
+      const totalWatch = prog.reduce((a, p) => a + p.watchTimeSeconds, 0);
+      return {
+        student: s,
+        latest: prog[0] as StudentProgress | undefined,
+        count: prog.length,
+        avgCompletion,
+        totalWatch,
+      };
     }),
     [students, progress],
   );
@@ -170,15 +180,15 @@ export default function SchoolDetailPage() {
       header: "Completion",
       align: "center",
       render: (r) =>
-        r.latest ? (
+        r.avgCompletion != null ? (
           <Badge
             tone={
-              r.latest.videoCompletionPercentage > 80 ? "forest"
-              : r.latest.videoCompletionPercentage > 50 ? "gold"
+              r.avgCompletion > 80 ? "forest"
+              : r.avgCompletion > 50 ? "gold"
               : "clay"
             }
           >
-            {r.latest.videoCompletionPercentage}%
+            {r.avgCompletion}%
           </Badge>
         ) : "-",
     },
@@ -186,7 +196,7 @@ export default function SchoolDetailPage() {
       key: "watch",
       header: "Watch time",
       align: "center",
-      render: (r) => r.latest ? formatWatchTime(r.latest.watchTimeSeconds) : "-",
+      render: (r) => r.count ? formatWatchTime(r.totalWatch) : "-",
     },
     {
       key: "quiz",
@@ -421,7 +431,7 @@ export default function SchoolDetailPage() {
                       <div className="flex items-center gap-3 rounded-2xl bg-forest-50 px-4 py-3">
                         <AliasChip user={selectedUser} size={36} />
                         <span className="text-sm text-charcoal-soft">
-                          {detailProg.videoCompletionPercentage}% watched
+                          {tableRows.find((r) => r.student.id === selectedStudent)?.avgCompletion ?? detailProg.videoCompletionPercentage}% watched
                           {selectedStudent && quizByStudent.get(selectedStudent) != null
                             ? ` · ${quizByStudent.get(selectedStudent)}% quiz`
                             : ""}

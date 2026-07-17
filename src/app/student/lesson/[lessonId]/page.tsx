@@ -15,7 +15,8 @@ import { VideoPlayerMock, type WatchSignals } from "@/components/media/VideoPlay
 import { StudentBlockRenderer } from "../../activity/[activityId]/renderers";
 import { filterBlocksForStudent } from "@/lib/activityRouting";
 import { toSlidesEmbedUrl } from "@/lib/slides";
-import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation, ChevronUp } from "lucide-react";
+import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation, ChevronUp, Headphones, VolumeX } from "lucide-react";
+import type { AudioMode } from "@/components/media/VideoPlayer";
 import {
   getLessonOrTopicItems,
   getTopic,
@@ -68,6 +69,27 @@ export default function LessonPlayerPage({
   const [quizResultDetails, setQuizResultDetails] = useState<Record<string, { correct: boolean; correctAnswer: string }>>({});
   const [topicActivity, setTopicActivity] = useState<Activity | null>(null);
   const [done, setDone] = useState(false);
+
+  // Classroom audio: teacher can force silent (captions-only); students with
+  // headphones can unlock louder sound. Otherwise it's quiet + volume-capped.
+  const [classSilent, setClassSilent] = useState(false);
+  const [classHeadphone, setClassHeadphone] = useState(false);
+  useEffect(() => {
+    fetch("/api/student/audio-policy")
+      .then((r) => r.json())
+      .then((d) => {
+        setClassSilent(Boolean(d.silentMode));
+        setClassHeadphone(Boolean(d.headphoneMode));
+      })
+      .catch(() => {});
+  }, []);
+  // Audio is set by the teacher's class setting: silent (muted + captions),
+  // headphone (full volume), or the quiet, volume-capped default.
+  const audioMode: AudioMode = classSilent
+    ? "silent"
+    : classHeadphone
+    ? "headphone"
+    : "normal";
 
   // Interest signals per watched video this session — feeds worksheet building.
   const [watchHistory, setWatchHistory] = useState<WatchEntry[]>([]);
@@ -618,7 +640,17 @@ export default function LessonPlayerPage({
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10">
                   <Film className="h-4 w-4 text-gold-400" aria-hidden />
                 </span>
-                <h2 className="display font-bold text-cream">{currentItem.video.title}</h2>
+                <h2 className="display min-w-0 flex-1 truncate font-bold text-cream">{currentItem.video.title}</h2>
+                {/* Audio status — set by the teacher, not toggleable here */}
+                {classSilent ? (
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-cream/80">
+                    <VolumeX className="h-3.5 w-3.5" aria-hidden /> Silent · read captions
+                  </span>
+                ) : classHeadphone ? (
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gold-400 px-3 py-1.5 text-xs font-bold text-forest-950">
+                    <Headphones className="h-3.5 w-3.5" aria-hidden /> Headphones
+                  </span>
+                ) : null}
               </div>
 
               {currentItem.video.muxPlaybackId ? (
@@ -627,6 +659,7 @@ export default function LessonPlayerPage({
                   onComplete={handleVideoComplete}
                   liveSignalsRef={liveSignalsRef}
                   showDoneButton={false}
+                  audioMode={audioMode}
                 />
               ) : (
                 <VideoPlayerMock video={currentItem.video} onComplete={handleVideoComplete} liveSignalsRef={liveSignalsRef} />

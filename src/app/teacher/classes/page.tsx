@@ -70,6 +70,8 @@ export default function ClassesPage() {
         classCode: raw.class_code,
         studentIds: (raw.class_students ?? []).map((r: { student_id: string }) => r.student_id),
         assignedUnitIds: (raw.assignment_topics ?? []).map((r: { topic_id: string }) => r.topic_id),
+        silentMode: Boolean(raw.silent_mode),
+        headphoneMode: Boolean(raw.headphone_mode),
       };
       setCreated(cls);
       setClasses((prev) => [...prev, cls]);

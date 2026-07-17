@@ -63,12 +63,30 @@ export function filterBlocksForStudent(
   const difficulty = getStudentDifficulty(quizScore);
   const topTag = getTopInterest(watchTime, completionPct, reactions, topicTags);
 
-  return blocks.filter((block) => {
-    if (block.blockDifficulty && block.blockDifficulty !== difficulty) return false;
+  // Difficulty is a *preference*, not a hard gate. Prefer blocks at the
+  // student's tier (plus tier-agnostic blocks with no blockDifficulty set), but
+  // if the activity has none at that tier, fall back to the whole list rather
+  // than handing back an empty worksheet — a foundation student must never be
+  // left with nothing just because the author only wrote "core" blocks.
+  const preferTier = (list: TaggedActivityBlock[]): TaggedActivityBlock[] => {
+    const atTier = list.filter(
+      (b) => !b.blockDifficulty || b.blockDifficulty === difficulty
+    );
+    return atTier.length > 0 ? atTier : list;
+  };
+
+  // First choice: untagged ("all topics") blocks plus blocks matching the
+  // student's clearest interest.
+  const preferred = blocks.filter((block) => {
     const blockTags = getBlockTags(block);
-    // If no qualifying tag (spammer/equal watcher with no reactions), show only untagged blocks
-    if (!topTag) return blockTags.length === 0;
-    if (blockTags.length > 0 && !blockTags.includes(topTag)) return false;
-    return true;
+    if (blockTags.length === 0) return true;
+    if (!topTag) return false;
+    return blockTags.includes(topTag);
   });
+  if (preferred.length > 0) return preferTier(preferred);
+
+  // No interest match (e.g. low completion, or every block is tagged for a
+  // topic the student didn't engage with). Fall back to the full set so the
+  // worksheet still has content, still preferring the student's tier.
+  return preferTier(blocks);
 }

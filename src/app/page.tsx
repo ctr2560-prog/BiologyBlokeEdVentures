@@ -91,6 +91,8 @@ export default function LandingPage() {
         schoolId: "",
         studentIds: data.students.map((s: { id: string }) => s.id),
         assignedUnitIds: [],
+        silentMode: false,
+        headphoneMode: false,
       };
       const students: User[] = data.students.map((s: { id: string; name: string; animal_id: string }) => ({
         id: s.id,

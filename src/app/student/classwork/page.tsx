@@ -131,9 +131,11 @@ export default function ClassWork() {
               const topicProgress = videos.map((v) =>
                 progress.find((p) => p.video_id === v.id)
               );
-              const watchedCount = topicProgress.filter(
-                (p) => (p?.video_completion_percentage ?? 0) >= 90
-              ).length;
+              // A reel counts as done once the student has a saved progress row
+              // for it (written on every advance through the swipe feed), so a
+              // finished lesson reads as complete instead of demanding a ≥90%
+              // watch of every clip.
+              const watchedCount = topicProgress.filter((p) => p != null).length;
               const totalMins = Math.round(
                 videos.reduce((s, v) => s + v.durationSeconds, 0) / 60
               );
