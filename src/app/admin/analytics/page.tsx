@@ -1,7 +1,8 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import { SectionHeader, StatCard, Badge } from "@/components/ui/primitives";
-import { Film, Loader, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Film, ThumbsUp, ThumbsDown } from "lucide-react";
 import {
   AnalyticsChartCard,
   BarChart,
@@ -185,11 +186,7 @@ export default function AdminAnalytics() {
   ];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

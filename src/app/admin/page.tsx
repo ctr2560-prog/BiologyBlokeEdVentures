@@ -2,10 +2,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SectionHeader, StatCard, Button, Badge } from "@/components/ui/primitives";
-import { Film, FolderTree, School as SchoolIcon, BarChart3, Loader } from "lucide-react";
+import { Film, FolderTree, School as SchoolIcon, BarChart3 } from "lucide-react";
 import { AnalyticsChartCard, BarChart } from "@/components/analytics/Charts";
 import { InsightCard } from "@/components/cards/InsightCards";
-import { formatWatchTime } from "@/lib/analytics";
+import { formatWatchTime, avgWatchPerStudent } from "@/lib/analytics";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import {
   getProgress,
   getAllQuizResults,
@@ -48,7 +49,6 @@ export default function AdminDashboard() {
   const avg = (nums: number[]) =>
     nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
 
-  const totalWatchTime = progress.reduce((a, p) => a + p.watchTimeSeconds, 0);
   const completions = progress.filter((p) => p.videoCompletionPercentage >= 90).length;
   const avgCompletion = avg(progress.map((p) => p.videoCompletionPercentage));
 
@@ -60,7 +60,8 @@ export default function AdminDashboard() {
   const activeStudents = activeStudentIds.size;
   // Quiz scores come from server-graded quiz_results, not the legacy progress column.
   const avgQuiz = avg(quizResults.map((q) => q.score));
-  const avgWatch = progress.length ? Math.round(totalWatchTime / progress.length) : 0;
+  // Per student: total watch time averaged across students who engaged.
+  const avgWatch = avgWatchPerStudent(progress);
 
   // Quiz average per lesson (topic) from quiz_results.
   const quizAvgByTopic = new Map<string, number>();
@@ -127,17 +128,7 @@ export default function AdminDashboard() {
     .slice(0, 4);
 
   if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="h-10 w-64 animate-pulse rounded-2xl bg-charcoal/8" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[...Array(8)].map((_, i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-charcoal/8" />)}
-        </div>
-        <div className="flex items-center justify-center py-8">
-          <Loader className="h-8 w-8 animate-spin text-forest-600" />
-        </div>
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

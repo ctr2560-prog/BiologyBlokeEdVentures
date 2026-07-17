@@ -10,12 +10,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useApp } from "@/lib/store";
 import { Button, Badge, EmptyState } from "@/components/ui/primitives";
+import { BrandLoader, FullPageLoader } from "@/components/ui/BrandLoader";
 import { VideoPlayer } from "@/components/media/VideoPlayer";
 import { VideoPlayerMock, type WatchSignals } from "@/components/media/VideoPlayerMock";
 import { StudentBlockRenderer } from "../../activity/[activityId]/renderers";
 import { filterBlocksForStudent } from "@/lib/activityRouting";
 import { toSlidesEmbedUrl } from "@/lib/slides";
-import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation, ChevronUp, Headphones, VolumeX } from "lucide-react";
+import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation, Headphones, VolumeX } from "lucide-react";
 import type { AudioMode } from "@/components/media/VideoPlayer";
 import {
   getLessonOrTopicItems,
@@ -104,30 +105,40 @@ export default function LessonPlayerPage({
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // ── Swipe-to-advance state ────────────────────────────────────────────────
+  // ── Advance state ─────────────────────────────────────────────────────────
   // Auto-advance timer after quiz submit; cleared by advanceOrFinish.
   const autoNextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Debounce so trackpad momentum doesn't skip multiple steps at once.
-  const wheelLockRef = useRef(0);
-  const touchRef = useRef<{ y: number; atBottom: boolean } | null>(null);
-  // Live watch signals from the video player, so a swipe mid-video can
-  // record whatever was watched so far without pressing "Done watching".
+  // Live watch signals from the video player, so moving on mid-video can
+  // record whatever was watched so far.
   const liveSignalsRef = useRef<WatchSignals | null>(null);
-
-  const atScrollBottom = () => {
-    const el = scrollRef.current;
-    if (!el) return true;
-    return el.scrollTop + el.clientHeight >= el.scrollHeight - 32;
-  };
 
   useEffect(() => {
     Promise.all([
       getLessonOrTopicItems(lessonId, true),
       getTopic(lessonId),
       getProgressByStudent(studentId),
-    ]).then(([lessonItems, topic]) => {
+    ]).then(([lessonItems, topic, progress]) => {
       setItems(lessonItems);
       setLesson(topic);
+
+      // Resume where the student left off. A video writes a progress row every
+      // time they advance past it, so the furthest reached video tells us how
+      // far they got — pick up at the step just after it. (The worksheet and
+      // quizzes already restore their own saved answers.)
+      const watchedVideoIds = new Set(progress.map((p) => p.videoId));
+      let lastReached = -1;
+      lessonItems.forEach((item, i) => {
+        if (item.itemType === "video" && watchedVideoIds.has(item.video.id)) {
+          lastReached = i;
+        }
+      });
+      const resumeAt = lastReached + 1;
+      // Only resume mid-lesson; if they finished everything, leave them at the
+      // start so the card's "Review lesson" replays from the top.
+      if (lastReached >= 0 && resumeAt < lessonItems.length) {
+        setCurrentIndex(resumeAt);
+        setSlidesDone(true); // already past the intro slides
+      }
       setLoading(false);
     });
   }, [lessonId, studentId]);
@@ -359,17 +370,17 @@ export default function LessonPlayerPage({
   };
 
   /*
-   * What a swipe-up (or scroll past the end) does on the current step.
-   * Returns null when the step isn't ready to advance — quizzes must be
-   * submitted first, the worksheet must be submitted via its own button.
+   * What the "move on" button does on the current step. Returns null when the
+   * step isn't ready to advance — quizzes must be submitted first, and the
+   * worksheet is submitted via its own button.
    */
-  const swipeAction = (): (() => void) | null => {
+  const advanceAction = (): (() => void) | null => {
     if (saving) return null;
     if (onSlides) return () => setSlidesDone(true);
     if (done) return null;
     if (currentItem?.itemType === "video") {
-      // Swipe works mid-video: record whatever was watched so far. Skipping
-      // early is a legitimate signal — it lowers that video's interest weight.
+      // Moving on mid-video is fine: record whatever was watched so far.
+      // Skipping early is a legitimate signal — it lowers that video's weight.
       const sig = signals ?? liveSignalsRef.current ?? {
         watchTimeSeconds: 0,
         completion: 0,
@@ -382,30 +393,6 @@ export default function LessonPlayerPage({
     }
     if (currentItem?.itemType === "quiz" && quizSubmitted) return advanceOrFinish;
     return null;
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchRef.current = { y: e.touches[0].clientY, atBottom: atScrollBottom() };
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const start = touchRef.current;
-    touchRef.current = null;
-    if (!start || !start.atBottom) return;
-    const dy = start.y - e.changedTouches[0].clientY;
-    if (dy < 70) return; // Not a deliberate upward swipe
-    swipeAction()?.();
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.deltaY < 60 || !atScrollBottom()) return;
-    const now = Date.now();
-    if (now - wheelLockRef.current < 900) return;
-    const act = swipeAction();
-    if (act) {
-      wheelLockRef.current = now;
-      act();
-    }
   };
 
   // ── Worksheet handlers ────────────────────────────────────────────────────
@@ -455,11 +442,7 @@ export default function LessonPlayerPage({
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-forest-950">
-        <Loader className="h-8 w-8 animate-spin text-forest-400" />
-      </div>
-    );
+    return <FullPageLoader label="Loading your Edventure…" />;
   }
 
   if (items.length === 0) {
@@ -538,10 +521,10 @@ export default function LessonPlayerPage({
         {lesson && (
           <div className="mx-auto mt-2 flex max-w-2xl items-center gap-2">
             <Image
-              src="/edventra-white.png"
+              src="/edventra-white-v2.png"
               alt="Edventra"
-              width={472}
-              height={119}
+              width={416}
+              height={101}
               className="h-4 w-auto opacity-60"
             />
             <span className="text-white/20">·</span>
@@ -554,9 +537,6 @@ export default function LessonPlayerPage({
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto overscroll-contain"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onWheel={handleWheel}
       >
         <div
           key={done ? "done" : onSlides ? "slides" : currentIndex}
@@ -664,6 +644,16 @@ export default function LessonPlayerPage({
               ) : (
                 <VideoPlayerMock video={currentItem.video} onComplete={handleVideoComplete} liveSignalsRef={liveSignalsRef} />
               )}
+
+              <div className="sticky bottom-4 pt-2">
+                <button
+                  onClick={() => advanceAction()?.()}
+                  disabled={saving}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gold-400 py-4 text-base font-bold text-forest-950 shadow-hero transition-transform hover:scale-[1.01] disabled:opacity-40"
+                >
+                  Move on when you&apos;re ready →
+                </button>
+              </div>
             </div>
           ) : currentItem?.itemType === "quiz" ? (
             /* ── Quiz slide ── */
@@ -750,17 +740,11 @@ export default function LessonPlayerPage({
             !wsReady ? (
               /* Building phase */
               <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 text-center">
-                <div className="relative">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-gold-400/20" />
-                  <span className="relative grid h-20 w-20 place-items-center rounded-full bg-white/10 text-4xl backdrop-blur">
-                    🔍
-                  </span>
-                </div>
+                <BrandLoader tone="cream" size={88} />
                 <h2 className="display text-2xl font-bold text-cream">Building your Edventure…</h2>
                 <p className="max-w-xs text-sm text-forest-100/70">
                   Picking activities just for you, based on what you watched and how you went in the quizzes.
                 </p>
-                <Loader className="h-5 w-5 animate-spin text-gold-400" aria-hidden />
               </div>
             ) : wsSections.length === 0 ? (
               <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
@@ -833,15 +817,6 @@ export default function LessonPlayerPage({
             )
           ) : null}
 
-          {/* Swipe hint — shown whenever the current step is ready to advance */}
-          {swipeAction() && (
-            <div className="pointer-events-none mt-8 flex flex-col items-center gap-1 text-forest-100/50">
-              <ChevronUp className="float-y-fast h-5 w-5" aria-hidden />
-              <span className="text-[0.65rem] font-semibold uppercase tracking-widest">
-                Swipe up for the next step
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>

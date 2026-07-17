@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import { SectionHeader, Button, Modal } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
@@ -51,11 +52,7 @@ export default function VideosPage() {
       />
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-48 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
+        <FullPageLoader />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {videos.map((v) => (

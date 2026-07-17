@@ -205,16 +205,16 @@ export default function LandingPage() {
 
         {/* Centered copy */}
         <div className="rise-in relative z-10 mx-auto max-w-4xl px-6">
-          {/* Edventra wordmark — tight-cropped transparent PNG */}
+          {/* Edventra wordmark with "by The Biology Bloke" tagline (home only) */}
           <Image
-            src="/edventra-white.png"
-            alt="Edventra"
-            width={472}
-            height={119}
+            src="/edventra-tagline-v2.png"
+            alt="Edventra — by The Biology Bloke"
+            width={420}
+            height={112}
             priority
             className="mx-auto h-auto w-72 drop-shadow-2xl sm:w-96 md:w-[28rem]"
           />
-          <p className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-cream/20 bg-forest-950/40 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-cream/90 backdrop-blur">
+          <p className="mx-auto mt-5 inline-flex items-center gap-2 rounded-full border border-cream/20 bg-forest-950/40 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-cream/90 backdrop-blur">
             <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Adaptive short-form learning, built for the real world
           </p>

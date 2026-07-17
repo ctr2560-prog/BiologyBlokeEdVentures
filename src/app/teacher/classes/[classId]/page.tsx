@@ -3,6 +3,7 @@ import { use, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { SectionHeader, Button, Badge, EmptyState } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { AliasChip } from "@/components/ui/AliasChip";
 import { EngagementPill } from "@/components/cards/InsightCards";
 import { Leaf, Printer, Plus, MonitorPlay, ClipboardList, VolumeX, Volume2, Headphones } from "lucide-react";
@@ -117,18 +118,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-4 w-32 animate-pulse rounded-full bg-charcoal/8" />
-        <div className="h-10 w-64 animate-pulse rounded-2xl bg-charcoal/8" />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {[0, 1].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
-        <div className="h-64 animate-pulse rounded-3xl bg-charcoal/8" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!cls) {

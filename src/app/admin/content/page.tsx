@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -685,11 +686,7 @@ export default function ContentPage() {
 
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

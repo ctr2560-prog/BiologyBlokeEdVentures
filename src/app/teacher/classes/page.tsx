@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
@@ -96,11 +97,7 @@ export default function ClassesPage() {
       />
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-36 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
+        <FullPageLoader />
       ) : classes.length ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {classes.map((c) => (

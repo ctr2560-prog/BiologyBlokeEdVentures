@@ -20,7 +20,8 @@ import {
 } from "@/lib/supabaseService";
 import { LibraryUnitCard, LibraryLessonCard } from "@/components/cards/LibraryCards";
 import { PromoBannerCarousel } from "@/components/ui/PromoBanner";
-import { formatWatchTime } from "@/lib/analytics";
+import { formatWatchTime, avgWatchPerStudent } from "@/lib/analytics";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { DEMO_TEACHER_ID } from "@/data/people";
 import { GraduationCap, ArrowRight } from "lucide-react";
 import type { ClassGroup, StudentProgress, User, Topic, Unit, SiteBanner, PLSession } from "@/types";
@@ -95,9 +96,9 @@ export default function TeacherDashboard() {
   const studentById = new Map(students.map((s) => [s.id, s]));
 
   const needSupport = allProgress.filter((p) => p.recommendedTaskType === "support");
-  const avgWatch = allProgress.length
-    ? Math.round(allProgress.reduce((a, p) => a + p.watchTimeSeconds, 0) / allProgress.length)
-    : 0;
+  // Average watch time per student (total across their reels, averaged across
+  // students) — "each student watched ~X on average".
+  const avgWatch = avgWatchPerStudent(allProgress);
   // Quiz scores come from server-graded quiz_results, not the legacy progress column.
   const scores = allQuizResults.map((q) => q.score);
   const avgQuiz = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
@@ -120,21 +121,7 @@ export default function TeacherDashboard() {
     .slice(0, 5);
 
   if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="h-10 w-64 animate-pulse rounded-2xl bg-charcoal/8" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

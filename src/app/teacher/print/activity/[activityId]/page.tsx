@@ -468,7 +468,7 @@ export default function PrintWorksheetPage({
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/edventra-white.png" alt="Edventra" className="h-7 w-auto" />
+          <img src="/edventra-white-v2.png" alt="Edventra" className="h-7 w-auto" />
           <div className="ml-auto text-right">
             <p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-forest-100/70">
               Worksheet

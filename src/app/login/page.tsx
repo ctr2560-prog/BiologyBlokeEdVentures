@@ -53,10 +53,10 @@ function LoginForm() {
         <div />
         <div className="text-center">
           <Image
-            src="/edventra-white.png"
+            src="/edventra-white-v2.png"
             alt="Edventra"
-            width={472}
-            height={119}
+            width={416}
+            height={101}
             className="mx-auto h-auto w-4/5 max-w-xs drop-shadow-2xl"
           />
           <h1 className="display mt-6 text-3xl font-bold leading-tight text-cream">

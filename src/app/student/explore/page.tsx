@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import { SectionHeader, Badge, Modal } from "@/components/ui/primitives";
 import { VideoCard } from "@/components/cards/ContentCards";
@@ -42,11 +43,7 @@ export default function Explore() {
       />
 
       {loading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="aspect-square animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
+        <FullPageLoader />
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {ecosystems.map((eco) => {

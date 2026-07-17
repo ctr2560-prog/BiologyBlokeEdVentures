@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
@@ -70,21 +71,7 @@ export default function ClassWork() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-10 w-48 animate-pulse rounded-2xl bg-charcoal/8" />
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="space-y-3">
-            <div className="h-10 w-64 animate-pulse rounded-2xl bg-charcoal/8" />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {[...Array(3)].map((_, j) => (
-                <div key={j} className="h-56 animate-pulse rounded-3xl bg-charcoal/8" />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (error) {

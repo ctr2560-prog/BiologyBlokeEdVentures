@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useRef, useState } from "react";
 import { SectionHeader, Button, FormField, inputClass } from "@/components/ui/primitives";
 import { PromoBanner } from "@/components/ui/PromoBanner";
@@ -171,11 +172,7 @@ export default function AdminBannerPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

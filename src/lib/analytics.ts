@@ -30,6 +30,25 @@ export const formatWatchTime = (seconds: number): string => {
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 };
 
+/**
+ * Average watch time *per student*: sum each student's watch time across all
+ * their reels, then average those totals across students. Answers "how long
+ * has each student watched on average", rather than the per-reel-view mean
+ * (which blends engaged and barely-watched views together).
+ */
+export function avgWatchPerStudent(
+  rows: { studentId: string; watchTimeSeconds: number }[]
+): number {
+  const totals = new Map<string, number>();
+  rows.forEach((p) =>
+    totals.set(p.studentId, (totals.get(p.studentId) ?? 0) + p.watchTimeSeconds)
+  );
+  if (totals.size === 0) return 0;
+  let sum = 0;
+  totals.forEach((v) => (sum += v));
+  return Math.round(sum / totals.size);
+}
+
 function quizScores(rows: StudentProgress[]): number[] {
   return rows
     .map((p) => p.quizScore)

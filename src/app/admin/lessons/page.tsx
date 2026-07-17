@@ -1,10 +1,11 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { SectionHeader, Button, Modal, Badge, EmptyState } from "@/components/ui/primitives";
 import { LessonForm } from "@/components/forms/ContentForms";
 import { getTopics, deleteTopic } from "@/lib/supabaseService";
-import { BookOpen, Plus, Film, CircleHelp, Loader, Pencil, Trash2 } from "lucide-react";
+import { BookOpen, Plus, Film, CircleHelp, Pencil, Trash2 } from "lucide-react";
 import type { Topic } from "@/types";
 
 export default function LessonsPage() {
@@ -31,11 +32,7 @@ export default function LessonsPage() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" aria-hidden />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

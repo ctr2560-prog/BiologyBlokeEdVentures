@@ -13,11 +13,13 @@ import {
   getQuizResultsByClass,
   getResponsesByClass,
   getActivitiesByIds,
+  getVideosByIds,
   getTopics,
   type ClassQuizResult,
 } from "@/lib/supabaseService";
 import { WorksheetReview } from "@/components/insights/WorksheetReview";
-import { FileText } from "lucide-react";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
+import { FileText, BarChart3, Film } from "lucide-react";
 import { formatWatchTime } from "@/lib/analytics";
 import { DEMO_TEACHER_ID } from "@/data/people";
 import type { ClassGroup, User, StudentProgress, Topic, StudentActivityResponse, Activity } from "@/types";
@@ -71,9 +73,12 @@ function InsightsInner() {
   const [responses, setResponses] = useState<StudentActivityResponse[]>([]);
   const [activityById, setActivityById] = useState<Map<string, Activity>>(new Map());
   const [topicNames, setTopicNames] = useState<Map<string, string>>(new Map());
+  const [videoTitles, setVideoTitles] = useState<Map<string, string>>(new Map());
   const [classLoading, setClassLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  // Student whose per-reel watch breakdown is shown in the modal.
+  const [breakdownStudent, setBreakdownStudent] = useState<string | null>(null);
 
   // Load class list once
   useEffect(() => {
@@ -90,6 +95,7 @@ function InsightsInner() {
     if (!classId) return;
     setDataLoading(true);
     setSelectedStudent(null);
+    setBreakdownStudent(null);
     const [studentsData, progressData, quizData, responseData, topicsData] = await Promise.all([
       getStudentsByClass(classId),
       getProgressByClass(classId),
@@ -100,12 +106,16 @@ function InsightsInner() {
     // Load the activities referenced by worksheet responses so we can show them.
     const activityIds = [...new Set(responseData.map((r) => r.activityId))];
     const activities = activityIds.length ? await getActivitiesByIds(activityIds) : [];
+    // Titles for the per-reel breakdown modal.
+    const videoIds = [...new Set(progressData.map((p) => p.videoId).filter(Boolean))];
+    const videos = videoIds.length ? await getVideosByIds(videoIds) : [];
     setStudents(studentsData);
     setProgress(progressData);
     setQuizResults(quizData);
     setResponses(responseData);
     setActivityById(new Map(activities.map((a) => [a.id, a])));
     setTopicNames(new Map((topicsData as Topic[]).map((t) => [t.id, t.title])));
+    setVideoTitles(new Map(videos.map((v) => [v.id, v.title])));
     setDataLoading(false);
   }, [classId]);
 
@@ -173,26 +183,38 @@ function InsightsInner() {
   const selectedUser = students.find((s) => s.id === selectedStudent);
   const detailTopicName = detailProg ? (topicNames.get(detailProg.topicId) ?? "") : "";
 
+  const breakdownUser = students.find((s) => s.id === breakdownStudent);
+  const breakdownRows = breakdownStudent
+    ? progress.filter((p) => p.studentId === breakdownStudent)
+    : [];
+
   type TableRow = (typeof tableRows)[number];
   const columns: Column<TableRow>[] = [
     { key: "name", header: "Explorer", render: (r) => <AliasChip user={r.student} /> },
     {
       key: "completion",
-      header: "Completion",
+      header: "Watched",
       align: "center",
       render: (r) =>
         r.avgCompletion != null ? (
-          <Badge
-            tone={
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setBreakdownStudent(r.student.id);
+            }}
+            title="See each reel this student watched"
+            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ring-1 transition-shadow hover:shadow-soft ${
               r.avgCompletion > 80
-                ? "forest"
+                ? "bg-forest-100 text-forest-800 ring-forest-600/20"
                 : r.avgCompletion > 50
-                  ? "gold"
-                  : "clay"
-            }
+                  ? "bg-gold-300/30 text-forest-900 ring-gold-500/30"
+                  : "bg-clay-400/15 text-clay-600 ring-clay-500/25"
+            }`}
           >
             {r.avgCompletion}%
-          </Badge>
+            <BarChart3 className="h-3 w-3 opacity-70" aria-hidden />
+          </button>
         ) : (
           "-"
         ),
@@ -269,15 +291,7 @@ function InsightsInner() {
       />
 
       {loading ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 animate-pulse rounded-3xl bg-charcoal/8" />
-            ))}
-          </div>
-          <div className="h-56 animate-pulse rounded-3xl bg-charcoal/8" />
-          <div className="h-64 animate-pulse rounded-3xl bg-charcoal/8" />
-        </div>
+        <FullPageLoader />
       ) : !classes.length ? (
         <div className="rounded-3xl bg-white p-10 text-center shadow-soft ring-1 ring-black/5">
           <p className="text-4xl">🌿</p>
@@ -377,6 +391,51 @@ function InsightsInner() {
               </div>
             )}
           </Modal>
+
+          {/* Per-reel watch breakdown modal */}
+          <Modal
+            open={!!breakdownUser}
+            onClose={() => setBreakdownStudent(null)}
+            title={breakdownUser ? `${breakdownUser.name} — reels watched` : "Reels watched"}
+            maxWidth="max-w-lg"
+          >
+            {breakdownUser && (
+              <div className="space-y-2">
+                {breakdownRows.length === 0 ? (
+                  <p className="text-sm text-charcoal-soft">No reels watched yet.</p>
+                ) : (
+                  breakdownRows.map((p) => {
+                    const pct = Math.round(p.videoCompletionPercentage);
+                    return (
+                      <div
+                        key={p.videoId}
+                        className="flex items-center gap-3 rounded-2xl bg-cream/60 px-4 py-3"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-forest-100 text-forest-700">
+                          <Film className="h-4 w-4" aria-hidden />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-forest-900">
+                            {videoTitles.get(p.videoId) ?? "Reel"}
+                          </p>
+                          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-sand">
+                            <div
+                              className={`h-full rounded-full ${pct > 80 ? "bg-forest-600" : pct > 50 ? "bg-gold-500" : "bg-clay-500"}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-bold text-forest-900">{pct}%</p>
+                          <p className="text-xs text-charcoal-soft">{formatWatchTime(p.watchTimeSeconds)}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </Modal>
         </>
       )}
     </div>
@@ -385,7 +444,7 @@ function InsightsInner() {
 
 export default function InsightsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-charcoal-soft">Loading insights...</div>}>
+    <Suspense fallback={<FullPageLoader />}>
       <InsightsInner />
     </Suspense>
   );

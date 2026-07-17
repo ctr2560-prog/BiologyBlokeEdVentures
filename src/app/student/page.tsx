@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
@@ -93,17 +94,7 @@ export default function StudentHome() {
     (ecosystems.length > 0 ? ecosystems[new Date().getDate() % ecosystems.length] : null);
 
   if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="h-48 animate-pulse rounded-3xl bg-charcoal/8" />
-        <div className="h-6 w-48 animate-pulse rounded-full bg-charcoal/8" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-56 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

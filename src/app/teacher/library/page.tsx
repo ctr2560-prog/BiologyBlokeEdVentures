@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SectionHeader, EmptyState } from "@/components/ui/primitives";
@@ -121,16 +122,7 @@ function LibraryInner() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-10 w-64 animate-pulse rounded-2xl bg-charcoal/8" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-64 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

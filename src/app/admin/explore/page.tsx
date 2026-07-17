@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 /*
  * Admin builder for the student Explore section: ecosystem tiles students
  * browse at home, plus which one is the "Featured ecosystem" on their home
@@ -9,7 +10,7 @@ import { SectionHeader, Button, Modal, FormField, inputClass, Badge, EmptyState 
 import { getEcosystems, upsertEcosystem, deleteEcosystem } from "@/lib/supabaseService";
 import { ECO_ICON_CHOICES, getEcoIconByKey } from "@/lib/icons";
 import {
-  Compass, Plus, Star, Pencil, Trash2, Loader, ChevronUp, ChevronDown, Eye, EyeOff, X,
+  Compass, Plus, Star, Pencil, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, X,
 } from "lucide-react";
 import type { Ecosystem } from "@/types";
 
@@ -88,11 +89,7 @@ export default function AdminExplorePage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

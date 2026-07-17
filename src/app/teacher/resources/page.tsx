@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 /*
  * Teacher resources = printable worksheets for the lessons a teacher has been
  * assigned. Each lesson's linked adaptive activities become a printable
@@ -101,16 +102,7 @@ export default function TeacherResources() {
   );
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-10 w-64 animate-pulse rounded-2xl bg-charcoal/8" />
-        <div className="grid grid-cols-1 gap-3">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-40 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   const modePills: { id: ModeFilter; label: string; Icon: typeof Users }[] = [

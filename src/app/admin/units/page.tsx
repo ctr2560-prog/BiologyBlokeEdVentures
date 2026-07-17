@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { SectionHeader, Button, Modal, Badge, EmptyState } from "@/components/ui/primitives";
@@ -114,11 +115,7 @@ export default function UnitsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" aria-hidden />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

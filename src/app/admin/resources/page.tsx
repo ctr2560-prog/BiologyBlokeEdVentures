@@ -1,9 +1,10 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SectionHeader, EmptyState, Button } from "@/components/ui/primitives";
 import { getActivities, deleteActivity } from "@/lib/supabaseService";
-import { Loader, PenLine, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { PenLine, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import type { Activity } from "@/types";
 import { BLOCK_CATALOGUE } from "./[activityId]/blocks";
 
@@ -107,11 +108,7 @@ export default function ResourcesPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

@@ -18,13 +18,13 @@ export function Logo({
   withWordmark?: boolean;
 }) {
   if (variant === "white") {
-    // Full horizontal wordmark — tight-cropped transparent PNG, ≈4:1 ratio.
+    // Full horizontal wordmark — tight-cropped transparent PNG, ≈4.12:1 ratio.
     // size is the rendered height; width scales proportionally.
     const h = size;
-    const w = Math.round(h * 3.97);
+    const w = Math.round(h * 4.12);
     return (
       <Image
-        src="/edventra-white.png"
+        src="/edventra-white-v2.png"
         alt="Edventra"
         width={w}
         height={h}

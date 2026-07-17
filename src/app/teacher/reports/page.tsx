@@ -10,7 +10,8 @@ import {
   getTopics,
   type ClassQuizResult,
 } from "@/lib/supabaseService";
-import { formatWatchTime } from "@/lib/analytics";
+import { formatWatchTime, avgWatchPerStudent } from "@/lib/analytics";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { DEMO_TEACHER_ID } from "@/data/people";
 import type { ClassGroup, User, StudentProgress, Topic } from "@/types";
 
@@ -37,7 +38,7 @@ function computeReport(
   return {
     avgCompletion: avg(progress.map((p) => p.videoCompletionPercentage)),
     avgQuiz: avg(quizResults.map((q) => q.score)),
-    avgWatchTime: avg(progress.map((p) => p.watchTimeSeconds)),
+    avgWatchTime: avgWatchPerStudent(progress),
     gaps: topicPerformance.filter((t) => t.avg < 60),
     strengths: topicPerformance.filter((t) => t.avg >= 75),
   };
@@ -123,7 +124,7 @@ function ReportsInner() {
       />
 
       {loading ? (
-        <div className="h-96 animate-pulse rounded-3xl bg-charcoal/8" />
+        <FullPageLoader />
       ) : !classes.length ? (
         <div className="rounded-3xl bg-white p-10 text-center shadow-soft ring-1 ring-black/5">
           <p className="text-4xl">📋</p>

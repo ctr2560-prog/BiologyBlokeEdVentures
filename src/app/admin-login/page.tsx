@@ -56,10 +56,10 @@ export default function AdminLoginPage() {
         {/* Logo + heading */}
         <div className="mb-8 text-center">
           <Image
-            src="/edventra-white.png"
+            src="/edventra-white-v2.png"
             alt="Edventra"
-            width={472}
-            height={119}
+            width={416}
+            height={101}
             className="mx-auto h-auto w-56 opacity-90 drop-shadow-2xl"
           />
           <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-forest-700/40 bg-forest-900/60 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-widest text-forest-400">

@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 /*
  * Admin manager for professional learning sessions — posted here, browsed and
  * booked by teachers under /teacher/pl.
@@ -92,11 +93,7 @@ export default function AdminPLPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

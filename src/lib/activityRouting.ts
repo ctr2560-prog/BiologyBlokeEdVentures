@@ -75,18 +75,19 @@ export function filterBlocksForStudent(
     return atTier.length > 0 ? atTier : list;
   };
 
-  // First choice: untagged ("all topics") blocks plus blocks matching the
-  // student's clearest interest.
-  const preferred = blocks.filter((block) => {
+  // Which blocks to include:
+  // - Untagged blocks (instructions, general prompts) are always shown.
+  // - If the student has a clear top interest, narrow the tagged tasks to that
+  //   topic so the worksheet feels personalised.
+  // - If there's no clear interest (e.g. low completion, or their videos don't
+  //   share tags with this activity), fall back to a general worksheet across
+  //   all topics rather than showing only the instruction with no actual tasks.
+  const selected = blocks.filter((block) => {
     const blockTags = getBlockTags(block);
     if (blockTags.length === 0) return true;
-    if (!topTag) return false;
+    if (!topTag) return true;
     return blockTags.includes(topTag);
   });
-  if (preferred.length > 0) return preferTier(preferred);
 
-  // No interest match (e.g. low completion, or every block is tagged for a
-  // topic the student didn't engage with). Fall back to the full set so the
-  // worksheet still has content, still preferring the student's tier.
-  return preferTier(blocks);
+  return preferTier(selected);
 }

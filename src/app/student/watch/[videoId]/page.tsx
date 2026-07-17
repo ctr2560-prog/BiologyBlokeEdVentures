@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
@@ -186,13 +187,7 @@ export default function WatchPage({ params }: { params: Promise<{ videoId: strin
   };
 
   if (pageLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-4 w-32 animate-pulse rounded-full bg-charcoal/8" />
-        <div className="h-10 w-64 animate-pulse rounded-2xl bg-charcoal/8" />
-        <div className="aspect-video animate-pulse rounded-3xl bg-charcoal/8" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!pageData?.video) {

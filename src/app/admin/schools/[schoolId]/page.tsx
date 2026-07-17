@@ -16,6 +16,7 @@ import {
   type ClassQuizResult,
 } from "@/lib/supabaseService";
 import { formatWatchTime } from "@/lib/analytics";
+import { BrandLoader } from "@/components/ui/BrandLoader";
 import { ArrowLeft, Loader, Users, BookOpen, FileText } from "lucide-react";
 import type {
   School, ClassGroup, User, StudentProgress, Topic, StudentActivityResponse, Activity,
@@ -177,7 +178,7 @@ export default function SchoolDetailPage() {
     { key: "name", header: "Explorer", render: (r) => <AliasChip user={r.student} /> },
     {
       key: "completion",
-      header: "Completion",
+      header: "Watched",
       align: "center",
       render: (r) =>
         r.avgCompletion != null ? (
@@ -330,14 +331,8 @@ export default function SchoolDetailPage() {
           )}
 
           {classLoading ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-24 animate-pulse rounded-3xl bg-charcoal/8" />
-                ))}
-              </div>
-              <div className="h-56 animate-pulse rounded-3xl bg-charcoal/8" />
-              <div className="h-64 animate-pulse rounded-3xl bg-charcoal/8" />
+            <div className="flex justify-center py-16">
+              <BrandLoader />
             </div>
           ) : (
             <>

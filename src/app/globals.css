@@ -150,6 +150,22 @@ h1, h2, h3, h4, .display {
 .float-y-slow { animation: float-y 9s ease-in-out infinite; }
 .float-y-fast { animation: float-y 4.5s ease-in-out infinite; }
 
+/* Edventra symbol loader — the mark drawn on stroke-by-stroke. The symbol PNG
+   is used as a mask so it can be tinted with currentColor to suit any surface,
+   and a top-to-bottom clip reveal makes it look like the path is being drawn. */
+.brand-symbol {
+  -webkit-mask: url("/edventra-symbol.png") center / contain no-repeat;
+  mask: url("/edventra-symbol.png") center / contain no-repeat;
+  background-color: currentColor;
+}
+.brand-symbol--draw { animation: brand-draw 2.4s ease-in-out infinite; }
+@keyframes brand-draw {
+  0%   { clip-path: inset(0 0 100% 0); opacity: 1; }
+  55%  { clip-path: inset(0 0 0 0);    opacity: 1; }
+  80%  { clip-path: inset(0 0 0 0);    opacity: 1; }
+  100% { clip-path: inset(0 0 0 0);    opacity: 0; }
+}
+
 /* Slow cinematic zoom (Ken Burns) for the video backdrop */
 @keyframes ken-burns {
   from { transform: scale(1.04); }
@@ -237,7 +253,7 @@ h1, h2, h3, h4, .display {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .float-y, .float-y-slow, .float-y-fast, .ken-burns, .glow-pulse, .text-shimmer,
+  .float-y, .float-y-slow, .float-y-fast, .brand-symbol--draw, .ken-burns, .glow-pulse, .text-shimmer,
   .panel-in, .animate-marquee, .aurora-blob {
     animation: none !important;
   }

@@ -1,9 +1,10 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import { SectionHeader, Button, Modal, Badge, EmptyState } from "@/components/ui/primitives";
 import { QuizForm } from "@/components/forms/ContentForms";
 import { getQuizzes, deleteQuiz } from "@/lib/supabaseService";
-import { HelpCircle, Loader, Pencil, Plus, Trash2 } from "lucide-react";
+import { HelpCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Quiz } from "@/types";
 
 export default function QuizzesPage() {
@@ -33,11 +34,7 @@ export default function QuizzesPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" aria-hidden />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

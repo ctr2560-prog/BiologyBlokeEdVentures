@@ -1,10 +1,11 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SectionHeader, Badge, EmptyState } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { getSchools } from "@/lib/supabaseService";
-import { School as SchoolIcon, Loader } from "lucide-react";
+import { School as SchoolIcon } from "lucide-react";
 import type { School } from "@/types";
 
 const subTone = { active: "forest", trial: "gold", lapsed: "clay" } as const;
@@ -19,11 +20,7 @@ export default function SchoolsPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" aria-hidden />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   const columns: Column<School>[] = [

@@ -7,6 +7,7 @@ import { getClassesByTeacher } from "@/lib/supabaseService";
 import { DEMO_TEACHER_ID } from "@/data/people";
 import type { ClassGroup } from "@/types";
 import { Presentation, Loader, Users } from "lucide-react";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 
 export default function PresentIndexPage() {
   const { currentUser } = useApp();
@@ -30,11 +31,7 @@ export default function PresentIndexPage() {
       />
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-44 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
+        <FullPageLoader />
       ) : classes.length === 0 ? (
         <EmptyState
           title="No classes yet"

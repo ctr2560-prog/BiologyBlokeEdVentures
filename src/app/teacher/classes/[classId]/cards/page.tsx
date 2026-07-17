@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 /*
  * Printable explorer cards. One card per student alias (animal + class code),
  * designed to print cleanly so a teacher can cut and hand them out.
@@ -30,13 +31,7 @@ export default function ExplorerCardsPage({ params }: { params: Promise<{ classI
   }, [classId]);
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-52 animate-pulse rounded-2xl bg-charcoal/8" />
-        ))}
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!cls) {

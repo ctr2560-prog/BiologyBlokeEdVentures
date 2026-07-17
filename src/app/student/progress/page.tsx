@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useEffect, useState } from "react";
 import { useApp } from "@/lib/store";
 import { SectionHeader, StatCard, Badge, ProgressBar } from "@/components/ui/primitives";
@@ -63,17 +64,7 @@ export default function StudentProgress() {
   ];
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-10 w-48 animate-pulse rounded-2xl bg-charcoal/8" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-3xl bg-charcoal/8" />
-          ))}
-        </div>
-        <div className="h-48 animate-pulse rounded-3xl bg-charcoal/8" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (

@@ -1,4 +1,5 @@
 "use client";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useCallback, useEffect, useState } from "react";
 import { use } from "react";
 import Link from "next/link";
@@ -14,7 +15,7 @@ import { toSlidesEmbedUrl } from "@/lib/slides";
 import { CoverImageControl } from "@/components/forms/CoverImageControl";
 import {
   ArrowLeft, Film, CircleHelp, ChevronUp, ChevronDown,
-  Trash2, Loader, BookOpen, Plus, Check, PenLine, Sparkles, Search, X, Star,
+  Trash2, BookOpen, Plus, Check, PenLine, Sparkles, Search, X, Star,
   Presentation, Eye, EyeOff, Image as ImageIcon,
 } from "lucide-react";
 import type {
@@ -269,11 +270,7 @@ export default function LessonBuilderPage({
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader className="h-8 w-8 animate-spin text-forest-600" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!lesson) {
