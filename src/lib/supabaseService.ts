@@ -160,6 +160,7 @@ function mapQuiz(r: Row): Quiz {
     id: r.id,
     title: r.title,
     topicId: r.topic_id ?? "",
+    tags: r.tags ?? [],
     questions: (r.questions ?? [])
       .sort((a: Row, b: Row) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map(mapQuestion),
@@ -1060,6 +1061,7 @@ export async function createQuiz(quiz: Omit<Quiz, "id">): Promise<Quiz> {
     id,
     title: quiz.title,
     topic_id: quiz.topicId || null,
+    tags: quiz.tags ?? [],
   });
   if (error) throw new Error(error.message);
 
@@ -1087,13 +1089,13 @@ export async function createQuiz(quiz: Omit<Quiz, "id">): Promise<Quiz> {
 /** Update a quiz's title and replace its full question set. */
 export async function updateQuiz(
   id: string,
-  quiz: { title: string; questions: Question[] }
+  quiz: { title: string; tags?: string[]; questions: Question[] }
 ): Promise<Quiz> {
   const supabase = getSupabaseClient();
 
   const { error } = await supabase
     .from("quizzes")
-    .update({ title: quiz.title })
+    .update({ title: quiz.title, ...(quiz.tags ? { tags: quiz.tags } : {}) })
     .eq("id", id);
   if (error) throw new Error(error.message);
 

@@ -14,6 +14,7 @@ import {
   getResponsesByClass,
   getActivitiesByIds,
   getVideosByIds,
+  getQuizzes,
   getTopics,
   type ClassQuizResult,
 } from "@/lib/supabaseService";
@@ -31,17 +32,19 @@ const avg = (nums: number[]) =>
 function computeAnalytics(
   progress: StudentProgress[],
   quizResults: ClassQuizResult[],
-  // lesson (topic) id → the video tags covered in that lesson, so a quiz's
-  // score can be attributed to the topics its lesson teaches.
+  // A quiz's own tags take priority; otherwise fall back to the video tags
+  // covered in its lesson so scores still roll up to topics.
+  quizTagsById: Map<string, string[]>,
   lessonTags: Map<string, Set<string>>
 ) {
-  // Topic performance grouped by video tag: each quiz score is credited to
-  // every tag its lesson covers, then averaged per tag.
+  // Topic performance grouped by tag: each quiz score is credited to every tag
+  // it assesses (its own tags, else its lesson's video tags), averaged per tag.
   const tagScores = new Map<string, number[]>();
   quizResults.forEach((q) => {
-    if (!q.topicId) return;
-    const tags = lessonTags.get(q.topicId);
-    if (!tags) return;
+    const own = quizTagsById.get(q.quizId);
+    const tags = own && own.length
+      ? own
+      : (q.topicId ? [...(lessonTags.get(q.topicId) ?? [])] : []);
     tags.forEach((tag) => {
       const arr = tagScores.get(tag) ?? [];
       arr.push(q.score);
@@ -87,6 +90,7 @@ function InsightsInner() {
   const [topicNames, setTopicNames] = useState<Map<string, string>>(new Map());
   const [videoTitles, setVideoTitles] = useState<Map<string, string>>(new Map());
   const [videoTagsById, setVideoTagsById] = useState<Map<string, string[]>>(new Map());
+  const [quizTagsById, setQuizTagsById] = useState<Map<string, string[]>>(new Map());
   const [classLoading, setClassLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
@@ -109,12 +113,13 @@ function InsightsInner() {
     setDataLoading(true);
     setSelectedStudent(null);
     setBreakdownStudent(null);
-    const [studentsData, progressData, quizData, responseData, topicsData] = await Promise.all([
+    const [studentsData, progressData, quizData, responseData, topicsData, allQuizzes] = await Promise.all([
       getStudentsByClass(classId),
       getProgressByClass(classId),
       getQuizResultsByClass(classId),
       getResponsesByClass(classId),
       getTopics(),
+      getQuizzes(),
     ]);
     // Load the activities referenced by worksheet responses so we can show them.
     const activityIds = [...new Set(responseData.map((r) => r.activityId))];
@@ -130,6 +135,7 @@ function InsightsInner() {
     setTopicNames(new Map((topicsData as Topic[]).map((t) => [t.id, t.title])));
     setVideoTitles(new Map(videos.map((v) => [v.id, v.title])));
     setVideoTagsById(new Map(videos.map((v) => [v.id, v.tags])));
+    setQuizTagsById(new Map(allQuizzes.map((z) => [z.id, z.tags])));
     setDataLoading(false);
   }, [classId]);
 
@@ -151,8 +157,8 @@ function InsightsInner() {
   }, [progress, videoTagsById]);
 
   const analytics = useMemo(
-    () => computeAnalytics(progress, quizResults, lessonTags),
-    [progress, quizResults, lessonTags]
+    () => computeAnalytics(progress, quizResults, quizTagsById, lessonTags),
+    [progress, quizResults, quizTagsById, lessonTags]
   );
 
   // Average server-graded quiz score per student (across all their quizzes).

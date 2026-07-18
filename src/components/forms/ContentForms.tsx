@@ -499,6 +499,7 @@ export function QuizForm({
   onSaved: () => void;
 }) {
   const [title, setTitle] = useState(quiz?.title ?? "");
+  const [tags, setTags] = useState((quiz?.tags ?? []).join(", "));
   const [questions, setQuestions] = useState<Question[]>(quiz?.questions ?? []);
   const [draft, setDraft] = useState<Question>(blankQuestion());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -554,11 +555,12 @@ export function QuizForm({
     }
     setError("");
     setSaving(true);
+    const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
     try {
       if (quiz) {
-        await updateQuiz(quiz.id, { title, questions: finalQuestions });
+        await updateQuiz(quiz.id, { title, tags: tagList, questions: finalQuestions });
       } else {
-        await createQuiz({ title, topicId: lockedTopicId ?? "", questions: finalQuestions });
+        await createQuiz({ title, topicId: lockedTopicId ?? "", tags: tagList, questions: finalQuestions });
       }
       onSaved();
     } catch (err) {
@@ -576,6 +578,14 @@ export function QuizForm({
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+        />
+      </FormField>
+      <FormField label="Tags" hint="Comma separated — used for topic strengths & gaps (e.g. adaptation, behaviour)">
+        <input
+          className={inputClass}
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="adaptation, behaviour"
         />
       </FormField>
       {lockedTopicId && (

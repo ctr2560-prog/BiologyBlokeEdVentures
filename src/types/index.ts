@@ -199,6 +199,8 @@ export interface Quiz {
   id: string;
   title: string;
   topicId: string;
+  /** Topic tags this quiz assesses — feed strengths/gaps analytics. */
+  tags: string[];
   questions: Question[];
 }
 
