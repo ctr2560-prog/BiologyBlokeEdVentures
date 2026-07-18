@@ -7,13 +7,14 @@ import {
   getStudentsByClass,
   getProgressByClass,
   getQuizResultsByClass,
-  getTopics,
+  getVideosByIds,
+  getQuizzes,
   type ClassQuizResult,
 } from "@/lib/supabaseService";
 import { formatWatchTime, avgWatchPerStudent } from "@/lib/analytics";
 import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { DEMO_TEACHER_ID } from "@/data/people";
-import type { ClassGroup, User, StudentProgress, Topic } from "@/types";
+import type { ClassGroup, User, StudentProgress } from "@/types";
 
 const avg = (nums: number[]) =>
   nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
@@ -21,27 +22,44 @@ const avg = (nums: number[]) =>
 function computeReport(
   progress: StudentProgress[],
   quizResults: ClassQuizResult[],
-  topicNames: Map<string, string>
+  quizTagsById: Map<string, string[]>,
+  lessonTags: Map<string, Set<string>>
 ) {
-  // Quiz performance comes from server-graded quiz_results, grouped by lesson.
-  const topicMap = new Map<string, number[]>();
+  // Topic performance grouped by tag: a quiz's own tags take priority, else the
+  // video tags of its lesson, so each score rolls up to the topics it assesses.
+  const tagScores = new Map<string, number[]>();
   quizResults.forEach((q) => {
-    if (!q.topicId) return;
-    const arr = topicMap.get(q.topicId) ?? [];
-    arr.push(q.score);
-    topicMap.set(q.topicId, arr);
+    const own = quizTagsById.get(q.quizId);
+    const tags = own && own.length
+      ? own
+      : (q.topicId ? [...(lessonTags.get(q.topicId) ?? [])] : []);
+    tags.forEach((tag) => {
+      const arr = tagScores.get(tag) ?? [];
+      arr.push(q.score);
+      tagScores.set(tag, arr);
+    });
   });
-  const topicPerformance = [...topicMap.entries()].map(([tid, scores]) => ({
-    topic: topicNames.get(tid) ?? tid,
-    avg: avg(scores),
-  }));
+  const topicPerformance = [...tagScores.entries()]
+    .map(([tag, scores]) => ({ topic: tag, avg: avg(scores) }))
+    .sort((a, b) => b.avg - a.avg);
   return {
     avgCompletion: avg(progress.map((p) => p.videoCompletionPercentage)),
     avgQuiz: avg(quizResults.map((q) => q.score)),
     avgWatchTime: avgWatchPerStudent(progress),
-    gaps: topicPerformance.filter((t) => t.avg < 60),
-    strengths: topicPerformance.filter((t) => t.avg >= 75),
+    gaps: topicPerformance.filter((t) => t.avg < 50),
+    strengths: topicPerformance.filter((t) => t.avg > 90),
   };
+}
+
+/** Average quiz score per student across all their quizzes. */
+function quizAvgByStudent(quizResults: ClassQuizResult[]): Map<string, number> {
+  const scores = new Map<string, number[]>();
+  quizResults.forEach((q) => {
+    const arr = scores.get(q.studentId) ?? [];
+    arr.push(q.score);
+    scores.set(q.studentId, arr);
+  });
+  return new Map([...scores.entries()].map(([sid, s]) => [sid, avg(s)]));
 }
 
 function ReportsInner() {
@@ -53,7 +71,8 @@ function ReportsInner() {
   const [students, setStudents] = useState<User[]>([]);
   const [progress, setProgress] = useState<StudentProgress[]>([]);
   const [quizResults, setQuizResults] = useState<ClassQuizResult[]>([]);
-  const [topicNames, setTopicNames] = useState<Map<string, string>>(new Map());
+  const [videoTagsById, setVideoTagsById] = useState<Map<string, string[]>>(new Map());
+  const [quizTagsById, setQuizTagsById] = useState<Map<string, string[]>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,33 +86,52 @@ function ReportsInner() {
   const loadClass = useCallback(async () => {
     if (!classId) return;
     setLoading(true);
-    const [studentsData, progressData, quizData, topicsData] = await Promise.all([
+    const [studentsData, progressData, quizData, allQuizzes] = await Promise.all([
       getStudentsByClass(classId),
       getProgressByClass(classId),
       getQuizResultsByClass(classId),
-      getTopics(),
+      getQuizzes(),
     ]);
+    const videoIds = [...new Set(progressData.map((p) => p.videoId).filter(Boolean))];
+    const videos = videoIds.length ? await getVideosByIds(videoIds) : [];
     setStudents(studentsData);
     setProgress(progressData);
     setQuizResults(quizData);
-    setTopicNames(new Map((topicsData as Topic[]).map((t) => [t.id, t.title])));
+    setVideoTagsById(new Map(videos.map((v) => [v.id, v.tags])));
+    setQuizTagsById(new Map(allQuizzes.map((z) => [z.id, z.tags])));
     setLoading(false);
   }, [classId]);
 
   useEffect(() => { loadClass(); }, [loadClass]);
 
+  // Lesson (topic) id → video tags taught, from the videos students watched.
+  const lessonTags = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    progress.forEach((p) => {
+      if (!p.topicId) return;
+      const tags = videoTagsById.get(p.videoId);
+      if (!tags?.length) return;
+      const set = m.get(p.topicId) ?? new Set<string>();
+      tags.forEach((t) => set.add(t));
+      m.set(p.topicId, set);
+    });
+    return m;
+  }, [progress, videoTagsById]);
+
   const report = useMemo(
-    () => computeReport(progress, quizResults, topicNames),
-    [progress, quizResults, topicNames]
+    () => computeReport(progress, quizResults, quizTagsById, lessonTags),
+    [progress, quizResults, quizTagsById, lessonTags]
   );
 
+  // Support / extension by each student's average quiz score.
+  const studentAvg = useMemo(() => quizAvgByStudent(quizResults), [quizResults]);
   const needSupport = useMemo(
-    () => students.filter((s) => progress.some((p) => p.studentId === s.id && p.recommendedTaskType === "support")),
-    [students, progress]
+    () => students.filter((s) => (studentAvg.get(s.id) ?? 100) < 50),
+    [students, studentAvg]
   );
   const readyExtension = useMemo(
-    () => students.filter((s) => progress.some((p) => p.studentId === s.id && p.recommendedTaskType === "extension")),
-    [students, progress]
+    () => students.filter((s) => (studentAvg.get(s.id) ?? 0) > 90),
+    [students, studentAvg]
   );
 
   const cls = classes.find((c) => c.id === classId);
