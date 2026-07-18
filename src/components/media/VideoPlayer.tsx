@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 import type MuxPlayerElement from "@mux/mux-player";
 import { Button } from "@/components/ui/primitives";
+import { BrandLoader } from "@/components/ui/BrandLoader";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import type { WatchSignals } from "./VideoPlayerMock";
 import type { Video } from "@/types";
@@ -42,6 +43,9 @@ export function VideoPlayer({ video, onComplete, liveSignalsRef, showDoneButton 
   const playerRef = useRef<MuxPlayerElement>(null);
   const [reaction, setReaction] = useState<"like" | "dislike" | undefined>(undefined);
   const [ended, setEnded] = useState(false);
+  // Show the brand loader over the player until the video is ready to play.
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setReady(false); }, [video.muxPlaybackId]);
 
   // Apply the audio mode: set the starting volume/mute, and clamp any attempt
   // to push the volume past the cap for this mode.
@@ -139,10 +143,24 @@ export function VideoPlayer({ video, onComplete, liveSignalsRef, showDoneButton 
           metadata={{ video_title: video.title }}
           streamType="on-demand"
           accentColor="#4f9776"
+          preload="auto"
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
+          onCanPlay={() => setReady(true)}
+          onLoadedData={() => setReady(true)}
+          onPlaying={() => setReady(true)}
           style={{ width: "100%", aspectRatio: "16/9" }}
         />
+
+        {/* Branded buffering overlay — covers the player until it can play */}
+        <div
+          className={`pointer-events-none absolute inset-0 flex items-center justify-center bg-forest-950 transition-opacity duration-500 ${
+            ready ? "opacity-0" : "opacity-100"
+          }`}
+          aria-hidden={ready}
+        >
+          <BrandLoader tone="cream" size={72} />
+        </div>
 
         {/* Overlay interaction buttons */}
         {!ended && (
