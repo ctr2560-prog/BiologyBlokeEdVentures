@@ -31,32 +31,44 @@ const avg = (nums: number[]) =>
 function computeAnalytics(
   progress: StudentProgress[],
   quizResults: ClassQuizResult[],
-  topicNames: Map<string, string>
+  // lesson (topic) id → the video tags covered in that lesson, so a quiz's
+  // score can be attributed to the topics its lesson teaches.
+  lessonTags: Map<string, Set<string>>
 ) {
-  // Quiz performance now comes from server-graded quiz_results, grouped by lesson.
-  const topicMap = new Map<string, number[]>();
+  // Topic performance grouped by video tag: each quiz score is credited to
+  // every tag its lesson covers, then averaged per tag.
+  const tagScores = new Map<string, number[]>();
   quizResults.forEach((q) => {
     if (!q.topicId) return;
-    const arr = topicMap.get(q.topicId) ?? [];
-    arr.push(q.score);
-    topicMap.set(q.topicId, arr);
+    const tags = lessonTags.get(q.topicId);
+    if (!tags) return;
+    tags.forEach((tag) => {
+      const arr = tagScores.get(tag) ?? [];
+      arr.push(q.score);
+      tagScores.set(tag, arr);
+    });
   });
-  const topicPerformance = [...topicMap.entries()].map(([tid, scores]) => ({
-    topic: topicNames.get(tid) ?? tid,
-    avg: avg(scores),
-  }));
+  const topicPerformance = [...tagScores.entries()]
+    .map(([tag, scores]) => ({ topic: tag, avg: avg(scores) }))
+    .sort((a, b) => b.avg - a.avg);
+
+  // Support / extension by each student's average quiz score.
+  const scoresByStudent = new Map<string, number[]>();
+  quizResults.forEach((q) => {
+    const arr = scoresByStudent.get(q.studentId) ?? [];
+    arr.push(q.score);
+    scoresByStudent.set(q.studentId, arr);
+  });
+  const studentAvgs = [...scoresByStudent.values()].map((s) => avg(s));
+
   return {
     avgCompletion: avg(progress.map((p) => p.videoCompletionPercentage)),
     avgQuiz: avg(quizResults.map((q) => q.score)),
-    studentsNeedingSupport: [
-      ...new Set(progress.filter((p) => p.recommendedTaskType === "support").map((p) => p.studentId)),
-    ].length,
-    studentsReadyExtension: [
-      ...new Set(progress.filter((p) => p.recommendedTaskType === "extension").map((p) => p.studentId)),
-    ].length,
+    studentsNeedingSupport: studentAvgs.filter((a) => a < 50).length,
+    studentsReadyExtension: studentAvgs.filter((a) => a > 90).length,
     topicPerformance,
-    gaps: topicPerformance.filter((t) => t.avg < 60),
-    strengths: topicPerformance.filter((t) => t.avg >= 75),
+    gaps: topicPerformance.filter((t) => t.avg < 50),
+    strengths: topicPerformance.filter((t) => t.avg > 90),
   };
 }
 
@@ -74,6 +86,7 @@ function InsightsInner() {
   const [activityById, setActivityById] = useState<Map<string, Activity>>(new Map());
   const [topicNames, setTopicNames] = useState<Map<string, string>>(new Map());
   const [videoTitles, setVideoTitles] = useState<Map<string, string>>(new Map());
+  const [videoTagsById, setVideoTagsById] = useState<Map<string, string[]>>(new Map());
   const [classLoading, setClassLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
@@ -116,14 +129,30 @@ function InsightsInner() {
     setActivityById(new Map(activities.map((a) => [a.id, a])));
     setTopicNames(new Map((topicsData as Topic[]).map((t) => [t.id, t.title])));
     setVideoTitles(new Map(videos.map((v) => [v.id, v.title])));
+    setVideoTagsById(new Map(videos.map((v) => [v.id, v.tags])));
     setDataLoading(false);
   }, [classId]);
 
   useEffect(() => { loadClass(); }, [loadClass]);
 
+  // Lesson (topic) id → the set of video tags taught in that lesson, derived
+  // from the videos students have watched. Lets quiz scores roll up to tags.
+  const lessonTags = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    progress.forEach((p) => {
+      if (!p.topicId) return;
+      const tags = videoTagsById.get(p.videoId);
+      if (!tags?.length) return;
+      const set = m.get(p.topicId) ?? new Set<string>();
+      tags.forEach((t) => set.add(t));
+      m.set(p.topicId, set);
+    });
+    return m;
+  }, [progress, videoTagsById]);
+
   const analytics = useMemo(
-    () => computeAnalytics(progress, quizResults, topicNames),
-    [progress, quizResults, topicNames]
+    () => computeAnalytics(progress, quizResults, lessonTags),
+    [progress, quizResults, lessonTags]
   );
 
   // Average server-graded quiz score per student (across all their quizzes).
@@ -314,7 +343,7 @@ function InsightsInner() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <AnalyticsChartCard title="Topic performance" subtitle="Average quiz score by topic">
+            <AnalyticsChartCard title="Topic performance" subtitle="Average quiz score by topic tag">
               <BarChart
                 data={analytics.topicPerformance.map((t) => ({ label: t.topic, value: t.avg }))}
                 unit="%"
