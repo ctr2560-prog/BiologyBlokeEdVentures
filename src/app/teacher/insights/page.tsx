@@ -71,7 +71,9 @@ function computeAnalytics(
     studentsReadyExtension: studentAvgs.filter((a) => a > 90).length,
     topicPerformance,
     gaps: topicPerformance.filter((t) => t.avg < 50),
-    strengths: topicPerformance.filter((t) => t.avg > 90),
+    // Top 3 highest-scoring tags (sorted desc above), floored at 50% so a weak
+    // topic is never shown as a strength.
+    strengths: topicPerformance.filter((t) => t.avg >= 50).slice(0, 3),
   };
 }
 
