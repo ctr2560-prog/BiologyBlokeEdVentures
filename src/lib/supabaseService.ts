@@ -890,6 +890,12 @@ export async function getStudentsByClass(classId: string): Promise<User[]> {
 
 // ---- Quiz results (server-graded quiz scores from the lesson feed) ----
 
+export interface QuizAnswerDetail {
+  answer: string;
+  correct: boolean;
+  correctAnswer: string;
+}
+
 export interface ClassQuizResult {
   quizId: string;
   studentId: string;
@@ -897,6 +903,8 @@ export interface ClassQuizResult {
   score: number;
   attempts: number;
   submittedAt: string;
+  /** Per-question detail (by question id). Empty for attempts before this was recorded. */
+  details: Record<string, QuizAnswerDetail>;
 }
 
 function mapQuizResult(r: Row): ClassQuizResult {
@@ -907,13 +915,14 @@ function mapQuizResult(r: Row): ClassQuizResult {
     score: Number(r.score),
     attempts: (r.attempts as number) ?? 1,
     submittedAt: (r.submitted_at as string) ?? "",
+    details: (r.details as Record<string, QuizAnswerDetail>) ?? {},
   };
 }
 
 export async function getQuizResultsByClass(classId: string): Promise<ClassQuizResult[]> {
   const { data } = await getSupabaseClient()
     .from("quiz_results")
-    .select("quiz_id, student_id, lesson_id, score, attempts, submitted_at")
+    .select("quiz_id, student_id, lesson_id, score, attempts, submitted_at, details")
     .eq("class_id", classId);
   return (data ?? []).map(mapQuizResult);
 }

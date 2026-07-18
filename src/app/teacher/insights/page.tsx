@@ -20,10 +20,10 @@ import {
 } from "@/lib/supabaseService";
 import { WorksheetReview } from "@/components/insights/WorksheetReview";
 import { FullPageLoader } from "@/components/ui/BrandLoader";
-import { FileText, BarChart3, Film } from "lucide-react";
+import { FileText, BarChart3, Film, ListChecks, Check, X } from "lucide-react";
 import { formatWatchTime } from "@/lib/analytics";
 import { DEMO_TEACHER_ID } from "@/data/people";
-import type { ClassGroup, User, StudentProgress, Topic, StudentActivityResponse, Activity } from "@/types";
+import type { ClassGroup, User, StudentProgress, Topic, StudentActivityResponse, Activity, Quiz } from "@/types";
 
 // Pure helpers (same logic as analytics.ts but operating on pre-fetched arrays)
 const avg = (nums: number[]) =>
@@ -93,11 +93,16 @@ function InsightsInner() {
   const [videoTitles, setVideoTitles] = useState<Map<string, string>>(new Map());
   const [videoTagsById, setVideoTagsById] = useState<Map<string, string[]>>(new Map());
   const [quizTagsById, setQuizTagsById] = useState<Map<string, string[]>>(new Map());
+  const [quizById, setQuizById] = useState<Map<string, Quiz>>(new Map());
   const [classLoading, setClassLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   // Student whose per-reel watch breakdown is shown in the modal.
   const [breakdownStudent, setBreakdownStudent] = useState<string | null>(null);
+  // Student whose per-question quiz breakdown is shown in the modal.
+  const [quizStudent, setQuizStudent] = useState<string | null>(null);
+  // Which support/extension band list is open, if any.
+  const [bandModal, setBandModal] = useState<"support" | "extension" | null>(null);
 
   // Load class list once
   useEffect(() => {
@@ -138,6 +143,7 @@ function InsightsInner() {
     setVideoTitles(new Map(videos.map((v) => [v.id, v.title])));
     setVideoTagsById(new Map(videos.map((v) => [v.id, v.tags])));
     setQuizTagsById(new Map(allQuizzes.map((z) => [z.id, z.tags])));
+    setQuizById(new Map(allQuizzes.map((z) => [z.id, z])));
     setDataLoading(false);
   }, [classId]);
 
@@ -225,6 +231,25 @@ function InsightsInner() {
     ? progress.filter((p) => p.studentId === breakdownStudent)
     : [];
 
+  // Support / extension bands by each student's average quiz score.
+  const supportStudents = students.filter((s) => {
+    const a = quizByStudent.get(s.id);
+    return a != null && a < 50;
+  });
+  const extensionStudents = students.filter((s) => {
+    const a = quizByStudent.get(s.id);
+    return a != null && a > 90;
+  });
+  const bandStudents = bandModal === "support" ? supportStudents : bandModal === "extension" ? extensionStudents : [];
+
+  // Per-question quiz breakdown for the clicked student.
+  const quizStudentUser = students.find((s) => s.id === quizStudent);
+  const quizStudentResults = quizStudent
+    ? quizResults
+        .filter((q) => q.studentId === quizStudent)
+        .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
+    : [];
+
   type TableRow = (typeof tableRows)[number];
   const columns: Column<TableRow>[] = [
     { key: "name", header: "Explorer", render: (r) => <AliasChip user={r.student} /> },
@@ -268,7 +293,22 @@ function InsightsInner() {
       align: "center",
       render: (r) => {
         const q = quizByStudent.get(r.student.id);
-        return q != null ? `${q}%` : "-";
+        if (q == null) return "-";
+        return (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setQuizStudent(r.student.id); }}
+            title="See each question this student answered"
+            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ring-1 transition-shadow hover:shadow-soft ${
+              q >= 80 ? "bg-forest-100 text-forest-800 ring-forest-600/20"
+              : q >= 50 ? "bg-gold-300/30 text-forest-900 ring-gold-500/30"
+              : "bg-clay-400/15 text-clay-600 ring-clay-500/25"
+            }`}
+          >
+            {q}%
+            <ListChecks className="h-3 w-3 opacity-70" aria-hidden />
+          </button>
+        );
       },
     },
     {
@@ -346,8 +386,8 @@ function InsightsInner() {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <StatCard label="Avg completion" value={`${analytics.avgCompletion}%`} />
             <StatCard label="Avg quiz score" value={`${analytics.avgQuiz}%`} tone="gold" />
-            <StatCard label="Need support" value={analytics.studentsNeedingSupport} tone="clay" />
-            <StatCard label="Ready for extension" value={analytics.studentsReadyExtension} tone="mist" />
+            <StatCard label="Need support" value={analytics.studentsNeedingSupport} tone="clay" onClick={() => setBandModal("support")} />
+            <StatCard label="Ready for extension" value={analytics.studentsReadyExtension} tone="mist" onClick={() => setBandModal("extension")} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -470,6 +510,98 @@ function InsightsInner() {
                     );
                   })
                 )}
+              </div>
+            )}
+          </Modal>
+
+          {/* Per-question quiz breakdown modal */}
+          <Modal
+            open={!!quizStudentUser}
+            onClose={() => setQuizStudent(null)}
+            title={quizStudentUser ? `${quizStudentUser.name} — quiz answers` : "Quiz answers"}
+            maxWidth="max-w-2xl"
+          >
+            {quizStudentUser && (
+              <div className="space-y-5">
+                {quizStudentResults.length === 0 ? (
+                  <p className="text-sm text-charcoal-soft">No quizzes completed yet.</p>
+                ) : (
+                  quizStudentResults.map((res) => {
+                    const quiz = quizById.get(res.quizId);
+                    const detailKeys = Object.keys(res.details ?? {});
+                    return (
+                      <div key={res.quizId} className="rounded-2xl bg-cream/60 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-forest-900">{quiz?.title ?? "Quiz"}</p>
+                          <Badge tone={res.score >= 80 ? "forest" : res.score >= 50 ? "gold" : "clay"}>
+                            {Math.round(res.score)}%
+                          </Badge>
+                        </div>
+                        {detailKeys.length === 0 ? (
+                          <p className="mt-2 text-xs text-charcoal-soft">
+                            Per-question detail wasn&apos;t recorded for this attempt. It will show for quizzes taken from now on.
+                          </p>
+                        ) : (
+                          <ul className="mt-3 space-y-2">
+                            {(quiz?.questions ?? []).map((q, i) => {
+                              const d = res.details[q.id];
+                              if (!d) return null;
+                              return (
+                                <li key={q.id} className="rounded-xl bg-white p-3 ring-1 ring-black/5">
+                                  <div className="flex items-start gap-2">
+                                    <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full ${d.correct ? "bg-forest-100 text-forest-700" : "bg-clay-400/20 text-clay-600"}`}>
+                                      {d.correct ? <Check className="h-3.5 w-3.5" aria-hidden /> : <X className="h-3.5 w-3.5" aria-hidden />}
+                                    </span>
+                                    <p className="text-sm font-medium text-forest-900">{i + 1}. {q.questionText}</p>
+                                  </div>
+                                  <p className="mt-1.5 pl-7 text-xs text-charcoal-soft">
+                                    Answered: <span className={d.correct ? "font-semibold text-forest-700" : "font-semibold text-clay-600"}>{d.answer || "—"}</span>
+                                    {!d.correct && d.correctAnswer ? <> · Correct: <span className="font-semibold text-forest-700">{d.correctAnswer}</span></> : null}
+                                  </p>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </Modal>
+
+          {/* Support / extension student list modal */}
+          <Modal
+            open={!!bandModal}
+            onClose={() => setBandModal(null)}
+            title={bandModal === "support" ? "Students needing support" : "Ready for extension"}
+            maxWidth="max-w-md"
+          >
+            <p className="mb-3 text-sm text-charcoal-soft">
+              {bandModal === "support"
+                ? "Average quiz score below 50%."
+                : "Average quiz score above 90%."}
+            </p>
+            {bandStudents.length === 0 ? (
+              <p className="text-sm text-charcoal-soft">
+                {bandModal === "support" ? "No students are struggling — nice." : "No students here yet."}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {bandStudents.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => { setBandModal(null); setQuizStudent(s.id); }}
+                    className="flex w-full items-center gap-3 rounded-2xl bg-cream/60 px-4 py-3 text-left transition-shadow hover:shadow-soft"
+                  >
+                    <AliasChip user={s} size={32} />
+                    <span className="ml-auto rounded-full bg-white px-3 py-1 text-xs font-bold text-forest-900 ring-1 ring-black/5">
+                      {quizByStudent.get(s.id)}%
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
           </Modal>

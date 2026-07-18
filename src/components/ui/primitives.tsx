@@ -125,12 +125,15 @@ export function StatCard({
   sublabel,
   icon,
   tone = "forest",
+  onClick,
 }: {
   label: string;
   value: string | number;
   sublabel?: string;
   icon?: ReactNode;
   tone?: "forest" | "gold" | "mist" | "clay";
+  /** When set, the card becomes a clickable button. */
+  onClick?: () => void;
 }) {
   const accents = {
     forest: "text-forest-700 bg-forest-50",
@@ -138,8 +141,14 @@ export function StatCard({
     mist: "text-mist-600 bg-mist-100",
     clay: "text-clay-600 bg-clay-400/15",
   };
+  const Tag = onClick ? "button" : "div";
   return (
-    <div className="card-lift rounded-3xl bg-white p-5 shadow-soft ring-1 ring-black/5">
+    <Tag
+      onClick={onClick}
+      className={`card-lift w-full rounded-3xl bg-white p-5 text-left shadow-soft ring-1 ring-black/5 ${
+        onClick ? "cursor-pointer transition-shadow hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-forest-400" : ""
+      }`}
+    >
       <div className="flex items-start justify-between">
         <p className="text-sm font-medium text-charcoal-soft">{label}</p>
         {icon && (
@@ -150,7 +159,7 @@ export function StatCard({
       </div>
       <p className="display mt-2 text-3xl font-bold text-charcoal">{value}</p>
       {sublabel && <p className="mt-1 text-xs text-charcoal-soft">{sublabel}</p>}
-    </div>
+    </Tag>
   );
 }
 

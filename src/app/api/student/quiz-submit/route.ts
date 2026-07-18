@@ -37,17 +37,22 @@ export async function POST(req: NextRequest) {
   // Grade: only multipleChoice and trueFalse count; shortResponse is always marked correct
   type ResultDetail = { correct: boolean; correctAnswer: string };
   const results: Record<string, ResultDetail> = {};
+  // Persisted per-question detail for the teacher's breakdown view.
+  const details: Record<string, { answer: string; correct: boolean; correctAnswer: string }> = {};
   let gradedCount = 0;
   let correctCount = 0;
 
   for (const q of questions) {
+    const answer = String(answers[q.id] ?? "");
     if (q.type === "shortResponse") {
       results[q.id] = { correct: true, correctAnswer: "" };
+      details[q.id] = { answer, correct: true, correctAnswer: "" };
     } else {
       gradedCount++;
-      const isCorrect = String(answers[q.id] ?? "").trim() === String(q.correct_answer ?? "").trim();
+      const isCorrect = answer.trim() === String(q.correct_answer ?? "").trim();
       if (isCorrect) correctCount++;
       results[q.id] = { correct: isCorrect, correctAnswer: q.correct_answer ?? "" };
+      details[q.id] = { answer, correct: isCorrect, correctAnswer: q.correct_answer ?? "" };
     }
   }
 
@@ -68,6 +73,7 @@ export async function POST(req: NextRequest) {
         score,
         attempts: (existing.attempts ?? 1) + 1,
         submitted_at: new Date().toISOString(),
+        details,
       })
       .eq("id", existing.id);
   } else {
@@ -80,6 +86,7 @@ export async function POST(req: NextRequest) {
       lesson_id: lessonId ?? null,
       score,
       attempts: 1,
+      details,
     });
   }
 
