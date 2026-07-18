@@ -6,8 +6,9 @@
  * working sign-in. Login is fully functional: account-type selector,
  * email/password (visual for the MVP) and one-tap demo logins.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { FullPageLoader } from "@/components/ui/BrandLoader";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { roleHome, roleLabel } from "@/components/layout/navConfig";
@@ -46,6 +47,33 @@ const features = [
 export default function LandingPage() {
   const { signInStudent } = useApp();
   const router = useRouter();
+
+  // Brief branded splash on first paint while the hero film warms up, so the
+  // page reveals smoothly instead of flashing an unloaded video.
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const [splash, setSplash] = useState(true);
+  const [splashFade, setSplashFade] = useState(false);
+  useEffect(() => {
+    const start = Date.now();
+    const MIN = 1200; // show at least ~1.2s so it never flashes
+    const MAX = 3500; // but never hang past this, even on a slow video
+    let hidden = false;
+    const hide = () => {
+      if (hidden) return;
+      hidden = true;
+      setSplashFade(true);
+      setTimeout(() => setSplash(false), 600); // unmount after the fade
+    };
+    const reveal = () => setTimeout(hide, Math.max(0, MIN - (Date.now() - start)));
+    const v = heroVideoRef.current;
+    if (v && v.readyState >= 3) reveal();
+    else v?.addEventListener("canplay", reveal, { once: true });
+    const maxT = setTimeout(hide, MAX);
+    return () => {
+      clearTimeout(maxT);
+      v?.removeEventListener("canplay", reveal);
+    };
+  }, []);
 
   // Student login: step 1 = class code, step 2 = pick your animal, step 3 = PIN.
   const [codeOpen, setCodeOpen] = useState(false);
@@ -154,6 +182,16 @@ export default function LandingPage() {
 
   return (
     <div className="bg-cream">
+      {/* Branded splash while the hero film loads */}
+      {splash && (
+        <div
+          className={`fixed inset-0 z-[100] transition-opacity duration-500 ${
+            splashFade ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          <FullPageLoader />
+        </div>
+      )}
       <ScrollProgress />
       {/* ============ Top nav ============ */}
       <header className="absolute inset-x-0 top-0 z-30">
@@ -185,6 +223,7 @@ export default function LandingPage() {
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-forest-950 text-center">
         {/* Live wildlife film */}
         <video
+          ref={heroVideoRef}
           className="ken-burns absolute inset-0 h-full w-full object-cover"
           autoPlay
           muted
