@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { SectionHeader, StatCard, Button } from "@/components/ui/primitives";
-import { InsightCard, EngagementPill } from "@/components/cards/InsightCards";
+import { InsightCard } from "@/components/cards/InsightCards";
 import { ClassCard } from "@/components/cards/ContentCards";
 import { AliasAvatar } from "@/components/ui/AliasChip";
 import {
@@ -95,7 +95,22 @@ export default function TeacherDashboard() {
 
   const studentById = new Map(students.map((s) => [s.id, s]));
 
-  const needSupport = allProgress.filter((p) => p.recommendedTaskType === "support");
+  // Average quiz score per student across all their quizzes.
+  const studentQuizAvg = new Map<string, number>();
+  {
+    const byStudent = new Map<string, number[]>();
+    allQuizResults.forEach((q) => {
+      const arr = byStudent.get(q.studentId) ?? [];
+      arr.push(q.score);
+      byStudent.set(q.studentId, arr);
+    });
+    byStudent.forEach((arr, sid) =>
+      studentQuizAvg.set(sid, Math.round(arr.reduce((a, b) => a + b, 0) / arr.length))
+    );
+  }
+  // Students needing support: average quiz score under 50%. Students with no
+  // quiz data yet aren't flagged.
+  const needSupport = students.filter((s) => (studentQuizAvg.get(s.id) ?? 100) < 50);
   // Average watch time per student (total across their reels, averaged across
   // students) — "each student watched ~X on average".
   const avgWatch = avgWatchPerStudent(allProgress);
@@ -145,7 +160,7 @@ export default function TeacherDashboard() {
         <StatCard label="Avg quiz score" value={`${avgQuiz}%`} tone="gold" />
         <StatCard
           label="Need support"
-          value={[...new Set(needSupport.map((p) => p.studentId))].length}
+          value={needSupport.length}
           tone="clay"
         />
       </div>
@@ -245,21 +260,18 @@ export default function TeacherDashboard() {
                 Everyone is on track right now.
               </p>
             ) : (
-              needSupport.slice(0, 5).map((p) => {
-                const student = studentById.get(p.studentId);
-                return (
-                  <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-soft ring-1 ring-black/5">
-                    {student && <AliasAvatar user={student} size={36} />}
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-forest-900">{student?.name}</p>
-                      <p className="text-xs text-charcoal-soft">
-                        {topicMap.get(p.topicId)?.title} · {p.adaptiveFocusArea}
-                      </p>
-                    </div>
-                    <EngagementPill level={p.engagementLevel} />
+              needSupport.slice(0, 5).map((student) => (
+                <div key={student.id} className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-soft ring-1 ring-black/5">
+                  <AliasAvatar user={student} size={36} />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-forest-900">{student.name}</p>
+                    <p className="text-xs text-charcoal-soft">Average quiz score below 50%</p>
                   </div>
-                );
-              })
+                  <span className="rounded-full bg-clay-400/15 px-3 py-1 text-xs font-bold text-clay-600">
+                    {studentQuizAvg.get(student.id) ?? 0}%
+                  </span>
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -307,7 +319,7 @@ export default function TeacherDashboard() {
             <InsightCard title="Students needing support" tone="clay">
               {needSupport.length === 0
                 ? "All students are on track — great work!"
-                : `${[...new Set(needSupport.map((p) => p.studentId))].length} student${[...new Set(needSupport.map((p) => p.studentId))].length === 1 ? "" : "s"} flagged for support. Check Class Insights for details.`}
+                : `${needSupport.length} student${needSupport.length === 1 ? "" : "s"} averaging under 50% on quizzes. Check Class Insights for details.`}
             </InsightCard>
             <InsightCard title="Quiz engagement" tone="gold">
               {scores.length === 0
