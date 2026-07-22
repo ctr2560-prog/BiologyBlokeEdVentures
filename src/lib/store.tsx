@@ -62,8 +62,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Restore a real Supabase session on page load / refresh.
+    // In dev, React Strict Mode double-invokes this effect, so two concurrent
+    // calls race for the same Supabase auth lock — the loser rejects with a
+    // "lock was stolen" error. That's benign (the winner still sets the real
+    // user), so it's caught and ignored here instead of surfacing as an
+    // unhandled rejection.
     getCurrentDbUser()
       .then((user) => { if (user) setCurrentUser(user); })
+      .catch(() => {})
       .finally(() => setAuthReady(true));
 
     // Keep the store in sync when auth state changes externally.
