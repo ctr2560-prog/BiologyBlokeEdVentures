@@ -17,6 +17,24 @@ export function AliasAvatar({
   const animal = getAnimal(user.animalId ?? "");
   const color = animal ? getAnimalColor(animal.id) : "#3d7a5e";
   const Icon = animal ? getAnimalIcon(animal.kind) : null;
+
+  if (animal) {
+    return (
+      <span
+        className="grid shrink-0 place-items-center overflow-hidden rounded-full ring-2"
+        style={{ height: size, width: size, borderColor: color }}
+        title={user.name}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={animal.image}
+          alt={animal.name}
+          className="h-full w-full object-cover"
+        />
+      </span>
+    );
+  }
+
   return (
     <span
       className="grid shrink-0 place-items-center rounded-full text-cream"

@@ -11,7 +11,7 @@ import Link from "next/link";
 import { SectionHeader, Button, EmptyState } from "@/components/ui/primitives";
 import { getClass, getStudentsByClass } from "@/lib/supabaseService";
 import { getAnimal } from "@/data/animals";
-import { getAnimalIcon, getAnimalColor } from "@/lib/icons";
+import { getAnimalColor } from "@/lib/icons";
 import { Printer, ArrowLeft } from "lucide-react";
 import type { ClassGroup, User } from "@/types";
 
@@ -64,7 +64,6 @@ export default function ExplorerCardsPage({ params }: { params: Promise<{ classI
         {students.map((s) => {
           const animal = getAnimal(s.animalId ?? "");
           if (!animal) return null;
-          const Icon = getAnimalIcon(animal.kind);
           const color = getAnimalColor(animal.id);
           return (
             <div
@@ -74,10 +73,11 @@ export default function ExplorerCardsPage({ params }: { params: Promise<{ classI
             >
               <div className="p-5">
                 <div
-                  className="mx-auto grid h-16 w-16 place-items-center rounded-full ring-2"
-                  style={{ color, borderColor: color }}
+                  className="mx-auto h-16 w-16 overflow-hidden rounded-full ring-2"
+                  style={{ borderColor: color }}
                 >
-                  <Icon className="h-8 w-8" aria-hidden strokeWidth={1.5} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={animal.image} alt={animal.name} className="h-full w-full object-cover" />
                 </div>
                 <h3 className="display mt-3 text-xl font-bold text-forest-900">{animal.name}</h3>
                 <p className="mt-0.5 text-xs text-charcoal-soft">{cls.name}</p>

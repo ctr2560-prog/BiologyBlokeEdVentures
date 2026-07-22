@@ -516,17 +516,27 @@ export default function LandingPage() {
             {(() => {
               const animal = getAnimal(pickStudent.animalId ?? "");
               const Icon = animal ? getAnimalIcon(animal.kind) : Compass;
+              if (animal) {
+                return (
+                  <div className="mx-auto flex w-fit flex-col items-center gap-2">
+                    <div
+                      className="h-20 w-20 overflow-hidden rounded-full ring-4 shadow-soft"
+                      style={{ borderColor: getAnimalColor(animal.id) }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={animal.image} alt={animal.name} className="h-full w-full object-cover" />
+                    </div>
+                    <span className="text-sm font-bold text-forest-900">{animal.name}</span>
+                  </div>
+                );
+              }
               return (
                 <div
                   className="mx-auto flex w-fit flex-col items-center gap-2 rounded-3xl px-8 py-5 text-cream shadow-soft"
-                  style={{
-                    background: `linear-gradient(150deg, ${
-                      animal ? getAnimalColor(animal.id) : "#3d7a5e"
-                    }, #163329)`,
-                  }}
+                  style={{ background: "linear-gradient(150deg, #3d7a5e, #163329)" }}
                 >
                   <Icon className="h-10 w-10" aria-hidden strokeWidth={1.5} />
-                  <span className="text-sm font-bold">{animal?.name ?? "Explorer"}</span>
+                  <span className="text-sm font-bold">Explorer</span>
                 </div>
               );
             })()}
@@ -569,16 +579,22 @@ export default function LandingPage() {
                 {pickStudents.map((s) => {
                   const animal = getAnimal(s.animalId ?? "");
                   if (!animal) return null;
-                  const Icon = getAnimalIcon(animal.kind);
                   return (
                     <button
                       key={s.id}
                       onClick={() => pickAnimal(s.id)}
-                      className="card-lift group flex flex-col items-center gap-2 overflow-hidden rounded-2xl p-3 text-cream shadow-soft"
-                      style={{ background: `linear-gradient(150deg, ${getAnimalColor(animal.id)}, #163329)` }}
+                      className="card-lift group flex flex-col items-center gap-1.5 overflow-hidden rounded-2xl bg-white p-2 shadow-soft"
+                      style={{ boxShadow: `0 0 0 2px ${getAnimalColor(animal.id)}` }}
                     >
-                      <Icon className="h-8 w-8 transition-transform group-hover:scale-110" aria-hidden strokeWidth={1.5} />
-                      <span className="text-xs font-semibold">{animal.name}</span>
+                      <div className="aspect-square w-full overflow-hidden rounded-xl">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={animal.image}
+                          alt={animal.name}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                        />
+                      </div>
+                      <span className="text-xs font-semibold text-forest-900">{animal.name}</span>
                     </button>
                   );
                 })}
