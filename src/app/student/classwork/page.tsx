@@ -155,7 +155,13 @@ export default function ClassWork() {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Link href={`/student/lesson/${topic.id}`}>
+                      <Link
+                        href={
+                          watchedCount === videos.length && videos.length > 0
+                            ? `/student/lesson/${topic.id}/review`
+                            : `/student/lesson/${topic.id}`
+                        }
+                      >
                         <button
                           type="button"
                           className="rounded-full bg-cream px-5 py-2 text-sm font-bold text-forest-900 shadow-soft transition hover:bg-white"

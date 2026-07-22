@@ -368,3 +368,13 @@ create policy "Teachers: read responses for students in own classes"
 create policy "Students: read/write own activity responses"
   on public.student_activity_responses for all
   using (student_id = public.bb_my_student_id());
+
+create policy "Teachers: give feedback on responses in own classes"
+  on public.student_activity_responses for update
+  using (
+    exists (
+      select 1 from public.classes
+      where classes.id = student_activity_responses.class_id
+        and classes.teacher_id = public.bb_my_user_id()
+    )
+  );

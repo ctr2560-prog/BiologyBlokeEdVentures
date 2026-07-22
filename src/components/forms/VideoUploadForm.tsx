@@ -2,8 +2,8 @@
 import { useRef, useState } from "react";
 import { FormField, Button, inputClass } from "@/components/ui/primitives";
 import { createVideo } from "@/lib/supabaseService";
-import { Loader, X } from "lucide-react";
-import type { Topic, Video } from "@/types";
+import { Loader, X, RectangleVertical, RectangleHorizontal } from "lucide-react";
+import type { Topic, Video, VideoAspectRatio } from "@/types";
 
 type UploadState = "idle" | "creating" | "uploading" | "processing" | "error";
 
@@ -18,6 +18,7 @@ export function VideoUploadForm({ lockedTopic, onDone }: Props) {
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("vertical");
   const [file, setFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -35,6 +36,7 @@ export function VideoUploadForm({ lockedTopic, onDone }: Props) {
     setDescription("");
     setTags([]);
     setTagDraft("");
+    setAspectRatio("vertical");
     setFile(null);
     setUploadState("idle");
     setUploadProgress(0);
@@ -70,6 +72,7 @@ export function VideoUploadForm({ lockedTopic, onDone }: Props) {
         learningIntent: "",
         successCriteria: [],
         published: false,
+        aspectRatio,
       });
 
       setUploadState("uploading");
@@ -176,6 +179,33 @@ export function VideoUploadForm({ lockedTopic, onDone }: Props) {
             onBlur={addTag}
             placeholder="e.g. chimpanzees — press Enter to add"
           />
+        </div>
+      </FormField>
+
+      <FormField label="Framing" hint="Vertical fills the screen edge-to-edge in the lesson feed; horizontal is letterboxed">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setAspectRatio("vertical")}
+            className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-2.5 text-sm font-semibold transition-colors ${
+              aspectRatio === "vertical"
+                ? "border-forest-700 bg-forest-50 text-forest-800"
+                : "border-sand-dark text-charcoal-soft hover:bg-cream"
+            }`}
+          >
+            <RectangleVertical className="h-4 w-4" aria-hidden /> Vertical (9:16)
+          </button>
+          <button
+            type="button"
+            onClick={() => setAspectRatio("horizontal")}
+            className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-2.5 text-sm font-semibold transition-colors ${
+              aspectRatio === "horizontal"
+                ? "border-forest-700 bg-forest-50 text-forest-800"
+                : "border-sand-dark text-charcoal-soft hover:bg-cream"
+            }`}
+          >
+            <RectangleHorizontal className="h-4 w-4" aria-hidden /> Horizontal (16:9)
+          </button>
         </div>
       </FormField>
 

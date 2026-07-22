@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 import type MuxPlayerElement from "@mux/mux-player";
+import type { MuxPlayerCSSProperties } from "@mux/mux-player-react";
 import { Button } from "@/components/ui/primitives";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import type { WatchSignals } from "./VideoPlayerMock";
@@ -33,9 +34,15 @@ interface VideoPlayerProps {
   showDoneButton?: boolean;
   /** Classroom audio mode. Defaults to the quiet, capped "normal". */
   audioMode?: AudioMode;
+  /**
+   * Full-bleed reel mode: the player fills its parent edge-to-edge instead of
+   * a boxed, rounded 16:9 card. Vertical videos cover-crop to fill; horizontal
+   * videos letterbox (contain) rather than get cropped.
+   */
+  fill?: boolean;
 }
 
-export function VideoPlayer({ video, onComplete, liveSignalsRef, showDoneButton = true, audioMode = "normal" }: VideoPlayerProps) {
+export function VideoPlayer({ video, onComplete, liveSignalsRef, showDoneButton = true, audioMode = "normal", fill = false }: VideoPlayerProps) {
   const watchedRef = useRef(0);
   const lastTimeRef = useRef(0);
   const replayCountRef = useRef(0);
@@ -130,19 +137,71 @@ export function VideoPlayer({ video, onComplete, liveSignalsRef, showDoneButton 
     finish(completion);
   };
 
+  // Vertical source in fill mode: cover-crop to fill the screen edge-to-edge.
+  // Horizontal source in fill mode: letterbox (contain) so nothing is cropped.
+  // Boxed (non-fill) mode always shows the video's full frame (contain).
+  const objectFit = fill && video.aspectRatio === "vertical" ? "cover" : "contain";
+
+  const player = (
+    <MuxPlayer
+      ref={playerRef}
+      playbackId={video.muxPlaybackId ?? ""}
+      metadata={{ video_title: video.title }}
+      streamType="on-demand"
+      accentColor="#4f9776"
+      onTimeUpdate={handleTimeUpdate}
+      onEnded={handleEnded}
+      style={
+        fill
+          ? ({ width: "100%", height: "100%", "--media-object-fit": objectFit } as MuxPlayerCSSProperties)
+          : { width: "100%", aspectRatio: video.aspectRatio === "vertical" ? "9/16" : "16/9", maxHeight: "75vh" }
+      }
+    />
+  );
+
+  if (fill) {
+    return (
+      <div className="relative h-full w-full bg-black">
+        {player}
+        {!ended && (
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+            <button
+              onClick={() => handleReaction("like")}
+              aria-label="Like this video"
+              aria-pressed={reaction === "like"}
+              className={`grid h-11 w-11 place-items-center rounded-full shadow-lift backdrop-blur transition-all ${
+                reaction === "like"
+                  ? "bg-forest-600 text-white scale-110"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
+            >
+              <ThumbsUp className="h-5 w-5" aria-hidden />
+            </button>
+            <button
+              onClick={() => handleReaction("dislike")}
+              aria-label="Dislike this video"
+              aria-pressed={reaction === "dislike"}
+              className={`grid h-11 w-11 place-items-center rounded-full shadow-lift backdrop-blur transition-all ${
+                reaction === "dislike"
+                  ? "bg-clay-500 text-white scale-110"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
+            >
+              <ThumbsDown className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-3xl bg-forest-950 shadow-hero">
-        <MuxPlayer
-          ref={playerRef}
-          playbackId={video.muxPlaybackId ?? ""}
-          metadata={{ video_title: video.title }}
-          streamType="on-demand"
-          accentColor="#4f9776"
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={handleEnded}
-          style={{ width: "100%", aspectRatio: "16/9" }}
-        />
+      <div
+        className="relative mx-auto overflow-hidden rounded-3xl bg-forest-950 shadow-hero"
+        style={video.aspectRatio === "vertical" ? { maxWidth: 380 } : undefined}
+      >
+        {player}
 
         {/* Overlay interaction buttons */}
         {!ended && (

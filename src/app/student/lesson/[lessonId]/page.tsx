@@ -7,7 +7,6 @@
  */
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useApp } from "@/lib/store";
 import { Button, Badge, EmptyState } from "@/components/ui/primitives";
 import { BrandLoader, FullPageLoader } from "@/components/ui/BrandLoader";
@@ -16,7 +15,7 @@ import { VideoPlayerMock, type WatchSignals } from "@/components/media/VideoPlay
 import { StudentBlockRenderer } from "../../activity/[activityId]/renderers";
 import { filterBlocksForStudent } from "@/lib/activityRouting";
 import { toSlidesEmbedUrl } from "@/lib/slides";
-import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation, Headphones, VolumeX } from "lucide-react";
+import { Film, HelpCircle, X, Sparkles, CheckCircle, Loader, Presentation, Headphones, VolumeX, ChevronUp, ChevronDown } from "lucide-react";
 import type { AudioMode } from "@/components/media/VideoPlayer";
 import {
   getLessonOrTopicItems,
@@ -111,6 +110,32 @@ export default function LessonPlayerPage({
   // Live watch signals from the video player, so moving on mid-video can
   // record whatever was watched so far.
   const liveSignalsRef = useRef<WatchSignals | null>(null);
+
+  // Up/down arrow navigation (swipe turned out too unreliable across
+  // trackpads/touchscreens). A single lock prevents double-fires from a fast
+  // double-click; a brief hint shows when "next" is blocked (e.g. quiz not
+  // submitted yet).
+  const actionLockRef = useRef(false);
+  const [actionHint, setActionHint] = useState<string | null>(null);
+  const actionHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showActionHint = (msg: string) => {
+    setActionHint(msg);
+    if (actionHintTimeoutRef.current) clearTimeout(actionHintTimeoutRef.current);
+    actionHintTimeoutRef.current = setTimeout(() => setActionHint(null), 2200);
+  };
+  const handleNext = () => {
+    if (actionLockRef.current) return;
+    const action = advanceAction();
+    if (!action) {
+      if (currentItem?.itemType === "quiz" && !quizSubmitted) {
+        showActionHint("Submit your answers before moving on.");
+      }
+      return;
+    }
+    actionLockRef.current = true;
+    action();
+    setTimeout(() => { actionLockRef.current = false; }, 600);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -370,6 +395,27 @@ export default function LessonPlayerPage({
   };
 
   /*
+   * The up arrow steps back one screen — no gate, no save: just navigation,
+   * so it's safe even mid-quiz. Does nothing if there's nowhere to go back to.
+   */
+  const canGoBack = !done && (currentIndex > 0 || (hasSlides && !onSlides));
+  const goBack = () => {
+    if (saving || done || actionLockRef.current) return;
+    actionLockRef.current = true;
+    setTimeout(() => { actionLockRef.current = false; }, 600);
+    setSignals(null);
+    liveSignalsRef.current = null;
+    setAnswers({});
+    setQuizSubmitted(false);
+    setQuizResultDetails({});
+    if (currentIndex === 0) {
+      if (hasSlides && !onSlides) setSlidesDone(false);
+      return;
+    }
+    setCurrentIndex((i) => i - 1);
+  };
+
+  /*
    * What the "move on" button does on the current step. Returns null when the
    * step isn't ready to advance — quizzes must be submitted first, and the
    * worksheet is submitted via its own button.
@@ -462,75 +508,73 @@ export default function LessonPlayerPage({
   const stepIcon = (item: LessonItemWithContent) =>
     item.itemType === "video" ? Film : item.itemType === "quiz" ? HelpCircle : Sparkles;
 
+  // Real (uploaded) video steps get the full-bleed, TikTok-style reel treatment.
+  // The mock fallback (no Mux playback id yet) keeps the old boxed layout.
+  const isFullBleedVideoStep =
+    !onSlides && !done && currentItem?.itemType === "video" && Boolean(currentItem.video.muxPlaybackId);
+
+  // Slides and quizzes get a wider, vertically-centred column instead of the
+  // narrower top-anchored one — they're usually shorter than a full screen,
+  // so centring reads much better and gives the slide deck / question cards
+  // more room to breathe.
+  const isWideCenteredStep = onSlides || (!done && currentItem?.itemType === "quiz");
+
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col"
+      className="fixed inset-0 z-50 flex"
       style={{ background: "linear-gradient(175deg, #163329 0%, #204535 55%, #2c5844 100%)" }}
     >
-      {/* ── Top bar: close + story progress ── */}
-      <div className="shrink-0 px-4 pt-4 pb-2">
-        <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <Link
-            href="/student/classwork"
-            aria-label="Exit lesson"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-cream backdrop-blur transition-colors hover:bg-white/20"
-          >
-            <X className="h-4 w-4" />
-          </Link>
-          <div className="flex flex-1 items-center gap-1.5">
-            {hasSlides && (
-              <div className="flex flex-1 items-center gap-1.5">
-                <div
-                  className={`h-1.5 flex-1 rounded-full transition-colors ${
-                    slidesDone || done ? "bg-gold-400" : "bg-cream"
-                  }`}
-                />
-                <Presentation
+      {/* ── Left rail: close + vertical story progress ── */}
+      <div className="flex w-14 shrink-0 flex-col items-center gap-3 py-4">
+        <Link
+          href="/student/classwork"
+          aria-label="Exit lesson"
+          className="glass-dark grid h-10 w-10 shrink-0 place-items-center rounded-full text-cream/80 shadow-hero ring-1 ring-white/10 transition-all hover:text-cream hover:ring-white/20 active:scale-90"
+        >
+          <X className="h-4 w-4" />
+        </Link>
+
+        <div className="glass-dark flex flex-1 flex-col items-center gap-2 rounded-[28px] px-1.5 py-3 shadow-hero ring-1 ring-white/10">
+          {hasSlides && (
+            <div className="flex flex-1 flex-col items-center gap-1.5">
+              <Presentation
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  slidesDone || done ? "text-gold-400" : "text-cream"
+                }`}
+                aria-hidden
+              />
+              <div
+                className={`w-1.5 flex-1 rounded-full transition-colors ${
+                  slidesDone || done ? "bg-gold-400" : "bg-cream"
+                }`}
+              />
+            </div>
+          )}
+          {items.map((item, i) => {
+            const Icon = stepIcon(item);
+            const isDone = done || (!onSlides && i < currentIndex);
+            const isCurrent = !done && !onSlides && i === currentIndex;
+            return (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+                <Icon
                   className={`h-3.5 w-3.5 shrink-0 ${
-                    slidesDone || done ? "text-gold-400" : "text-cream"
+                    isDone ? "text-gold-400" : isCurrent ? "text-cream" : "text-white/25"
                   }`}
                   aria-hidden
                 />
+                <div
+                  className={`w-1.5 flex-1 rounded-full transition-colors ${
+                    isDone ? "bg-gold-400" : isCurrent ? "bg-cream" : "bg-white/15"
+                  }`}
+                />
               </div>
-            )}
-            {items.map((item, i) => {
-              const Icon = stepIcon(item);
-              const isDone = done || (!onSlides && i < currentIndex);
-              const isCurrent = !done && !onSlides && i === currentIndex;
-              return (
-                <div key={i} className="flex flex-1 items-center gap-1.5">
-                  <div
-                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                      isDone ? "bg-gold-400" : isCurrent ? "bg-cream" : "bg-white/15"
-                    }`}
-                  />
-                  <Icon
-                    className={`h-3.5 w-3.5 shrink-0 ${
-                      isDone ? "text-gold-400" : isCurrent ? "text-cream" : "text-white/25"
-                    }`}
-                    aria-hidden
-                  />
-                </div>
-              );
-            })}
-          </div>
-          <span className="shrink-0 text-xs font-semibold tabular-nums text-white/50">
-            {displayStep}/{totalSteps}
-          </span>
+            );
+          })}
         </div>
-        {lesson && (
-          <div className="mx-auto mt-2 flex max-w-2xl items-center gap-2">
-            <Image
-              src="/edventra-white-v2.png"
-              alt="Edventra"
-              width={416}
-              height={101}
-              className="h-4 w-auto opacity-60"
-            />
-            <span className="text-white/20">·</span>
-            <p className="min-w-0 truncate text-xs font-semibold text-white/40">{lesson.title}</p>
-          </div>
-        )}
+
+        <span className="glass-dark shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums text-white/60 ring-1 ring-white/10">
+          {displayStep}/{totalSteps}
+        </span>
       </div>
 
       {/* ── Feed ── */}
@@ -540,17 +584,23 @@ export default function LessonPlayerPage({
       >
         <div
           key={done ? "done" : onSlides ? "slides" : currentIndex}
-          className="rise-in mx-auto max-w-2xl px-4 pb-24 pt-2"
+          className={
+            isFullBleedVideoStep
+              ? "rise-in mx-auto h-full max-w-2xl"
+              : isWideCenteredStep
+              ? "rise-in mx-auto flex min-h-full max-w-4xl flex-col justify-center px-4 py-8"
+              : "rise-in mx-auto max-w-2xl px-4 pb-24 pt-2"
+          }
         >
 
           {/* ── Slides slide ── */}
           {onSlides ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10">
-                  <Presentation className="h-4 w-4 text-gold-400" aria-hidden />
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-white/10">
+                  <Presentation className="h-5 w-5 text-gold-400" aria-hidden />
                 </span>
-                <h2 className="display font-bold text-cream">Lesson slides</h2>
+                <h2 className="display text-xl font-bold text-cream">Lesson slides</h2>
               </div>
 
               <div className="overflow-hidden rounded-3xl shadow-hero ring-1 ring-white/10">
@@ -561,17 +611,8 @@ export default function LessonPlayerPage({
                 />
               </div>
               <p className="text-center text-xs text-forest-100/60">
-                Click through the slides, then keep going when you&apos;re ready.
+                Click through the slides, then use the arrow on the right when you&apos;re ready to keep going.
               </p>
-
-              <div className="sticky bottom-4 pt-2">
-                <button
-                  onClick={() => setSlidesDone(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gold-400 py-4 text-base font-bold text-forest-950 shadow-hero transition-transform hover:scale-[1.01]"
-                >
-                  Keep going →
-                </button>
-              </div>
             </div>
           ) : done ? (
             <div className="flex min-h-[70vh] flex-col items-center justify-center gap-5 text-center">
@@ -614,65 +655,69 @@ export default function LessonPlayerPage({
               </Link>
             </div>
           ) : currentItem?.itemType === "video" ? (
-            /* ── Video slide ── */
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10">
-                  <Film className="h-4 w-4 text-gold-400" aria-hidden />
-                </span>
-                <h2 className="display min-w-0 flex-1 truncate font-bold text-cream">{currentItem.video.title}</h2>
-                {/* Audio status — set by the teacher, not toggleable here */}
-                {classSilent ? (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-cream/80">
-                    <VolumeX className="h-3.5 w-3.5" aria-hidden /> Silent · read captions
-                  </span>
-                ) : classHeadphone ? (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gold-400 px-3 py-1.5 text-xs font-bold text-forest-950">
-                    <Headphones className="h-3.5 w-3.5" aria-hidden /> Headphones
-                  </span>
-                ) : null}
-              </div>
+            currentItem.video.muxPlaybackId ? (
+              /* ── Video slide: full-bleed reel ── */
+              <div className="relative h-full w-full">
+                {/* Framed inset - a gap and rounded corners instead of hugging the screen edge. */}
+                <div className="absolute inset-3 overflow-hidden rounded-3xl bg-black shadow-hero md:inset-6">
+                  <VideoPlayer
+                    video={currentItem.video}
+                    onComplete={handleVideoComplete}
+                    liveSignalsRef={liveSignalsRef}
+                    showDoneButton={false}
+                    audioMode={audioMode}
+                    fill
+                  />
 
-              {currentItem.video.muxPlaybackId ? (
-                <VideoPlayer
-                  video={currentItem.video}
-                  onComplete={handleVideoComplete}
-                  liveSignalsRef={liveSignalsRef}
-                  showDoneButton={false}
-                  audioMode={audioMode}
-                />
-              ) : (
+                  {/* Top overlay: title + audio status */}
+                  <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-black/70 to-transparent p-4">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 backdrop-blur">
+                      <Film className="h-4 w-4 text-gold-400" aria-hidden />
+                    </span>
+                    <h2 className="display min-w-0 flex-1 truncate font-bold text-cream">{currentItem.video.title}</h2>
+                    {classSilent ? (
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-cream/80 backdrop-blur">
+                        <VolumeX className="h-3.5 w-3.5" aria-hidden /> Silent · read captions
+                      </span>
+                    ) : classHeadphone ? (
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gold-400 px-3 py-1.5 text-xs font-bold text-forest-950">
+                        <Headphones className="h-3.5 w-3.5" aria-hidden /> Headphones
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ── Video slide: mock fallback (no file uploaded yet) ── */
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10">
+                    <Film className="h-4 w-4 text-gold-400" aria-hidden />
+                  </span>
+                  <h2 className="display min-w-0 flex-1 truncate font-bold text-cream">{currentItem.video.title}</h2>
+                </div>
+
                 <VideoPlayerMock video={currentItem.video} onComplete={handleVideoComplete} liveSignalsRef={liveSignalsRef} />
-              )}
-
-              <div className="sticky bottom-4 pt-2">
-                <button
-                  onClick={() => advanceAction()?.()}
-                  disabled={saving}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gold-400 py-4 text-base font-bold text-forest-950 shadow-hero transition-transform hover:scale-[1.01] disabled:opacity-40"
-                >
-                  Move on when you&apos;re ready →
-                </button>
               </div>
-            </div>
+            )
           ) : currentItem?.itemType === "quiz" ? (
             /* ── Quiz slide ── */
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10">
-                  <HelpCircle className="h-4 w-4 text-gold-400" aria-hidden />
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-white/10">
+                  <HelpCircle className="h-5 w-5 text-gold-400" aria-hidden />
                 </span>
-                <h2 className="display font-bold text-cream">{currentItem.quiz.title}</h2>
+                <h2 className="display text-xl font-bold text-cream">{currentItem.quiz.title}</h2>
               </div>
 
               {currentItem.quiz.questions.map((q, i) => (
-                <div key={q.id} className="rounded-3xl bg-white p-5 shadow-soft">
-                  <p className="font-semibold text-forest-900">
+                <div key={q.id} className="rounded-3xl bg-white p-6 shadow-soft sm:p-8">
+                  <p className="text-lg font-semibold text-forest-900">
                     {i + 1}. {q.questionText}
                   </p>
                   {q.type === "shortResponse" ? (
                     <textarea
-                      className="mt-3 w-full rounded-2xl border border-sand-dark bg-white px-4 py-2.5 text-sm focus:border-forest-500 focus:outline-none"
+                      className="mt-4 w-full rounded-2xl border border-sand-dark bg-white px-4 py-3 text-base focus:border-forest-500 focus:outline-none"
                       rows={2}
                       disabled={quizSubmitted}
                       placeholder="Type your answer…"
@@ -680,7 +725,7 @@ export default function LessonPlayerPage({
                       onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
                     />
                   ) : (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-4 space-y-2.5">
                       {q.options.map((opt) => {
                         const selected = answers[q.id] === opt;
                         const result = quizResultDetails[q.id];
@@ -691,7 +736,7 @@ export default function LessonPlayerPage({
                             key={opt}
                             disabled={quizSubmitted}
                             onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
-                            className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-2.5 text-left text-sm transition-colors ${
+                            className={`flex w-full items-center gap-3 rounded-2xl border-2 px-5 py-3.5 text-left text-base transition-colors ${
                               wrong
                                 ? "border-clay-400 bg-clay-400/10 text-clay-600"
                                 : correct
@@ -702,7 +747,7 @@ export default function LessonPlayerPage({
                             }`}
                           >
                             <span
-                              className={`grid h-5 w-5 place-items-center rounded-full border-2 ${
+                              className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${
                                 selected && !wrong ? "border-forest-600 bg-forest-600 text-white" : "border-sand-dark"
                               }`}
                             />
@@ -726,12 +771,7 @@ export default function LessonPlayerPage({
                     {saving ? <><Loader className="h-4 w-4 animate-spin" /> Marking…</> : "Submit answers"}
                   </button>
                 ) : (
-                  <button
-                    onClick={advanceOrFinish}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-gold-400 py-4 text-base font-bold text-forest-950 shadow-hero transition-transform hover:scale-[1.01]"
-                  >
-                    Keep going →
-                  </button>
+                  <p className="text-center text-xs text-forest-100/60">Use the arrow on the right when you&apos;re ready to keep going.</p>
                 )}
               </div>
             </div>
@@ -819,6 +859,52 @@ export default function LessonPlayerPage({
 
         </div>
       </div>
+
+      {/* ── Right rail: up/down navigation ── */}
+      <div className="flex w-14 shrink-0 flex-col items-center justify-center py-4 sm:w-20">
+        <div className="glass-dark flex flex-col items-center gap-1.5 rounded-[28px] p-2 shadow-hero ring-1 ring-white/10">
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={!canGoBack}
+            aria-label="Go back"
+            className="group grid h-11 w-11 place-items-center rounded-full text-cream/70 transition-all duration-150 hover:bg-white/10 hover:text-cream active:scale-90 disabled:opacity-20 disabled:hover:bg-transparent"
+          >
+            <ChevronUp className="h-5 w-5 transition-transform duration-150 group-hover:-translate-y-0.5" aria-hidden strokeWidth={2.5} />
+          </button>
+
+          <div className="h-px w-6 bg-white/10" />
+
+          <div className="relative">
+            <span
+              className="glow-pulse pointer-events-none absolute inset-0 -z-10 rounded-full bg-gold-400 blur-lg"
+              aria-hidden
+            />
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={saving}
+              aria-label="Next"
+              className="group relative grid h-14 w-14 place-items-center rounded-full bg-gradient-to-b from-gold-300 to-gold-500 text-forest-950 shadow-[0_10px_28px_-6px_rgba(212,163,115,0.7)] transition-all duration-150 hover:scale-110 hover:shadow-[0_14px_34px_-6px_rgba(212,163,115,0.85)] active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+            >
+              {saving ? (
+                <Loader className="h-6 w-6 animate-spin" aria-hidden />
+              ) : (
+                <ChevronDown className="h-6 w-6 transition-transform duration-150 group-hover:translate-y-0.5" aria-hidden strokeWidth={2.5} />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Blocked-next prompt (e.g. quiz not submitted yet) */}
+      {actionHint && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-8 z-40 flex justify-center px-4">
+          <div className="rounded-full bg-black/80 px-5 py-3 text-sm font-semibold text-cream shadow-hero backdrop-blur">
+            {actionHint}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

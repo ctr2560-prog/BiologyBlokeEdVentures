@@ -20,6 +20,7 @@ import type {
   Unit,
   Topic,
   Video,
+  VideoAspectRatio,
   Resource,
   Quiz,
   Question,
@@ -121,6 +122,7 @@ export function mapVideo(r: Row): Video {
     muxUploadId: r.mux_upload_id ?? undefined,
     muxAssetId: r.mux_asset_id ?? undefined,
     muxPlaybackId: r.mux_playback_id ?? undefined,
+    aspectRatio: (r.aspect_ratio as VideoAspectRatio) ?? "horizontal",
   };
 }
 
@@ -927,6 +929,19 @@ export async function getQuizResultsByClass(classId: string): Promise<ClassQuizR
   return (data ?? []).map(mapQuizResult);
 }
 
+/** A single student's quiz results for one lesson (student-facing lesson review). */
+export async function getQuizResultsForStudentLesson(
+  lessonId: string,
+  studentId: string
+): Promise<ClassQuizResult[]> {
+  const { data } = await getSupabaseClient()
+    .from("quiz_results")
+    .select("quiz_id, student_id, lesson_id, score, attempts, submitted_at, details")
+    .eq("lesson_id", lessonId)
+    .eq("student_id", studentId);
+  return (data ?? []).map(mapQuizResult);
+}
+
 /** Every quiz result platform-wide (admin analytics). */
 export async function getAllQuizResults(): Promise<ClassQuizResult[]> {
   const { data } = await getSupabaseClient()
@@ -1168,13 +1183,14 @@ export async function attachMuxPlayback(
 
 export async function updateVideo(
   id: string,
-  fields: { title?: string; description?: string; tags?: string[]; published?: boolean }
+  fields: { title?: string; description?: string; tags?: string[]; published?: boolean; aspectRatio?: VideoAspectRatio }
 ): Promise<Video> {
   const updates: Record<string, unknown> = {};
   if (fields.title       !== undefined) updates.title       = fields.title;
   if (fields.description !== undefined) updates.description = fields.description;
   if (fields.tags        !== undefined) updates.tags        = fields.tags;
   if (fields.published   !== undefined) updates.published   = fields.published;
+  if (fields.aspectRatio !== undefined) updates.aspect_ratio = fields.aspectRatio;
   const { data, error } = await getSupabaseClient()
     .from("videos")
     .update(updates)
@@ -1205,6 +1221,7 @@ export async function createVideo(video: Omit<Video, "id">): Promise<Video> {
       learning_intent: video.learningIntent,
       success_criteria: video.successCriteria,
       published: video.published,
+      aspect_ratio: video.aspectRatio,
     })
     .select()
     .single();
@@ -1514,6 +1531,7 @@ function mapActivity(r: Row): Activity {
     title: r.title,
     difficulty: r.difficulty,
     blocks: (r.blocks ?? []) as TaggedActivityBlock[],
+    feedbackKeywords: r.feedback_keywords ?? undefined,
     createdAt: r.created_at ?? "",
   };
 }
@@ -1527,6 +1545,9 @@ function mapStudentActivityResponse(r: Row): StudentActivityResponse {
     responses: (r.responses ?? []) as BlockResponse[],
     submittedAt: r.submitted_at ?? undefined,
     lastEditedAt: r.last_edited_at ?? "",
+    teacherFeedback: r.teacher_feedback ?? undefined,
+    feedbackGivenAt: r.feedback_given_at ?? undefined,
+    feedbackSeenAt: r.feedback_seen_at ?? undefined,
   };
 }
 
@@ -1917,6 +1938,83 @@ export async function upsertStudentActivityResponse(
     .single();
   if (error) throw new Error(error.message);
   return mapStudentActivityResponse(data);
+}
+
+/** Teacher-only: set (or clear, by passing "") whole-worksheet feedback on a student's response. */
+export async function giveActivityFeedback(
+  activityId: string,
+  studentId: string,
+  classId: string,
+  feedback: string
+): Promise<void> {
+  const id = deterministicId("sar", activityId, studentId, classId);
+  const { data, error } = await getSupabaseClient()
+    .from("student_activity_responses")
+    .update({
+      teacher_feedback: feedback || null,
+      feedback_given_at: feedback ? new Date().toISOString() : null,
+      // Resetting this means re-sent (or edited) feedback notifies the student again.
+      feedback_seen_at: null,
+    })
+    .eq("id", id)
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error("This student hasn't started this activity yet, so there's no response to attach feedback to.");
+  }
+}
+
+export interface FeedbackNotice {
+  activityId: string;
+  lessonId: string;
+  lessonTitle: string;
+  feedback: string;
+  feedbackGivenAt: string;
+}
+
+/** Student-facing: worksheet feedback that hasn't been viewed yet (for a dashboard notice). */
+export async function getUnseenFeedbackForStudent(studentId: string): Promise<FeedbackNotice[]> {
+  const { data: rows } = await getSupabaseClient()
+    .from("student_activity_responses")
+    .select("activity_id, teacher_feedback, feedback_given_at")
+    .eq("student_id", studentId)
+    .not("teacher_feedback", "is", null)
+    .is("feedback_seen_at", null);
+  const data = (rows ?? []) as Row[];
+  if (data.length === 0) return [];
+
+  const activityIds = [...new Set(data.map((r) => r.activity_id as string))];
+  const activities = await getActivitiesByIds(activityIds);
+  const activityById = new Map(activities.map((a) => [a.id, a]));
+
+  const lessonIds = [...new Set(activities.map((a) => a.lessonId).filter((id): id is string => Boolean(id)))];
+  const topics = await Promise.all(lessonIds.map((id) => getTopic(id)));
+  const topicTitleById = new Map(topics.filter((t): t is Topic => t !== null).map((t) => [t.id, t.title]));
+
+  return data
+    .map((r) => {
+      const activity = activityById.get(r.activity_id as string);
+      if (!activity?.lessonId) return null;
+      return {
+        activityId: r.activity_id as string,
+        lessonId: activity.lessonId,
+        lessonTitle: topicTitleById.get(activity.lessonId) ?? activity.title,
+        feedback: r.teacher_feedback as string,
+        feedbackGivenAt: r.feedback_given_at as string,
+      };
+    })
+    .filter((n): n is FeedbackNotice => n !== null);
+}
+
+/** Student-facing: mark feedback on these activities as seen (call when the review page is opened). */
+export async function markFeedbackSeen(activityIds: string[], studentId: string): Promise<void> {
+  if (activityIds.length === 0) return;
+  await getSupabaseClient()
+    .from("student_activity_responses")
+    .update({ feedback_seen_at: new Date().toISOString() })
+    .eq("student_id", studentId)
+    .in("activity_id", activityIds)
+    .is("feedback_seen_at", null);
 }
 
 export async function getResponsesForActivity(

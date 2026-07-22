@@ -22,12 +22,13 @@ export async function POST(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
-  const { id, lessonId, title, difficulty, blocks } = await req.json() as {
+  const { id, lessonId, title, difficulty, blocks, feedbackKeywords } = await req.json() as {
     id?: string;
     lessonId: string;
     title: string;
     difficulty: string;
     blocks: ActivityBlock[];
+    feedbackKeywords?: string[];
   };
 
   if (!lessonId || !title?.trim() || !difficulty) {
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
       difficulty,
       blocks,
       topic_tags: null,
+      feedback_keywords: feedbackKeywords && feedbackKeywords.length > 0 ? feedbackKeywords : null,
     })
     .select()
     .single();

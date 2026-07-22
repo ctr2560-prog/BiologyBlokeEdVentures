@@ -140,6 +140,7 @@ interface Props {
 
 export function ActivityBuilderModal({ open, onClose, lessonId, difficulty, existing, onSaved }: Props) {
   const [title, setTitle] = useState(existing?.title ?? "");
+  const [feedbackKeywords, setFeedbackKeywords] = useState((existing?.feedbackKeywords ?? []).join(", "));
   const [blocks, setBlocks] = useState<ActivityBlock[]>(existing?.blocks ?? []);
   const [addingBlock, setAddingBlock] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -186,6 +187,10 @@ export function ActivityBuilderModal({ open, onClose, lessonId, difficulty, exis
           title: title.trim(),
           difficulty,
           blocks,
+          feedbackKeywords: feedbackKeywords
+            .split(",")
+            .map((k) => k.trim())
+            .filter(Boolean),
         }),
       });
       const data = await res.json();
@@ -198,6 +203,7 @@ export function ActivityBuilderModal({ open, onClose, lessonId, difficulty, exis
         title: r.title,
         difficulty: r.difficulty,
         blocks: r.blocks ?? [],
+        feedbackKeywords: r.feedback_keywords ?? undefined,
         createdAt: r.created_at ?? "",
       });
       onClose();
@@ -233,6 +239,18 @@ export function ActivityBuilderModal({ open, onClose, lessonId, difficulty, exis
                 ? "e.g. Compare two Australian animals"
                 : "e.g. Analyse habitat pressures"
             }
+          />
+        </FormField>
+
+        <FormField
+          label="Key concepts to check for (optional)"
+          hint="Comma-separated. Used to draft feedback for teachers - flags which of these words/phrases show up in a student's answers."
+        >
+          <input
+            className={inputClass}
+            value={feedbackKeywords}
+            onChange={(e) => setFeedbackKeywords(e.target.value)}
+            placeholder="e.g. adaptation, camouflage, predator, survival"
           />
         </FormField>
 

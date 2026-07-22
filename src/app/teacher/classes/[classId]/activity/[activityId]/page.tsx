@@ -576,6 +576,7 @@ export default function ActivityResponsesPage({
                   <Badge tone="gold">In progress</Badge>
                 )}
               </div>
+
               {activity.blocks.map((block) => (
                 <BlockResponseCard
                   key={block.id}

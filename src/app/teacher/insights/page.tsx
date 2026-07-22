@@ -226,6 +226,17 @@ function InsightsInner() {
   const selectedUser = students.find((s) => s.id === selectedStudent);
   const detailTopicName = detailProg ? (topicNames.get(detailProg.topicId) ?? "") : "";
 
+  const handleFeedbackSaved = (activityId: string, feedback: string, givenAt: string | null) => {
+    if (!selectedStudent) return;
+    setResponses((prev) =>
+      prev.map((r) =>
+        r.activityId === activityId && r.studentId === selectedStudent
+          ? { ...r, teacherFeedback: feedback || undefined, feedbackGivenAt: givenAt ?? undefined }
+          : r
+      )
+    );
+  };
+
   const breakdownUser = students.find((s) => s.id === breakdownStudent);
   const breakdownRows = breakdownStudent
     ? progress.filter((p) => p.studentId === breakdownStudent)
@@ -335,7 +346,7 @@ function InsightsInner() {
             }`}
           >
             <FileText className="h-3.5 w-3.5" aria-hidden />
-            {isOpen ? "Hide worksheet" : "View worksheet"}
+            {isOpen ? "Hide worksheet" : "View worksheet & feedback"}
             {submitted === 0 && <span className="rounded-full bg-gold-400 px-1.5 text-[10px] text-forest-950">draft</span>}
           </button>
         );
@@ -436,7 +447,7 @@ function InsightsInner() {
               }
             />
             <p className="mt-2 text-xs text-charcoal-soft">
-              Click a student&apos;s <span className="font-semibold text-forest-700">View worksheet</span> button to see their answers.
+              Click a student&apos;s <span className="font-semibold text-forest-700">View worksheet &amp; feedback</span> button to see their answers and send feedback.
             </p>
           </div>
 
@@ -464,6 +475,10 @@ function InsightsInner() {
                 <WorksheetReview
                   responses={selectedStudent ? responsesByStudent.get(selectedStudent) ?? [] : []}
                   activityById={activityById}
+                  studentId={selectedStudent ?? undefined}
+                  classId={classId}
+                  editable
+                  onFeedbackSaved={handleFeedbackSaved}
                 />
               </div>
             )}

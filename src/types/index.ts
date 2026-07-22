@@ -135,6 +135,9 @@ export interface Topic {
 
 export type Difficulty = "foundation" | "core" | "advanced";
 
+/** "vertical" (9:16, fills a full-screen reel edge-to-edge) or "horizontal" (16:9, letterboxed). */
+export type VideoAspectRatio = "vertical" | "horizontal";
+
 export interface Video {
   id: string;
   title: string;
@@ -148,6 +151,7 @@ export interface Video {
   muxUploadId?: string;
   muxAssetId?: string;
   muxPlaybackId?: string;
+  aspectRatio: VideoAspectRatio;
   tags: string[];
   stage: Stage;
   yearGroups: string[];
@@ -548,6 +552,8 @@ export interface Activity {
   title: string;
   difficulty: Difficulty;
   blocks: TaggedActivityBlock[];
+  /** Key concepts a teacher expects to see in a strong answer, set by admin at creation time. Used to draft heuristic feedback. */
+  feedbackKeywords?: string[];
   createdAt: string;
 }
 
@@ -581,4 +587,7 @@ export interface StudentActivityResponse {
   responses: BlockResponse[];
   submittedAt?: string;
   lastEditedAt: string;
+  teacherFeedback?: string;
+  feedbackGivenAt?: string;
+  feedbackSeenAt?: string;
 }

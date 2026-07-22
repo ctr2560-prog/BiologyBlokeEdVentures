@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { Button, Badge, ProgressBar } from "@/components/ui/primitives";
 import Image from "next/image";
-import { getEcosystems } from "@/lib/supabaseService";
+import { getEcosystems, getUnseenFeedbackForStudent, type FeedbackNotice } from "@/lib/supabaseService";
 import { conservationFacts } from "@/data/content";
 import { getEcoIconByKey } from "@/lib/icons";
-import { Play, Star, Film, Award, Globe, type LucideIcon } from "lucide-react";
+import { Play, Star, Film, Award, Globe, MessageSquareText, type LucideIcon } from "lucide-react";
 import type { Ecosystem } from "@/types";
 
 type RawProgress = {
@@ -31,7 +31,14 @@ export default function StudentHome() {
   const [lessons, setLessons] = useState<AssignedLesson[]>([]);
   const [progress, setProgress] = useState<RawProgress[]>([]);
   const [ecosystems, setEcosystems] = useState<Ecosystem[]>([]);
+  const [feedbackNotices, setFeedbackNotices] = useState<FeedbackNotice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      getUnseenFeedbackForStudent(currentUser.id).then(setFeedbackNotices).catch(() => {});
+    }
+  }, [currentUser?.id]);
 
   useEffect(() => {
     Promise.all([
@@ -134,6 +141,32 @@ export default function StudentHome() {
         </div>
       </div>
 
+      {/* Teacher feedback notice */}
+      {feedbackNotices.length > 0 && (
+        <div className="space-y-2">
+          {feedbackNotices.map((n) => (
+            <Link
+              key={n.activityId}
+              href={`/student/lesson/${n.lessonId}/review`}
+              className="card-lift flex items-center gap-4 rounded-3xl bg-gold-300/20 p-5 shadow-soft ring-1 ring-gold-500/30"
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold-400 text-forest-950">
+                <MessageSquareText className="h-5 w-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-forest-900">
+                  Your teacher left feedback on &ldquo;{n.lessonTitle}&rdquo;
+                </p>
+                <p className="mt-0.5 truncate text-sm text-charcoal-soft">{n.feedback}</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-forest-700 px-4 py-2 text-sm font-bold text-cream">
+                View
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* Current class work */}
       <div>
         <div className="mb-3 flex items-center justify-between">
@@ -150,7 +183,7 @@ export default function StudentHome() {
               return (
                 <Link
                   key={l.id}
-                  href={`/student/lesson/${l.id}`}
+                  href={done ? `/student/lesson/${l.id}/review` : `/student/lesson/${l.id}`}
                   className="card-lift group flex flex-col overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-black/5"
                 >
                   <div

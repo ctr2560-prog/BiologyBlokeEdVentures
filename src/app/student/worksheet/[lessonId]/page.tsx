@@ -52,6 +52,7 @@ export default function StudentWorksheetPage({
   const [lessonTitle, setLessonTitle] = useState("");
   const [sections, setSections] = useState<WorksheetSection[]>([]);
   const [responses, setResponses] = useState<Record<string, BlockResponse[]>>({});
+  const [feedback, setFeedback] = useState<{ activityTitle: string; feedback: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -105,6 +106,7 @@ export default function StudentWorksheetPage({
       // Resume saved answers; the worksheet counts as submitted only when
       // every activity on it has been submitted.
       const existing: Record<string, BlockResponse[]> = {};
+      const feedbackList: { activityTitle: string; feedback: string }[] = [];
       let allSubmitted = built.length > 0 && Boolean(classId);
       await Promise.all(
         built.map(async (s) => {
@@ -113,12 +115,16 @@ export default function StudentWorksheetPage({
           if (resp) {
             existing[s.activity.id] = resp.responses;
             if (!resp.submittedAt) allSubmitted = false;
+            if (resp.teacherFeedback) {
+              feedbackList.push({ activityTitle: s.activity.title, feedback: resp.teacherFeedback });
+            }
           } else {
             allSubmitted = false;
           }
         })
       );
       setResponses(existing);
+      setFeedback(feedbackList);
       setSubmitted(allSubmitted);
       setLoading(false);
     })();
@@ -205,6 +211,18 @@ export default function StudentWorksheetPage({
             <p className="mt-2 text-forest-100/80">Your work has been saved. Your teacher can see it.</p>
           </div>
         </div>
+        {feedback.length > 0 && (
+          <div className="space-y-3">
+            {feedback.map((f, i) => (
+              <div key={i} className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-black/5">
+                <p className="text-xs font-bold uppercase tracking-widest text-forest-700">
+                  Feedback from your teacher — {f.activityTitle}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-charcoal">{f.feedback}</p>
+              </div>
+            ))}
+          </div>
+        )}
         <Link href="/student/classwork">
           <Button className="w-full" size="lg">
             Back to class work

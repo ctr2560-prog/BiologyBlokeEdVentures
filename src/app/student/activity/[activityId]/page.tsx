@@ -43,6 +43,7 @@ export default function StudentActivityPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [teacherFeedback, setTeacherFeedback] = useState<string | null>(null);
 
   const saveResponses = useCallback(
     async (rs: BlockResponse[], isSubmit = false) => {
@@ -108,6 +109,7 @@ export default function StudentActivityPage({
         if (existing) {
           setResponses(existing.responses);
           if (existing.submittedAt) setSubmitted(true);
+          setTeacherFeedback(existing.teacherFeedback ?? null);
         } else {
           logAnalyticsEvent({
             userId: studentId,
@@ -183,6 +185,12 @@ export default function StudentActivityPage({
             <p className="mt-2 text-forest-100/80">Your work has been saved. Your teacher can see it.</p>
           </div>
         </div>
+        {teacherFeedback && (
+          <div className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-black/5">
+            <p className="text-xs font-bold uppercase tracking-widest text-forest-700">Feedback from your teacher</p>
+            <p className="mt-2 whitespace-pre-wrap text-charcoal">{teacherFeedback}</p>
+          </div>
+        )}
         <Link href="/student/classwork">
           <Button className="w-full" size="lg">
             Back to class work

@@ -4,8 +4,8 @@ import { createPortal } from "react-dom";
 import MuxPlayer from "@mux/mux-player-react";
 import { Button, FormField, inputClass, Badge } from "@/components/ui/primitives";
 import { updateVideo } from "@/lib/supabaseService";
-import { X, Film, Loader, Check } from "lucide-react";
-import type { Video } from "@/types";
+import { X, Film, Loader, Check, RectangleVertical, RectangleHorizontal } from "lucide-react";
+import type { Video, VideoAspectRatio } from "@/types";
 
 interface Props {
   video: Video;
@@ -18,6 +18,7 @@ export function VideoDetailModal({ video, onClose, onUpdated }: Props) {
   const [title, setTitle]               = useState(video.title);
   const [description, setDescription]   = useState(video.description);
   const [tags, setTags]                 = useState(video.tags.join(", "));
+  const [aspectRatio, setAspectRatio]   = useState<VideoAspectRatio>(video.aspectRatio);
   const [saving, setSaving]             = useState(false);
   const [saveError, setSaveError]       = useState("");
   const [saved, setSaved]               = useState(false);
@@ -31,6 +32,7 @@ export function VideoDetailModal({ video, onClose, onUpdated }: Props) {
         title: title.trim(),
         description: description.trim(),
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+        aspectRatio,
       });
       onUpdated(updated);
       setSaved(true);
@@ -103,13 +105,16 @@ export function VideoDetailModal({ video, onClose, onUpdated }: Props) {
           {tab === "preview" && (
             <div>
               {video.muxPlaybackId ? (
-                <div className="overflow-hidden rounded-2xl bg-forest-950">
+                <div
+                  className="mx-auto overflow-hidden rounded-2xl bg-forest-950"
+                  style={video.aspectRatio === "vertical" ? { maxWidth: 320 } : undefined}
+                >
                   <MuxPlayer
                     playbackId={video.muxPlaybackId}
                     metadata={{ video_title: video.title }}
                     streamType="on-demand"
                     accentColor="#4f9776"
-                    style={{ width: "100%", aspectRatio: "16/9" }}
+                    style={{ width: "100%", aspectRatio: video.aspectRatio === "vertical" ? "9/16" : "16/9" }}
                   />
                 </div>
               ) : (
@@ -160,6 +165,32 @@ export function VideoDetailModal({ video, onClose, onUpdated }: Props) {
                   onChange={(e) => setTags(e.target.value)}
                   placeholder="adaptations, koala, habitat"
                 />
+              </FormField>
+              <FormField label="Framing" hint="Vertical fills the screen edge-to-edge in the lesson feed; horizontal is letterboxed">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAspectRatio("vertical")}
+                    className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-2.5 text-sm font-semibold transition-colors ${
+                      aspectRatio === "vertical"
+                        ? "border-forest-700 bg-forest-50 text-forest-800"
+                        : "border-sand-dark text-charcoal-soft hover:bg-cream"
+                    }`}
+                  >
+                    <RectangleVertical className="h-4 w-4" aria-hidden /> Vertical (9:16)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAspectRatio("horizontal")}
+                    className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-2.5 text-sm font-semibold transition-colors ${
+                      aspectRatio === "horizontal"
+                        ? "border-forest-700 bg-forest-50 text-forest-800"
+                        : "border-sand-dark text-charcoal-soft hover:bg-cream"
+                    }`}
+                  >
+                    <RectangleHorizontal className="h-4 w-4" aria-hidden /> Horizontal (16:9)
+                  </button>
+                </div>
               </FormField>
               {saveError && (
                 <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm text-clay-600">
