@@ -110,6 +110,16 @@ export async function signInStudent(
   };
 }
 
+// ---- Forgot password ----
+
+export async function sendPasswordReset(email: string): Promise<{ error: string | null }> {
+  const supabase = getSupabaseClient();
+  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
 // ---- Sign out ----
 
 export async function signOut(): Promise<void> {

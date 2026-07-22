@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
-import { Button, inputClass } from "@/components/ui/primitives";
+import { sendPasswordReset } from "@/lib/auth";
+import { Button, Modal, inputClass } from "@/components/ui/primitives";
 import { roleHome } from "@/components/layout/navConfig";
 import { LogIn, ArrowLeft } from "lucide-react";
 
@@ -29,6 +30,32 @@ function LoginForm() {
       : ""
   );
   const [loading, setLoading] = useState(false);
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const openForgot = () => {
+    setResetEmail(email.trim());
+    setResetSent(false);
+    setResetError("");
+    setForgotOpen(true);
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
+    setResetLoading(true);
+    const { error: sendError } = await sendPasswordReset(resetEmail.trim());
+    setResetLoading(false);
+    if (sendError) {
+      setResetError(sendError);
+      return;
+    }
+    setResetSent(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +166,13 @@ function LoginForm() {
                   className={inputClass + " w-full"}
                   disabled={loading}
                 />
+                <button
+                  type="button"
+                  onClick={openForgot}
+                  className="mt-1.5 text-xs font-semibold text-forest-700 hover:underline"
+                >
+                  Forgot password?
+                </button>
               </div>
 
               {error && (
@@ -178,6 +212,49 @@ function LoginForm() {
 
         <div className="mt-auto" />
       </div>
+
+      <Modal open={forgotOpen} onClose={() => setForgotOpen(false)} title="Reset your password">
+        {resetSent ? (
+          <div className="space-y-4">
+            <p className="text-sm text-charcoal-soft">
+              If an account exists for <span className="font-semibold text-forest-900">{resetEmail}</span>, we&apos;ve
+              sent a link to reset your password. Check your inbox (and spam folder).
+            </p>
+            <Button type="button" size="lg" className="w-full" onClick={() => setForgotOpen(false)}>
+              Done
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleResetSubmit} className="space-y-4">
+            <p className="text-sm text-charcoal-soft">
+              Enter your email address and we&apos;ll send you a link to reset your password.
+            </p>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-forest-900">
+                Email address
+              </label>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="you@school.edu.au"
+                className={inputClass + " w-full"}
+                disabled={resetLoading}
+              />
+            </div>
+            {resetError && (
+              <p className="rounded-2xl bg-clay-400/10 px-4 py-3 text-sm font-medium text-clay-600">
+                {resetError}
+              </p>
+            )}
+            <Button type="submit" size="lg" className="w-full" disabled={resetLoading}>
+              {resetLoading ? "Sending..." : "Send reset link"}
+            </Button>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }
