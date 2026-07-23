@@ -22,6 +22,7 @@ import {
   Sprout,
   Star,
   User,
+  Gamepad2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,6 +54,7 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "My Classes", href: "/teacher/classes", Icon: Users },
     { label: "Assign Lessons", href: "/teacher/assign", Icon: ClipboardList },
     { label: "Present", href: "/teacher/present", Icon: Presentation },
+    { label: "Games", href: "/teacher/games", Icon: Gamepad2 },
     { label: "Resources", href: "/teacher/resources", Icon: FileText },
     { label: "Professional Learning", href: "/teacher/pl", Icon: GraduationCap },
     { label: "Class Insights", href: "/teacher/insights", Icon: LineChart },
